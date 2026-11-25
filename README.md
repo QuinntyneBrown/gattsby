@@ -204,9 +204,11 @@ npx playwright install chromium   # once, for the behaviour specs
 | `npm run check:bundle` | Fails when the initial bundle is over 250 KB gzip (NFR-004) |
 | `npm run check:headers -- <url>` | Checks a running Gattsby's security headers (NFR-013, NFR-014); defaults to `http://localhost:4300/` |
 
-The app is served as static files over HTTPS by a host that reads `public/_headers` (Cloudflare
-Pages or Netlify), or another host with the same headers translated (ADR 0003). After each
-deployment, run `npm run check:headers -- https://<deployed host>/`.
+On each push to `main`, GitHub Actions checks the frontend and deploys the tested build to
+[Gattsby on Azure](https://gray-pond-0fab1480f.6.azurestaticapps.net/). The workflow translates
+`public/_headers` for Azure, configures the Angular navigation fallback, and checks the live
+response headers. For credential rotation, update the repository Actions secret
+`AZURE_STATIC_WEB_APPS_API_TOKEN` with the deployment token from `swa-gattsby` in `rg-gattsby`.
 
 To take part in specifying Gattsby, read, in order:
 
