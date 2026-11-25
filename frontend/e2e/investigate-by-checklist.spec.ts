@@ -5,6 +5,7 @@
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
+import { AddNoteDialogPage } from './pages/add-note.dialog.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { StillThereDialogPage } from './pages/still-there.dialog.page';
@@ -28,6 +29,11 @@ test.describe('The browser has no on-device model', () => {
     await expect(investigation.modeBanner).toContainText(
       'Gattsby runs it and explains the result.',
     );
+    await investigation.dismissModeBanner.click();
+    await expect(investigation.modeBanner).toHaveCount(0);
+    await expect(investigation.subtitle).toHaveText('Checklist · Prepare');
+    await investigation.addNote.click();
+    await expect(new AddNoteDialogPage(page).dialog).toBeVisible();
     expect(fakeModel.calls()).toEqual([]);
   });
 

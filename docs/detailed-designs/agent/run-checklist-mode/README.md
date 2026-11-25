@@ -25,7 +25,8 @@ each step; Gattsby runs it and explains the result.", `docs/mocks/notifications/
 prefixes feed entries with "Checklist:" and "Purpose:" instead of "Agent:" and "Why:", and offers
 "Pick the next step" with "Recommended: Read device information. It’s read-only and takes a
 second." and the options "Read device information" and "Match known profiles". Recording and
-scanning require their own prompts. The Investigation options menu offers Add a note.
+scanning require their own prompts. Add a note below the prompt opens the investigation's note
+dialog. The person can dismiss the notice and still see the mode in the app bar.
 
 ## Description
 
@@ -82,9 +83,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - An FTMS treadmill, following the recommended options: Prepare questions, chooser, connect, read the
   maker, match the profile, record while the person walks and changes speed, then "Connected — FTMS"
   with speed and distance confirmed by live data (FR-049 AC1, brief MVP criterion 4).
-- A device with only unknown services: the rules find no standard service and move to the Proprietary
-  path; the recommended options record an idle baseline and activity, then find varying bytes. The
-  verdict is "Partially decoded" or "Needs a missing tool" (FR-049 AC2).
+- Journey 13 adds the Proprietary path. It supplies the idle and activity recordings and the step
+  that finds varying bytes, which complete the unknown-services path in FR-049 AC2.
 
 ### Data shapes
 

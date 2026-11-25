@@ -273,3 +273,15 @@ None; this is the first entry.
   consultation on exit now releases the session and leaves the stored verdict unset.
 - Use the fake clock for model timeouts, as in journey 5, and wait for a stored step before
   reading its evidence. Repeated missing-tool reports keep one request and reuse its ID.
+
+## Journey 7 — Investigate by checklist
+
+- The first no-model test checked API calls. Checking the scripts actually loaded then found that
+  Readiness had downloaded the adapter to discover the API was absent. A lightweight presence
+  check keeps both model modules out of that path.
+- Choosing Match known profiles before Device Information is valid. Reading new device
+  information refreshes the profile candidates before they are used.
+- Apply journey 6's per-step mode record at fallback. Commit the triggering step and mode change
+  together, and keep feed entries attributed to the mode in which they ran.
+- Keep the explicit Ready response as the trigger for a timed recording. Asking for another
+  checklist choice after Ready would let the device's activity change before recording starts.

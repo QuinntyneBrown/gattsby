@@ -20,6 +20,8 @@ export class InvestigationPage {
   readonly emergencyStop: Locator;
   readonly connectionBanner: Locator;
   readonly modeBanner: Locator;
+  readonly dismissModeBanner: Locator;
+  readonly addNote: Locator;
   readonly freeText: Locator;
   readonly leave: Locator;
   readonly liveRate: Locator;
@@ -41,6 +43,8 @@ export class InvestigationPage {
     this.emergencyStop = page.getByRole('button', { name: 'Emergency stop' });
     this.connectionBanner = page.locator('.conn-banner');
     this.modeBanner = page.getByRole('status', { name: 'Operating mode' });
+    this.dismissModeBanner = page.getByRole('button', { name: 'Dismiss mode notice' });
+    this.addNote = page.getByRole('button', { name: 'Add a note' });
     this.freeText = this.dock.getByRole('textbox');
     this.leave = page.getByRole('link', { name: 'Leave the investigation' });
     this.liveRate = this.devicePanel.locator('.live-badge');

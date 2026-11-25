@@ -1,10 +1,12 @@
-// Traces to: FR-005, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-058, FR-071, TOOL-029, NFR-001, NFR-020
+// Traces to: FR-005, FR-006, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-058, FR-071, TOOL-029, NFR-001, NFR-020
 // Given a model is available, when the person turns off full agent mode in Settings,
 // then the choice survives reload and the next investigation starts as a checklist.
 
+import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
+import { ExportDialogPage } from './pages/export.dialog.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { SettingsPage } from './pages/settings.page';
@@ -193,7 +195,8 @@ test.describe('The model proposes reads that cannot run', () => {
   }) => {
     const investigation = await beginTreadmill(page);
     await investigation.choose('Find the device');
-    await expect(new VerdictPage(page).title).toHaveText('Partially decoded');
+    await expect(investigation.modeBanner).toContainText('Continuing as a checklist.');
+    await investigation.waitForPrompt('Pick the next step');
     const id = investigation.id();
     const records = new StoredRecords(page);
     const refused = (await records.steps(id)).filter((step) => step.decidedBy === 'model');
@@ -203,10 +206,24 @@ test.describe('The model proposes reads that cannot run', () => {
       'PRECONDITION_FAILED',
     ]);
     expect(refused.every((step) => step.status === 'refused')).toBe(true);
+    expect(await records.investigation(id)).toMatchObject({
+      mode: 'checklist',
+      modeChanges: [
+        {
+          from: 'agent',
+          to: 'checklist',
+          reason: 'threeInvalidActions',
+          stage: 'identify',
+          rejectedActionIds: refused.map((step) => step.id),
+        },
+      ],
+    });
     expect(fakeModel.prompts()[1]).toContain('Unknown tool: <b>unknown</b>');
     expect(fakeModel.prompts()[2]).toContain('input for read_characteristic is incomplete');
     expect(fakeBluetooth.writes()).toEqual([]);
     expect(fakeBluetooth.calls().filter((call) => call === 'readValue')).toHaveLength(3);
+    await investigation.emergencyStop.click();
+    await expect(new VerdictPage(page).title).toBeVisible();
   });
 });
 
@@ -235,7 +252,7 @@ test.describe('The model returns unstructured or forbidden actions', () => {
   }) => {
     const investigation = await beginTreadmill(page);
     await investigation.choose('Find the device');
-    await expect(new VerdictPage(page).title).toBeVisible();
+    await expect(investigation.modeBanner).toContainText('Continuing as a checklist.');
     const refused = (await new StoredRecords(page).steps(investigation.id())).filter(
       (step) => step.decidedBy === 'model',
     );
@@ -260,9 +277,10 @@ test.describe('The model takes longer than ten seconds', () => {
     },
   });
 
-  test('aborts both timed-out calls and records a verdict after the second', async ({
+  test('aborts both timed-out calls and finishes using the same checklist at Identify', async ({
     page,
     fakeModel,
+    fakeBluetooth,
   }) => {
     const investigation = await beginTreadmill(page);
     await investigation.choose('Find the device');
@@ -271,16 +289,58 @@ test.describe('The model takes longer than ten seconds', () => {
     await page.clock.runFor(10_050);
     await expect.poll(() => fakeModel.prompts().length).toBe(2);
     await page.clock.runFor(10_050);
-    await expect(new VerdictPage(page).title).toHaveText('Partially decoded');
+    await expect(investigation.modeBanner).toContainText('Continuing as a checklist.');
+    await expect(investigation.modeBanner).toContainText('stopped answering twice in a row');
+    await expect(investigation.subtitle).toHaveText('Checklist · Identify');
+    await investigation.waitForPrompt('Pick the next step');
     const id = investigation.id();
     const records = new StoredRecords(page);
     const calls = (await records.steps(id)).filter((step) => step.decidedBy === 'model');
     expect(calls.map((step) => step.result.error?.code)).toEqual(['TIMEOUT', 'TIMEOUT']);
+    expect(calls.every((step) => step.mode === 'agent')).toBe(true);
     expect(await records.investigation(id)).toMatchObject({
       modelConsultations: 2,
-      verdict: { stopReason: 'failure' },
+      mode: 'checklist',
+      modeChanges: [
+        {
+          reason: 'twoTimeouts',
+          stage: 'identify',
+          step: calls[1].n,
+          rejectedActionIds: [],
+        },
+      ],
     });
     expect(fakeModel.calls().filter((call) => call === 'destroy')).toHaveLength(3);
+    await expect(investigation.panelValue('Maker')).toHaveText('Johnson Health Tech');
+    await investigation.choose('FTMS treadmill');
+    await investigation.choose('Read supported ranges');
+    await fakeBluetooth.setEffort(1);
+    await investigation.choose('Ready');
+    await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+    await page.clock.runFor(10_500);
+    await investigation.waitForPrompt('Now speed up to about 6 km/h. Change only the speed.');
+    await fakeBluetooth.setEffort(2);
+    await page.clock.runFor(2_100);
+    await investigation.choose('Done');
+    await investigation.waitForPrompt('Raise the incline to 2%, and keep the same speed.');
+    await investigation.choose('Skip');
+    const verdict = new VerdictPage(page);
+    await expect(verdict.title).toHaveText('Connected — FTMS');
+    await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
+    expect(
+      (await records.steps(id)).find((step) => step.tool === 'update_hypothesis'),
+    ).toMatchObject({
+      decidedBy: 'checklist',
+      mode: 'checklist',
+    });
+    expect(fakeModel.prompts()).toHaveLength(2);
+    await verdict.exportRecord.click();
+    const download = page.waitForEvent('download');
+    await new ExportDialogPage(page).fullRecord.click();
+    const exported = JSON.parse(await readFile((await (await download).path())!, 'utf8'));
+    expect(exported.investigation.modeChanges).toMatchObject([
+      { from: 'agent', to: 'checklist', reason: 'twoTimeouts', stage: 'identify' },
+    ]);
   });
 
   test('emergency stop aborts the pending model call before the timeout', async ({
@@ -378,5 +438,52 @@ test.describe('The model reports a missing tool twice', () => {
         evidence: ['s-7'],
       }),
     ]);
+  });
+});
+
+test.describe('The on-device model session stops mid-investigation', () => {
+  test.use({
+    bluetooth: ambiguousTreadmill,
+    model: {
+      availability: 'available',
+      responses: [{ error: 'InvalidStateError' }],
+    },
+  });
+
+  test('keeps Identify open and records why the checklist took over', async ({
+    page,
+    fakeModel,
+  }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect(investigation.modeBanner).toContainText('The on-device model session stopped.');
+    await investigation.waitForPrompt('Pick the next step');
+    expect(await new StoredRecords(page).investigation(investigation.id())).toMatchObject({
+      mode: 'checklist',
+      stage: 'identify',
+      modelConsultations: 1,
+      modeChanges: [{ reason: 'sessionFailed', stage: 'identify' }],
+    });
+    expect(fakeModel.prompts()).toHaveLength(1);
+  });
+});
+
+test.describe('An investigation prompt exceeds the model context', () => {
+  test.use({
+    bluetooth: ambiguousTreadmill,
+    model: { availability: 'available', responses: [], inputQuota: 512 },
+  });
+
+  test('keeps Identify open without calling prompt', async ({ page, fakeModel }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect(investigation.modeBanner).toContainText('ran out of space in the on-device model');
+    await investigation.waitForPrompt('Pick the next step');
+    expect(await new StoredRecords(page).investigation(investigation.id())).toMatchObject({
+      mode: 'checklist',
+      stage: 'identify',
+      modeChanges: [{ reason: 'contextExhausted', stage: 'identify' }],
+    });
+    expect(fakeModel.prompts()).toEqual([]);
   });
 });

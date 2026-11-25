@@ -65,7 +65,7 @@ export class ModelDecider {
         error:
           error instanceof ToolError
             ? error
-            : new ToolError('UNSUPPORTED', 'The on-device model could not make this decision.'),
+            : new ToolError('MODEL_SESSION_FAILED', 'The on-device model session stopped.'),
       };
     } finally {
       stopTimer();

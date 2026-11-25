@@ -78,8 +78,10 @@ fields added: `exportedAt` and `appVersion`. Notes are added as `notes` only whe
 
 ### Record formats 1.0 and 1.1
 
-Format 1.1 adds an operating mode to each step. It retains the 1.0 fields. For older stored
-steps, the exporter uses the investigation's mode.
+Format 1.1 adds an operating mode to each step and retains the 1.0 fields. When the model hands
+over to the checklist, `investigation.modeChanges` includes the reason, stage, step number and
+time of the change. If validation caused the fallback, the change links to each rejected step.
+For older steps without a mode, the exporter uses the investigation's initial mode.
 
 ```json
 {

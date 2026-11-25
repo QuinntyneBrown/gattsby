@@ -18,6 +18,7 @@ import { StoreError } from '../store/store-error';
 import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
+import type { ModeChange } from '../store/model/mode-change';
 import type { ModelDecision } from '../store/model/model-decision';
 import type { Observation } from '../store/model/observation';
 import type { Recording } from '../store/model/recording';
@@ -40,6 +41,7 @@ import { buildFeed } from './feed-builder';
 import type { FeedEntry } from './feed-entry';
 import { LOOP_CONFIG } from './loop-config';
 import type { ModelDecider } from './model-decider';
+import { ModelFailureRun } from './model-failure-run';
 import { checklistOptions, isBuiltStage, nextOutcome } from './playbook-rules';
 import { PromptChannel } from './prompt-channel';
 import type { RuleAction } from './rule-outcome';
@@ -99,8 +101,7 @@ export class PlaybookOrchestrator {
   private readonly observationKeys = new Set<string>();
   private noProgressRun = 0;
   private modelConsultations = 0;
-  private modelRefusals = 0;
-  private modelTimeouts = 0;
+  private readonly modelFailures = new ModelFailureRun();
   private refusedFinishes = 0;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
@@ -132,6 +133,7 @@ export class PlaybookOrchestrator {
     () => this.pending()?.action.stage ?? this.choosingStage() ?? this.state().stage,
   );
   readonly mode = computed(() => this.investigationSignal()?.mode ?? 'agent');
+  readonly modeChange = computed(() => this.investigationSignal()?.modeChanges?.at(-1) ?? null);
   readonly hypothesis = computed(() => this.hypotheses().at(-1) ?? null);
   readonly missingToolRequests = this.requests.asReadonly();
 
@@ -353,8 +355,14 @@ export class PlaybookOrchestrator {
             action = reply.action;
           }
         } else {
-          this.concludeNow = true;
-          continue;
+          refusal = new ToolError('MODEL_SESSION_FAILED', 'The on-device model session stopped.');
+          action = {
+            tool: 'model_decision',
+            input: {},
+            stage: outcome.stage,
+            ruleId: outcome.ruleId,
+            message: { text: refusal.message },
+          };
         }
       } else {
         action = outcome.action;
@@ -364,19 +372,6 @@ export class PlaybookOrchestrator {
       }
       const done = await this.runStep(id, action, modelDecision, refusal, chosenByPerson);
       if (done) return;
-      if (modelDecision) {
-        const result = this.steps().at(-1)?.result;
-        const code = result && !result.ok ? result.error.code : null;
-        this.modelTimeouts = code === 'TIMEOUT' ? this.modelTimeouts + 1 : 0;
-        this.modelRefusals = code ? this.modelRefusals + 1 : 0;
-        if (
-          !this.concludeNow &&
-          (code === 'CONTEXT_EXHAUSTED' || this.modelTimeouts >= 2 || this.modelRefusals >= 3)
-        ) {
-          this.stopReason = 'failure';
-          this.concludeNow = true;
-        }
-      }
       if (action.tool === 'finish' && ++this.refusedFinishes >= MAX_REFUSED_FINISHES) {
         throw new Error('The verdict was refused twice; no verdict is supported.');
       }
@@ -498,7 +493,13 @@ export class PlaybookOrchestrator {
       stage: action.stage,
       tool: action.tool,
       input: action.input,
-      decidedBy: modelDecision ? 'model' : chosenByPerson ? 'checklist' : 'rules',
+      decidedBy: modelDecision
+        ? 'model'
+        : refusal
+          ? 'orchestrator'
+          : chosenByPerson
+            ? 'checklist'
+            : 'rules',
       ...(modelDecision ? { modelDecision } : {}),
       ruleId: action.ruleId,
       startedAt,
@@ -603,6 +604,11 @@ export class PlaybookOrchestrator {
       return true;
     }
 
+    const modeChange = this.fallbackAfter(step, refusal);
+    const modePatch = modeChange && {
+      mode: modeChange.to,
+      modeChanges: [...(this.investigationSignal()?.modeChanges ?? []), modeChange],
+    };
     await this.store.commitStep({
       investigationId: id,
       step,
@@ -614,6 +620,7 @@ export class PlaybookOrchestrator {
       investigationPatch: {
         stage: action.stage,
         modelConsultations: this.modelConsultations,
+        ...modePatch,
         ...(newState.device?.name !== undefined ? { deviceName: newState.device.name } : {}),
       },
     });
@@ -621,9 +628,30 @@ export class PlaybookOrchestrator {
     this.observations.set(allObservations);
     this.requests.update((r) => [...r, ...requests]);
     if (hypothesis) this.hypotheses.update((h) => [...h, hypothesis]);
+    if (modePatch) {
+      this.releaseModel();
+      this.noProgressRun = 0;
+      this.investigationSignal.update((record) => record && { ...record, ...modePatch });
+    }
     this.pending.set(null);
     this.resetSignalAfterStop();
     return false;
+  }
+
+  private fallbackAfter(step: Step, refusal?: ToolError): ModeChange | null {
+    if (this.concludeNow || this.mode() !== 'agent' || (!step.modelDecision && !refusal))
+      return null;
+    const trigger = this.modelFailures.report(step.id, refusal?.code ?? null);
+    return (
+      trigger && {
+        ...trigger,
+        from: 'agent',
+        to: 'checklist',
+        at: step.endedAt,
+        stage: step.stage,
+        step: step.n,
+      }
+    );
   }
 
   private resetSignalAfterStop(): void {

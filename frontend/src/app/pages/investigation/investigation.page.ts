@@ -74,6 +74,10 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     .reading__label {
       display: block;
     }
+    .note-launch {
+      text-align: start;
+      cursor: pointer;
+    }
   `,
   template: `
     <div class="app app--fixed">
@@ -131,8 +135,11 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           aria-label="Activity"
           [attr.aria-busy]="loading() ? 'true' : null"
         >
-          @if (orchestrator.mode() === 'checklist') {
-            <g-mode-banner />
+          @if (orchestrator.mode() === 'checklist' && !modeBannerDismissed()) {
+            <g-mode-banner
+              [reason]="orchestrator.modeChange()?.reason ?? null"
+              (dismissed)="modeBannerDismissed.set(true)"
+            />
           }
           <div class="feed-scroll" #feedScroll>
             <div class="feed-wrap">
@@ -210,6 +217,15 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
             }
           }
         </section>
+        @if (orchestrator.mode() === 'checklist' && orchestrator.status() === 'running') {
+          <div class="inv__composer-wrap">
+            <div class="composer">
+              <button class="composer__input note-launch" type="button" (click)="openNote()">
+                Add a note…
+              </button>
+            </div>
+          </div>
+        }
         <aside class="inv__panel" aria-label="Hypothesis, live readings and device">
           <section>
             <p class="panel-section__label">Hypothesis</p>
@@ -350,6 +366,7 @@ export class InvestigationPage implements OnInit, OnDestroy {
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
   private readonly noteDialog = viewChild(AddNoteDialog);
   protected readonly optionsOpen = signal(false);
+  protected readonly modeBannerDismissed = signal(false);
   protected readonly noteOpen = signal(false);
   protected readonly savingNote = signal(false);
   protected readonly noteSaved = signal(false);
