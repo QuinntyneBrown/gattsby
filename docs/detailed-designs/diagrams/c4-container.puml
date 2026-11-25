@@ -1,0 +1,24 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Gattsby
+
+Person(person, "Person", "Beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  Container(sw, "Service worker", "Angular service worker", "Caches every static file for offline use")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "UUIDs, decoders' data, vendor signatures, safe limits, commands")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+System_Ext(nano, "Gemini Nano", "Prompt API")
+System_Ext(host, "Static host", "HTTPS")
+
+Rel(person, spa, "Uses", "Touch or keyboard")
+Rel(sw, host, "Fetches and caches static files", "HTTPS, same origin")
+Rel(spa, sw, "Loads through")
+Rel(spa, kb, "Reads")
+Rel(spa, idb, "Reads and writes")
+Rel(spa, device, "Scans, connects, reads, subscribes, writes with approval", "Web Bluetooth")
+Rel(spa, nano, "Asks for one JSON action", "Prompt API")
+@enduml

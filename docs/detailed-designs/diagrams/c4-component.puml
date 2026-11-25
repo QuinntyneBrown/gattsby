@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+title Components — the six parts of the Gattsby web app
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(ui, "Pages, dialogs and notifications", "Angular components", "Readiness, Home, Investigation, Verdict, Profiles, History, Settings")
+  Component(orch, "Agent orchestrator", "agent/", "Observe, decide, act loop; approvals; stop conditions; checklist mode")
+  Component(model, "Model adapter", "model/", "The only code touching LanguageModel")
+  Component(tools, "Tool registry and tools", "tools/, analysis/", "Typed tools, schemas, safety classes, result envelope")
+  Component(ble, "BLE layer", "ble/", "The only code touching navigator.bluetooth; raw traffic log; approval ledger")
+  Component(kbc, "Protocol knowledge base", "knowledge-base/", "UUIDs, decoders, vendor signatures, safe limits")
+  Component(outcome, "Outcome", "outcome/", "Hypothesis, verdict, device profile, missing-tool requests")
+  Component(store, "Investigation store", "store/", "The only code touching IndexedDB; import and export")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+System_Ext(nano, "Gemini Nano", "Prompt API")
+ContainerDb(idb, "Investigation database", "IndexedDB", "")
+
+Rel(person, ui, "Uses")
+Rel(ui, orch, "Starts, answers, approves, stops")
+Rel(orch, model, "Asks for one action (full agent mode)")
+Rel(orch, tools, "Runs validated tool calls")
+Rel(orch, outcome, "Updates hypothesis, issues verdict")
+Rel(tools, ble, "Scan, connect, read, subscribe, write")
+Rel(tools, kbc, "Decode, match, limits")
+Rel(orch, store, "Commits each step")
+Rel(outcome, store, "Stores profile and requests")
+Rel(model, nano, "prompt with responseConstraint")
+Rel(ble, device, "GATT", "Web Bluetooth")
+Rel(store, idb, "Transactions")
+@enduml
