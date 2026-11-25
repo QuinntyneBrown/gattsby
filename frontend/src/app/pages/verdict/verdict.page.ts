@@ -66,6 +66,22 @@ import { verdictView, type VerdictView } from './verdict-view';
                   <p class="tool-card__text">{{ request.reason }}</p>
                 </section>
               }
+              @if (view()?.readable?.length) {
+                <section class="group">
+                  <div class="group__head"><h2>Can read</h2></div>
+                  <ul class="group__items">
+                    @for (item of view()!.readable; track item.key) {
+                      <li>
+                        <span class="group__k">{{ item.key }}</span>
+                        <span class="group__v"
+                          ><bdi>{{ item.value }}</bdi></span
+                        >
+                        <g-confidence-badge word="confirmed" />
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
               @if (view()?.observed?.length) {
                 <section class="group">
                   <div class="group__head"><h2>Observed</h2></div>

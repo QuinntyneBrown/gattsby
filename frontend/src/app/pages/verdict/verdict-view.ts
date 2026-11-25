@@ -13,6 +13,7 @@ export interface VerdictItem {
 export interface VerdictView {
   readonly meta: string;
   readonly protocol: string;
+  readonly readable: readonly VerdictItem[];
   readonly observed: readonly VerdictItem[];
   readonly undetermined: readonly VerdictItem[];
 }
@@ -55,14 +56,8 @@ export function verdictView(
         verdict?.kind === 'connected' ? '' : ' · not verified with live data'
       }`
     : 'Not identified';
-  const observed = observations
-    .filter((o) => OBSERVED.has(o.kind))
-    .map((o): VerdictItem => {
-      const [key, ...rest] = o.text.split(': ');
-      return rest.length > 0
-        ? { key, value: rest.join(': '), tag: o.tag }
-        : { key: o.text, value: '', tag: o.tag };
-    });
+  const observed = observations.filter((o) => OBSERVED.has(o.kind)).map(verdictItem);
+  const readable = observations.filter((o) => o.kind === 'metric-confirmed').map(verdictItem);
   const undetermined: VerdictItem[] = [];
   if (verdict?.kind !== 'connected' && hypothesis) {
     undetermined.push({ key: 'Live data', value: 'no metric has been confirmed yet', tag: null });
@@ -79,7 +74,12 @@ export function verdictView(
     value: 'anything outside the known list is invisible',
     tag: null,
   });
-  return { meta, protocol, observed, undetermined };
+  return { meta, protocol, readable, observed, undetermined };
+}
+
+function verdictItem(observation: { text: string; tag: ObservationTag }): VerdictItem {
+  const [key, ...rest] = observation.text.split(': ');
+  return { key, value: rest.join(': '), tag: observation.tag };
 }
 
 function capitalise(text: string): string {

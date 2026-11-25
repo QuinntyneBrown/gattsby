@@ -126,3 +126,11 @@ None; this is the first entry.
   adding the dedicated tool cannot accidentally read the same characteristics twice.
 - Read the ranges during Identify, before asking the person to move. The answers survive even if
   they skip live confirmation.
+
+## Journey 3, slice 4: Issue the Connected verdict
+
+- The new critical path failed first with "Partially decoded". The verdict builder already
+  accepted a `metric-confirmed` observation, so the confirmation step now publishes that kind
+  with raw evidence for both Speed and Distance when the readings support it.
+- Check the counter against its last baseline reading while the belt moves. The unchanged-speed
+  case still records the person’s answer without treating it as evidence that speed was confirmed.

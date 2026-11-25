@@ -27,23 +27,33 @@ export const decodeStandardTool = entry<
   },
   async run(input, ctx) {
     if (!Number.isFinite(input.doneAt)) return fail('INVALID_INPUT', 'The action time is missing.');
-    const { baseline, qualifying, startedAt } = await ctx.confirmationCheck.finish(
-      input.doneAt,
-      ctx.ble,
-      ctx.signal,
-    );
+    const { baseline, qualifying, startedAt, baselineDistance, distance } =
+      await ctx.confirmationCheck.finish(input.doneAt, ctx.ble, ctx.signal);
     const confirmed = !!(baseline && qualifying && startedAt !== null);
     const summary = confirmed
       ? `Speed went from ${baseline.value.toFixed(1)} to ${qualifying.value.toFixed(1)} km/h within ${Math.ceil((qualifying.t - startedAt) / 1000)} s.`
       : 'Speed did not move enough to confirm it.';
     const observation = ctx.observe({
-      kind: 'metricConfirmation',
+      kind: confirmed ? 'metric-confirmed' : 'metricConfirmation',
       subject: 'speed',
       value: confirmed ? 'confirmed' : 'notConfirmed',
-      text: summary,
+      text: confirmed ? `Speed: ${qualifying.value.toFixed(1)} km/h` : summary,
       tag: confirmed ? 'confirmed' : 'likely',
       evidence: [baseline?.rawLogId, qualifying?.rawLogId].filter((id) => id !== undefined),
     });
-    return ok(summary, { confirmed }, [observation]);
+    const evidence = [observation];
+    if (baselineDistance && distance) {
+      evidence.push(
+        ctx.observe({
+          kind: 'metric-confirmed',
+          subject: 'distance',
+          value: 'confirmed',
+          text: `Distance: ${distance.value} m`,
+          tag: 'confirmed',
+          evidence: [baselineDistance.rawLogId, distance.rawLogId],
+        }),
+      );
+    }
+    return ok(summary, { confirmed }, evidence);
   },
 });

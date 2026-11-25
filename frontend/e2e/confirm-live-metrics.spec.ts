@@ -1,5 +1,5 @@
 // Acceptance Test
-// Traces to: FR-024, FR-025, FR-026, FR-027, FR-060, TOOL-013, TOOL-015, TOOL-026, TOOL-031
+// Traces to: FR-024, FR-025, FR-026, FR-027, FR-054, FR-057, FR-060, TOOL-013, TOOL-015, TOOL-026, TOOL-031
 // Description: Show live Treadmill Data and confirm it only when it follows a physical action.
 
 import type { Page } from '@playwright/test';
@@ -89,7 +89,7 @@ test('Given a walking baseline, when the person speeds up during the prompt, the
     .poll(() => records.observations(id))
     .toContainEqual(
       expect.objectContaining({
-        kind: 'metricConfirmation',
+        kind: 'metric-confirmed',
         subject: 'speed',
         value: 'confirmed',
       }),
@@ -99,6 +99,40 @@ test('Given a walking baseline, when the person speeds up during the prompt, the
     2,
   );
 });
+
+test(
+  'Given treadmill speed and distance both follow the walk, when the investigation concludes, then the verdict is Connected — FTMS and lists both metrics',
+  {
+    tag: '@critical',
+  },
+  async ({ page, fakeBluetooth, fakeModel }) => {
+    const investigation = await startRecording(page, fakeBluetooth);
+    const id = investigation.id();
+    await page.clock.runFor(10_500);
+    await investigation.waitForPrompt('Now speed up to about 6 km/h. Change only the speed.');
+    await fakeBluetooth.setEffort(2);
+    await page.clock.runFor(2_100);
+    await investigation.choose('Done');
+
+    const verdict = new VerdictPage(page);
+    await expect(verdict.title).toHaveText('Connected — FTMS');
+    await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
+    await expect(verdict.item('Can read', 'Distance')).toContainText('confirmed');
+    const records = new StoredRecords(page);
+    expect((await records.investigation(id))?.verdict?.kind).toBe('connected');
+    const observations = await records.observations(id);
+    for (const metric of ['speed', 'distance']) {
+      const observation = observations.find(
+        (item) => item.kind === 'metric-confirmed' && item.subject === metric,
+      );
+      expect(
+        new Set(observation?.evidence.filter((ref) => ref.startsWith('r-'))).size,
+      ).toBeGreaterThanOrEqual(2);
+    }
+    expect(fakeModel.prompts()).toEqual([]);
+    expect(fakeBluetooth.writes()).toEqual([]);
+  },
+);
 
 test('Given speed stays at the baseline, when 15 seconds pass after Done, then the person is asked what happened and the verdict remains Partially decoded', async ({
   page,

@@ -16,35 +16,50 @@ export class ConfirmationCheck {
   private readonly baseline: MetricSample[] = [];
   private reference: MetricSample | null = null;
   private qualifying: MetricSample | null = null;
+  private baselineDistance: MetricSample | null = null;
+  private qualifyingDistance: MetricSample | null = null;
   private openedAt: number | null = null;
   private wake: (() => void) | null = null;
 
   begin(): void {
     this.reference = baselineMedian(this.baseline);
     this.qualifying = null;
+    this.qualifyingDistance = null;
     this.openedAt = this.clock.now();
   }
 
   sample(fields: readonly DecodedMetric[], rawLogId: string, recording: boolean): void {
     const speed = fields.find((field) => field.metric === 'speed');
-    if (!speed) return;
-    const sample = { value: speed.value, t: this.clock.now(), rawLogId };
-    if (recording && this.baseline.length < BASELINE_LIMIT) this.baseline.push(sample);
-    if (
-      this.openedAt !== null &&
-      this.reference &&
-      !this.qualifying &&
-      sample.value - this.reference.value >= MIN_SPEED_CHANGE
-    ) {
-      this.qualifying = sample;
-      this.wake?.();
+    const distance = fields.find((field) => field.metric === 'distance');
+    const t = this.clock.now();
+    if (recording) {
+      if (speed && this.baseline.length < BASELINE_LIMIT) {
+        this.baseline.push({ value: speed.value, t, rawLogId });
+      }
+      if (distance) this.baselineDistance = { value: distance.value, t, rawLogId };
+      return;
     }
+    if (this.openedAt === null || !this.reference || !speed) return;
+    this.qualifying ??=
+      speed.value - this.reference.value >= MIN_SPEED_CHANGE
+        ? { value: speed.value, t, rawLogId }
+        : null;
+    if (
+      this.qualifying &&
+      speed.value > 0 &&
+      distance &&
+      this.baselineDistance &&
+      distance.value > this.baselineDistance.value
+    ) {
+      this.qualifyingDistance ??= { value: distance.value, t, rawLogId };
+    }
+    if (this.hasResult()) this.wake?.();
   }
 
   async finish(doneAt: number, ble: BleLayer, signal: AbortSignal) {
     const startedAt = this.openedAt;
     const deadline = doneAt + WINDOW_MS;
-    if (this.reference && !this.qualifying && ble.connection().status === 'connected') {
+    if (this.reference && !this.hasResult() && ble.connection().status === 'connected') {
       await new Promise<void>((resolve, reject) => {
         const cancel = this.clock.setTimeout(close, Math.max(0, deadline - this.clock.now()));
         const disconnect = ble.disconnected.subscribe(() => close());
@@ -67,7 +82,19 @@ export class ConfirmationCheck {
     }
     const candidate = this.qualifying;
     const qualifying = candidate && candidate.t <= deadline ? candidate : null;
+    const farther = this.qualifyingDistance;
+    const distance = qualifying && farther && farther.t <= deadline ? farther : null;
     this.openedAt = null;
-    return { baseline: this.reference, qualifying, startedAt };
+    return {
+      baseline: this.reference,
+      qualifying,
+      startedAt,
+      baselineDistance: this.baselineDistance,
+      distance,
+    };
+  }
+
+  private hasResult(): boolean {
+    return !!this.qualifying && (!this.baselineDistance || !!this.qualifyingDistance);
   }
 }

@@ -68,7 +68,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 | Metric | Action asked | Confirmed when | Source |
 |---|---|---|---|
 | Speed (treadmill, bike) | "Now speed up to about 6 km/h. Change only the speed." | A value in the window is at least 0.5 km/h above the baseline median | FR-025 AC1, A-12 |
-| Total distance | Keep the belt moving | The value increases during the window while decoded speed is above 0 | A-12 |
+| Total distance | Keep the belt moving during the speed check | The counter increases from its last baseline reading during the window while decoded speed is above 0 and the speed change is confirmed | A-12 |
 | Elapsed time | None; read while recording | The value increases during the recording | `<TO SUPPLY>` minimum (the mock marks it confirmed from "0:52 → 1:02") |
 | Inclination | "Raise the incline to 2%" | `<TO SUPPLY>` minimum change | Mock prompt |
 | Cadence, power, resistance level, heart rate | `<TO SUPPLY>` | `<TO SUPPLY>` | FR-025 names only speed |
