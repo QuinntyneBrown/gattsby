@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Apply heuristics first
+
+enum PlaybookStage {
+  prepare
+  find
+  identify
+  standard
+  proprietary
+  control
+  conclude
+}
+
+class Playbook {
+  +stages: StageDefinition[]
+  +stage(id: PlaybookStage): StageDefinition
+}
+
+class StageDefinition {
+  +id: PlaybookStage
+  +label: string
+  +rules: PlaybookRule[]
+  +check: StageCheck
+  +optional: boolean
+}
+
+class PlaybookRule {
+  +id: string
+  +priority: number
+  +when: (s: SessionSnapshot) => boolean
+  +propose: (s: SessionSnapshot) => AgentAction
+  +why: string
+}
+
+class StageCheck {
+  +done: (s: SessionSnapshot) => boolean
+  +next: (s: SessionSnapshot) => PlaybookStage
+}
+
+class SessionSnapshot {
+  +stage: PlaybookStage
+  +observations: Observation[]
+  +hypothesis: Hypothesis
+  +stepsRun: string[]
+  +skipped: string[]
+  +capabilities: CapabilityReport
+}
+
+abstract class HeuristicVerdict {
+  +kind: "decided" | "ambiguous" | "stageDone"
+}
+class Decided {
+  +action: AgentAction
+  +ruleId: string
+  +why: string
+}
+class Ambiguous {
+  +candidates: AgentAction[]
+}
+class StageDone {
+  +next: PlaybookStage
+}
+
+class PlaybookHeuristics <<pure>> {
+  +next(snapshot: SessionSnapshot): HeuristicVerdict
+}
+
+abstract class NextStepSource <<contract>> {
+  +next(verdict: HeuristicVerdict, signal: AbortSignal): Promise<Decision>
+}
+
+class AgentOrchestrator {
+  +step(): Promise<void>
+}
+
+Playbook "1" *-- "7" StageDefinition
+StageDefinition "1" *-- "*" PlaybookRule
+StageDefinition *-- StageCheck
+StageDefinition --> PlaybookStage
+HeuristicVerdict <|-- Decided
+HeuristicVerdict <|-- Ambiguous
+HeuristicVerdict <|-- StageDone
+PlaybookHeuristics ..> Playbook : evaluates
+PlaybookHeuristics ..> SessionSnapshot : reads
+PlaybookHeuristics ..> HeuristicVerdict : returns
+AgentOrchestrator ..> PlaybookHeuristics : first
+AgentOrchestrator ..> NextStepSource : then
+@enduml

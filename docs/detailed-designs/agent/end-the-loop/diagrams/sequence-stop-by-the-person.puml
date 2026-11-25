@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Stop by the person or by emergency stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "StopInvestigationDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "EmergencyStopController" as estop
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "FinishTool" as finish
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+alt The person stops
+  person -> page : Tap Stop
+  page -> dialog : Open
+  person -> dialog : Confirm stop
+  dialog -> orch : stop()
+  orch -> orch : abortCurrentStep(personStopped)
+  model --> orch : Pending call rejected with AbortError (FR-047)
+  orch -> store : Commit the step in progress as aborted
+  orch -> finish : run(Stopped by the person, what was learned) (FR-045)
+  finish -> store : Verdict, profile, LoopEnd personStopped
+  orch -> ble : disconnect() within 2 s (FR-009)
+  ble -> device : GATT disconnect
+else The person taps Emergency stop
+  person -> page : Tap Emergency stop
+  page -> estop : trigger()
+  estop -> ble : Write FTMS Stop, then Reset (FR-039)
+  ble -> device : 08 01
+  estop -> orch : end(emergencyStopped)
+  orch -> orch : abortCurrentStep(emergencyStopped)
+  orch -> finish : run(verdict from evidence and reason, summary)
+  finish -> store : Verdict, profile, LoopEnd emergencyStopped
+  orch -> ble : disconnect()
+end
+orch -> model : destroy(); clear timers and subscriptions
+orch -> page : Route to the Verdict page
+@enduml

@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Validate and run an action
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Hands each action to the validator, then the executor")
+  Component(validator, "ActionValidator", "Service", "Schema, tool, stage, capability, input, preconditions, safety")
+  Component(schema, "SchemaValidator", "Pure helper", "JSON Schema checks without eval or new Function")
+  Component(registry, "ToolRegistry", "Service", "Tool definitions: schemas, stages, preconditions, safety class")
+  Component(limits, "SafetyLimits", "Knowledge base", "Refuses unsafe values")
+  Component(executor, "ToolExecutor", "Service", "Runs a PendingCall; catches every exception")
+  Component(gate, "ApprovalGate", "Service", "Approval for write and control calls")
+  Component(tool, "Tool", "One per file in tools/", "run(input, ctx) returns ToolResult")
+  Component(summary, "ResultSummary", "Pure helper", "One line, at most 200 characters")
+  Component(feed, "ActivityFeed", "Service", "Running and completed entries")
+  Component(mode, "ModeController", "Service", "Falls back after 3 refusals in a row")
+  ComponentDb(store, "InvestigationStore", "Store", "commitStep in one transaction")
+}
+
+Rel(orch, validator, "parse(raw), validate(action, snapshot)")
+Rel(validator, registry, "Resolves the tool")
+Rel(validator, schema, "Action and input schemas")
+Rel(validator, limits, "Checks command values")
+Rel(orch, executor, "run(pendingCall, signal)")
+Rel(executor, gate, "Asks approval for write or control")
+Rel(executor, tool, "run(input, ToolContext)")
+Rel(executor, schema, "Output schema")
+Rel(executor, summary, "normalise(summary)")
+Rel(executor, store, "commitStep")
+Rel(executor, feed, "Completes the entry")
+Rel(orch, store, "Commits a refusal as a step")
+Rel(orch, mode, "Third refusal in a row")
+@enduml

@@ -1,0 +1,113 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Show agent activity
+
+enum EntryKind {
+  stage
+  message
+  reply
+  step
+  hypothesis
+}
+
+enum StepStatus {
+  running
+  ok
+  failed
+  refused
+  aborted
+}
+
+class ActivityEntry {
+  +id: string
+  +kind: EntryKind
+  +at: number
+}
+
+class StageEntry {
+  +stage: PlaybookStage
+}
+class MessageEntry {
+  +speaker: "agent" | "checklist"
+  +text: string
+  +why: string
+}
+class ReplyEntry {
+  +text: string
+}
+class StepEntry {
+  +toolName: string
+  +label: StepLabel
+  +status: StepStatus
+  +durationMs: number
+  +summary: string
+  +observations: ObservationLine[]
+  +evidenceIds: string[]
+}
+class HypothesisEntry {
+  +label: string
+  +from: number
+  +to: number
+  +confidence: string
+}
+
+class StepLabel {
+  +running: string
+  +purpose: string
+  +detail: string
+}
+
+class ActivityFeed {
+  +entries: Signal<ActivityEntry[]>
+  +stage(stage: PlaybookStage): void
+  +say(speaker: string, text: string, why: string): void
+  +reply(text: string): void
+  +startStep(call: PendingCall): string
+  +completeStep(id: string, result: ToolResult, observations: Observation[]): void
+  +hypothesisChanged(from: Hypothesis, to: Hypothesis): void
+  +loadEarlier(): Promise<void>
+}
+
+class StepLabeller <<pure>> {
+  +label(call: PendingCall, kb: KnowledgeBase): StepLabel
+}
+
+class InvestigationPage <<page>>
+
+class StageTrack <<component>> {
+  +stages: input<StageStatus[]>
+}
+class ActivityFeedList <<component>> {
+  +entries: input<ActivityEntry[]>
+  +mode: input<OperatingMode>
+}
+class RunningStep <<component>> {
+  +label: input<StepLabel>
+}
+
+ActivityEntry <|-- StageEntry
+ActivityEntry <|-- MessageEntry
+ActivityEntry <|-- ReplyEntry
+ActivityEntry <|-- StepEntry
+ActivityEntry <|-- HypothesisEntry
+ActivityEntry --> EntryKind
+StepEntry --> StepStatus
+StepEntry *-- StepLabel
+ActivityFeed "1" *-- "*" ActivityEntry
+ActivityFeed ..> StepLabeller
+InvestigationPage ..> ActivityFeed : reads
+InvestigationPage ..> StageTrack
+InvestigationPage ..> ActivityFeedList
+InvestigationPage ..> RunningStep
+@enduml

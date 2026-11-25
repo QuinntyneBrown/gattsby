@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Apply heuristics first
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, Prompt API, IndexedDB")
+System_Ext(nano, "Gemini Nano", "On-device model, consulted only for ambiguous steps")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Answers prompts; picks steps in checklist mode")
+Rel(gattsby, chrome, "Runs rule-decided steps", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE")
+Rel(gattsby, nano, "Asks only when the rules leave a choice", "Prompt API")
+@enduml

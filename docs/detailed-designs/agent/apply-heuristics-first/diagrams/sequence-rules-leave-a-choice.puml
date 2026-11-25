@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Rules leave a choice
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+  participant "ModelDecider" as decider
+  participant "ChecklistRunner" as checklist
+  participant "PromptChannel" as channel
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+end box
+
+orch -> heur : next(snapshot: only 0xFE00, KS- name prefix)
+heur -> heur : No standard service; vendor lookup done; no rule fires alone
+heur --> orch : ambiguous: baseline_vs_activity or read_characteristic 0xFE01 (FR-021 AC2)
+alt Full agent mode
+  orch -> decider : next(ambiguous, signal)
+  decider -> model : prompt(state, responseConstraint, signal) (FR-041, FR-042)
+  model --> decider : call_tool baseline_vs_activity
+  decider --> orch : Decision answered
+else Checklist mode
+  orch -> checklist : next(ambiguous, signal)
+  checklist -> channel : post(question: "Pick the next step", candidates)
+  channel -> card : Show choices
+  person -> card : Tap "Record idle, then activity"
+  card --> channel : PromptResponse
+  channel --> checklist : choice
+  checklist --> orch : Decision: baseline_vs_activity, decidedBy person
+end
+orch -> validator : validate(action) (FR-043)
+validator --> orch : PendingCall; runs as any other step
+@enduml

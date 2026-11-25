@@ -1,0 +1,90 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — End the loop
+
+enum StopReason {
+  finished
+  confident
+  stepBudget
+  noProgress
+  personStopped
+  emergencyStopped
+}
+
+class AgentConfig {
+  +finishThreshold: number = 0.9
+  +stepBudget: number = 40
+  +noProgressLimit: number = 5
+}
+
+class LoopCounters {
+  +stepCount: number
+  +stepsWithoutProgress: number
+  +consecutiveRefusals: number
+  +consecutiveTimeouts: number
+}
+
+class StopConditions <<pure>> {
+  +recordStep(counters: LoopCounters, step: InvestigationStep, newObservations: number): LoopCounters
+  +afterStep(snapshot: SessionSnapshot, counters: LoopCounters): StopReason | null
+}
+
+class "observationFingerprint" as Fingerprint <<pure>> {
+  +fingerprint(o: Observation): string
+}
+
+class LoopEnd {
+  +reason: StopReason
+  +label: string
+  +atStep: number
+  +stage: PlaybookStage
+  +endedAt: number
+  +verdict: Verdict
+  +profileId: string
+}
+
+class AgentOrchestrator {
+  -ending: boolean
+  +stop(): void
+  +end(reason: StopReason): Promise<LoopEnd>
+}
+
+class FinishTool {
+  +run(input: FinishInput, ctx: ToolContext): Promise<ToolResult<FinishOutput>>
+}
+
+class VerdictService {
+  +decide(record: Investigation, reason: StopReason): Verdict
+}
+
+class DeviceProfileBuilder {
+  +build(record: Investigation, verdict: Verdict): DeviceProfile
+}
+
+class EmergencyStopController {
+  +trigger(): Promise<void>
+}
+
+StopConditions ..> AgentConfig : reads limits
+StopConditions ..> LoopCounters : updates
+StopConditions ..> Fingerprint : progress
+StopConditions ..> StopReason : returns
+AgentOrchestrator ..> StopConditions : after each step
+AgentOrchestrator ..> FinishTool : on every reason but finished
+AgentOrchestrator ..> LoopEnd : records
+EmergencyStopController ..> AgentOrchestrator : end(emergencyStopped)
+FinishTool ..> VerdictService
+FinishTool ..> DeviceProfileBuilder
+LoopEnd --> StopReason
+@enduml

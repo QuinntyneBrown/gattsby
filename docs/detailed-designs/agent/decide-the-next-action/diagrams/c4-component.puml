@@ -1,0 +1,35 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Decide the next action
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "One step at a time; owns the step's AbortController")
+  Component(heur, "PlaybookHeuristics", "Service", "Deterministic rules; returns decided or ambiguous")
+  Component(mode, "ModeController", "Service", "Chooses the NextStepSource; falls back to checklist mode")
+  Component(decider, "ModelDecider", "NextStepSource", "Builds, fits and sends one decision; 10 s timeout")
+  Component(builder, "DecisionStateBuilder", "Service", "Facts, hypothesis, last 5 summaries, stage, allowed tools")
+  Component(budget, "PromptBudget", "Pure helper", "Drops oldest summaries, then shortens tool descriptions")
+  Component(schema, "ActionSchema", "Pure helper", "responseConstraint: exactly one of five actions")
+  Component(registry, "ToolRegistry", "Service", "Tool list for the stage and capabilities")
+  Component(hypo, "HypothesisTracker", "Service", "Current hypothesis and deterministic confidence")
+  Component(validator, "ActionValidator", "Service", "Parses and validates the raw answer")
+  Component(adapter, "PromptApiModelAdapter", "Model adapter", "The only code that touches LanguageModel")
+  ComponentDb(store, "InvestigationStore", "Store", "Step records and summaries")
+}
+System_Ext(nano, "Gemini Nano", "Chrome Prompt API")
+
+Rel(orch, heur, "next(stage, observations)")
+Rel(orch, mode, "Gets the current NextStepSource")
+Rel(orch, decider, "next(verdict, signal)")
+Rel(decider, builder, "build()")
+Rel(builder, registry, "toolListFor(stage, capabilities)")
+Rel(builder, hypo, "current()")
+Rel(builder, store, "Last 5 summaries")
+Rel(decider, budget, "fit(prompt, budget)")
+Rel(decider, schema, "build(toolNames)")
+Rel(decider, adapter, "prompt(text, responseConstraint, signal)")
+Rel(adapter, nano, "LanguageModel prompt()", "Prompt API")
+Rel(orch, validator, "Validates the Decision's raw answer")
+Rel(decider, mode, "Reports timeouts and context exhaustion")
+@enduml

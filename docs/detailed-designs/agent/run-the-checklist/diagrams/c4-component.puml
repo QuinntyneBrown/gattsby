@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Run the checklist
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(mode, "ModeController", "Service", "OperatingMode; chooses the NextStepSource")
+  Component(orch, "AgentOrchestrator", "Service", "Same loop in both modes")
+  Component(heur, "PlaybookHeuristics", "Pure service", "decided, ambiguous or stageDone")
+  Component(runner, "ChecklistRunner", "NextStepSource", "Stands in for the model")
+  Component(choices, "ChecklistChoices", "Pure helper", "Recommended first; at most 4 choices")
+  Component(channel, "PromptChannel", "Service", "Posts one PersonPrompt; awaits the answer")
+  Component(card, "PromptCard", "Presentation component", "Pick the next step")
+  Component(validator, "ActionValidator", "Service", "Validates the pick")
+  Component(executor, "ToolExecutor", "Service", "Runs the step; approval for write or control")
+  Component(verdict, "VerdictService", "Service", "Same verdicts as full agent mode")
+}
+
+Rel(mode, orch, "Sets ChecklistRunner as source")
+Rel(orch, heur, "next(snapshot)")
+Rel(orch, runner, "next(verdict, signal)")
+Rel(runner, choices, "build(verdict, snapshot)")
+Rel(runner, channel, "post(question)")
+Rel(channel, card, "Renders")
+Rel(person, card, "Taps a choice")
+Rel(orch, validator, "validate(pick, person)")
+Rel(orch, executor, "run(pendingCall)")
+Rel(executor, verdict, "finish at Conclude")
+@enduml

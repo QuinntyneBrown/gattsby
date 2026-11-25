@@ -1,0 +1,146 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Decide the next action
+
+enum DecisionOutcome {
+  answered
+  timedOut
+  aborted
+  contextExhausted
+  failed
+}
+
+class AgentOrchestrator {
+  -stepController: AbortController
+  +step(): Promise<void>
+  +abortCurrentStep(reason: string): void
+}
+
+abstract class NextStepSource <<contract>> {
+  +next(verdict: HeuristicVerdict, signal: AbortSignal): Promise<Decision>
+}
+
+class ModelDecider {
+  -consecutiveTimeouts: number
+  +next(verdict: HeuristicVerdict, signal: AbortSignal): Promise<Decision>
+}
+
+class DecisionStateBuilder {
+  +build(session: InvestigationSession): Promise<DecisionState>
+}
+
+class DecisionState {
+  +stage: PlaybookStage
+  +deviceFacts: DeviceFact[]
+  +hypothesis: HypothesisSummary
+  +recentSummaries: string[]
+  +allowedTools: ToolListEntry[]
+}
+
+class DeviceFact {
+  +label: string
+  +value: string
+}
+
+class HypothesisSummary {
+  +protocol: string
+  +deviceType: string
+  +maker: string
+  +model: string
+  +confidence: number
+}
+
+class ToolListEntry {
+  +name: string
+  +description: string
+  +safetyClass: SafetyClass
+  +inputSchema: JsonSchema
+}
+
+class SystemPrompt {
+  +role: string
+  +safety: string <<required>>
+}
+
+class DecisionPrompt {
+  +system: SystemPrompt
+  +tools: ToolListEntry[]
+  +state: DecisionState
+  +droppedSummaries: number
+  +toolDescriptionLevel: "full" | "firstSentence" | "schemaOnly"
+  +render(): string
+}
+
+class PromptBudget <<pure>> {
+  +fit(prompt: DecisionPrompt, budget: number, measure: (t: string) => Promise<number>): Promise<DecisionPrompt | "contextExhausted">
+}
+
+class ActionSchema <<pure>> {
+  +build(toolNames: string[]): JsonSchema
+}
+
+class Decision {
+  +outcome: DecisionOutcome
+  +rawAnswer: string | null
+  +timing: DecisionTiming
+  +promptTokens: number
+}
+
+class DecisionTiming {
+  +buildMs: number
+  +modelMs: number
+  +validateMs: number
+  +totalMs: number
+}
+
+class AgentConfig {
+  +modelTimeoutMs: number = 10000
+  +recentSummaryCount: number = 5
+  +answerReserveTokens: number = 512
+}
+
+abstract class ModelAdapter <<contract>> {
+  +availability(): Promise<ModelAvailability>
+  +createSession(signal: AbortSignal): Promise<ModelSession>
+}
+
+abstract class ModelSession <<contract>> {
+  +inputBudget(): number
+  +measure(text: string): Promise<number>
+  +prompt(text: string, options: PromptOptions): Promise<string>
+  +destroy(): void
+}
+
+class PromptApiModelAdapter
+
+AgentOrchestrator ..> NextStepSource : asks when ambiguous
+NextStepSource <|-- ModelDecider
+ModelDecider ..> DecisionStateBuilder : builds state
+ModelDecider ..> PromptBudget : fits prompt
+ModelDecider ..> ActionSchema : responseConstraint
+ModelDecider --> ModelSession : prompts
+ModelDecider ..> AgentConfig : reads
+ModelDecider ..> Decision : returns
+DecisionStateBuilder ..> DecisionState : builds
+DecisionPrompt *-- SystemPrompt
+DecisionPrompt *-- DecisionState
+DecisionPrompt "1" *-- "*" ToolListEntry
+DecisionState "1" *-- "*" DeviceFact
+DecisionState *-- HypothesisSummary
+DecisionState "1" *-- "*" ToolListEntry
+Decision --> DecisionOutcome
+Decision *-- DecisionTiming
+ModelAdapter <|-- PromptApiModelAdapter
+ModelAdapter ..> ModelSession : creates
+@enduml

@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Show agent activity
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model; its text is untrusted")
+System_Ext(device, "Device", "Machine under investigation; its names and values are untrusted")
+
+Rel(person, gattsby, "Reads the stage, the running step and the activity feed")
+Rel(gattsby, nano, "Receives actions with reasons", "Prompt API")
+Rel(gattsby, device, "Receives names and values", "Web Bluetooth")
+@enduml

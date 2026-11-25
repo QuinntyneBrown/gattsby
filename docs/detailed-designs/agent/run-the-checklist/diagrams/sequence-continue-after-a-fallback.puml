@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Continue after a fallback
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ModeBanner" as banner
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ModelDecider" as decider
+  participant "ModeController" as mode
+  participant "InvestigationSession" as session
+  participant "ChecklistRunner" as runner
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+
+orch -> decider : next(ambiguous, signal)
+decider --> orch : Decision timedOut (second in a row)
+orch -> store : Commit step: timed out
+orch -> mode : fallBack(modelTimeout) (FR-006)
+mode -> model : destroy session
+mode -> session : mode = checklist; stage stays Identify
+note right of session : Observations and hypothesis are untouched
+mode -> orch : source = ChecklistRunner
+mode -> banner : "Continuing as a checklist."
+banner --> person : Everything found so far is kept
+orch -> runner : next(verdict at Identify, signal) (FR-049)
+runner -> card : "Pick the next step"
+person -> card : Tap a choice
+card --> runner : choice
+runner --> orch : Decision, decidedBy person
+note over orch, store : The rest of the investigation runs as a checklist and ends with the same kinds of verdict and profile
+@enduml

@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Stop on a limit
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as vpage
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "StopConditions" as stop
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "FinishTool" as finish
+  participant "VerdictService" as verdict
+  participant "DeviceProfileBuilder" as profile
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+
+orch -> store : commitStep(step 40)
+orch -> stop : recordStep(counters, step 40, newObservations)
+orch -> stop : afterStep(snapshot, counters)
+alt 40 steps committed
+  stop --> orch : stepBudget (FR-045 AC1)
+else 5 consecutive steps added no observation
+  stop --> orch : noProgress (FR-045 AC2)
+end
+orch -> orch : end(reason): refuse further steps
+orch -> finish : run(verdict from evidence, summary)
+finish -> verdict : decide(record, reason)
+verdict --> finish : Partially decoded
+finish -> profile : build(record, verdict)
+profile --> finish : DeviceProfile
+finish -> store : saveProfile; commit LoopEnd "step budget reached"
+finish --> orch : verdict, profileId
+orch -> model : destroy()
+orch -> ble : disconnect(); flush raw log (FR-018)
+orch -> vpage : Route to /investigations/:id/verdict
+vpage --> person : One verdict and what was learned
+@enduml

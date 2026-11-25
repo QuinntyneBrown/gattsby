@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Rules decide the step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+  participant "ModelDecider" as decider
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "MatchKnownProfilesTool" as match
+  participant "HypothesisTracker" as hypo
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+executor -> match : run(layout, name)
+match --> executor : Horizon / Johnson FTMS treadmill family, above threshold, 10+ points ahead (FR-021)
+executor -> store : commitStep(decidedBy rule)
+orch -> heur : next(snapshot at Identify)
+heur --> orch : decided: update_hypothesis FTMS treadmill (FR-046)
+orch -> decider : next(decided, signal)
+decider --> orch : rule's action at once; no model call
+orch -> validator : validate(update_hypothesis, rule)
+validator --> orch : PendingCall
+orch -> executor : run
+executor -> hypo : apply(proposal); deterministic score
+hypo --> executor : version 2, confidence 0.65
+orch -> heur : next(snapshot)
+heur --> orch : stageDone: Standard path
+orch -> page : Stage reads "Standard path"
+orch -> heur : next(snapshot at Standard path)
+heur --> orch : decided: subscribe_and_record Treadmill Data, FTMS decoder first
+orch -> decider : next(decided, signal)
+decider --> orch : rule's action; no model call
+orch -> validator : validate(subscribe_and_record, rule)
+note over orch, store : Model consultations stay at most 5 for the whole FTMS investigation (FR-046)
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — End the loop
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Stop and Emergency stop")
+  Component(estop, "EmergencyStopController", "Service", "Sends stop or reset, then ends the loop")
+  Component(orch, "AgentOrchestrator", "Service", "end(reason): the single exit of the loop")
+  Component(stop, "StopConditions", "Pure service", "finished, confident, stepBudget, noProgress")
+  Component(finish, "FinishTool", "Tool", "Issues the verdict and builds the profile")
+  Component(verdict, "VerdictService", "Service", "Verdict from the evidence and the stop reason")
+  Component(profile, "DeviceProfileBuilder", "Service", "Profile from what is known")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Disconnects; flushes the raw log")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "Destroys the session")
+  Component(vpage, "VerdictPage", "Angular page", "Shows the one verdict")
+  ComponentDb(store, "InvestigationStore", "Store", "Stop reason, verdict, profile")
+}
+
+Rel(person, page, "Taps Stop or Emergency stop")
+Rel(page, orch, "stop()")
+Rel(page, estop, "trigger()")
+Rel(estop, orch, "end(emergencyStopped)")
+Rel(orch, stop, "afterStep(snapshot, counters)")
+Rel(orch, finish, "run(verdict, summary)")
+Rel(finish, verdict, "decide(evidence, reason)")
+Rel(finish, profile, "build()")
+Rel(finish, store, "saveProfile")
+Rel(orch, ble, "disconnect()")
+Rel(orch, model, "destroy()")
+Rel(orch, vpage, "Routes to the verdict")
+@enduml

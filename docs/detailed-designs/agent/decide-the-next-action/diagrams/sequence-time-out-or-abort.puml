@@ -1,0 +1,65 @@
+@startuml
+title UML sequence behaviour — Time out, abort, or run out of context
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ModeBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ModelDecider" as decider
+  participant "PromptBudget" as budget
+  participant "ModeController" as mode
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+alt The model does not answer within 10 seconds
+  decider -> model : prompt(text, responseConstraint, signal)
+  model -> nano : LanguageModel prompt()
+  decider -> decider : Timer fires after 10 s (FR-047)
+  decider -> decider : Abort the call with reason TIMEOUT
+  model --> decider : AbortError
+  decider --> orch : Decision timedOut
+  orch -> store : Commit step: timed out, counts as failed
+  opt Second timeout in a row
+    orch -> mode : fallBack(modelTimeout) (FR-006)
+    mode -> banner : "Continuing as a checklist."
+  end
+else The person taps Stop or Emergency stop
+  decider -> model : prompt(text, responseConstraint, signal)
+  person -> page : Tap Emergency stop
+  page -> orch : abortCurrentStep(emergencyStop) (FR-039)
+  orch -> orch : controller.abort()
+  model --> decider : AbortError at once
+  decider -> decider : Clear timer
+  decider --> orch : Decision aborted (ABORTED)
+  orch -> store : Commit step: aborted; no action runs
+else The prompt cannot fit the budget
+  decider -> budget : fit(prompt, inputBudget)
+  budget -> budget : Drop oldest summaries, then shorten tool descriptions (NFR-020)
+  budget --> decider : contextExhausted; safety part never dropped
+  decider --> orch : Decision contextExhausted; no model call
+  orch -> mode : fallBack(contextExhausted) (FR-006)
+  mode -> banner : "Continuing as a checklist."
+end
+@enduml

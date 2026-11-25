@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Show agent activity
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Investigation page, activity feed, step labeller, stage track")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Committed steps from which the feed is rebuilt")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Service and characteristic names for labels")
+}
+
+Rel(person, spa, "Reads the feed at arm's length", "Touch, keyboard, screen reader")
+Rel(spa, kb, "Names services and characteristics in labels")
+Rel(spa, idb, "Reads older entries; rebuilds the feed on resume")
+@enduml

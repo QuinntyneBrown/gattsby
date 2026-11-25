@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Decide the next action
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Prompt API (LanguageModel), Web Bluetooth, IndexedDB")
+System_Ext(nano, "Gemini Nano", "On-device model, downloaded once, run by Chrome")
+
+Rel(person, gattsby, "Follows the running step; may tap Stop or Emergency stop")
+Rel(gattsby, chrome, "Prompts with one bounded state and an action schema", "Prompt API")
+Rel(chrome, nano, "Runs the prompt on the device")
+@enduml

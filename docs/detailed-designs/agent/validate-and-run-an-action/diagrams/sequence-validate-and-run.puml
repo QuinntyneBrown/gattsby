@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Validate and run one call
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as list
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ToolRegistry" as registry
+  participant "ReadDeviceInfoTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+orch -> validator : parse(raw answer)
+validator --> orch : call_tool read_device_info, input {}
+orch -> validator : validate(action, snapshot, model) (FR-043)
+validator -> registry : get(read_device_info)
+registry --> validator : definition: read, stages identify
+validator -> validator : Registered, allowed at Identify, capable
+validator -> validator : Input schema; precondition connected; safety class read
+validator --> orch : PendingCall
+orch -> feed : start(running: "Reading the maker and model")
+feed --> list : Running entry (FR-048)
+orch -> executor : run(pendingCall, signal)
+executor -> tool : run({}, ToolContext)
+tool -> ble : read(0x180A characteristics)
+ble -> device : readValue()
+device --> ble : bytes
+ble --> tool : values; raw-log entries
+tool --> executor : ToolResult ok, summary, data, evidence
+executor -> executor : Check output schema; ResultSummary.normalise (FR-044)
+executor -> store : commitStep(step, result, raw log) in one transaction
+store --> executor : committed
+executor -> feed : complete("Johnson Health Tech · model T202 · firmware 2.14.0")
+feed --> list : Completed entry
+list --> person : Summary shown as text (NFR-013)
+executor --> orch : ToolResult
+@enduml

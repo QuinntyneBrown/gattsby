@@ -1,0 +1,43 @@
+@startuml
+title UML sequence behaviour — Show model text as text
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as list
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+nano --> model : action with reason "~<img src=x onerror=alert(1)>"
+model --> orch : raw answer
+orch -> validator : parse and validate
+validator -> validator : reason is a string of at most 200 characters
+validator --> orch : PendingCall with reason as plain string
+orch -> feed : say(agent, text, why = reason)
+feed --> list : MessageEntry
+list -> list : Bind why through interpolation; no innerHTML (NFR-013)
+list --> person : Shows the characters ~<img src=x onerror=alert(1)> (FR-048 AC2)
+note over list : Trusted Types would block any HTML sink at run time
+@enduml

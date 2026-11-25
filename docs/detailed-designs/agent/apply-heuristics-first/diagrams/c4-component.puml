@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Apply heuristics first
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Snapshot, stop check, heuristics, then the mode's source")
+  Component(session, "InvestigationSession", "Signals", "Stage, device, hypothesis, observations")
+  Component(heur, "PlaybookHeuristics", "Pure service", "Returns decided, ambiguous or stageDone")
+  Component(playbook, "Playbook", "Data", "7 stages, ordered rules, stage checks, why texts")
+  Component(match, "MatchKnownProfilesTool", "Tool", "Scores against the knowledge base")
+  Component(source, "NextStepSource", "Contract", "ModelDecider or ChecklistRunner")
+  Component(validator, "ActionValidator", "Service", "Validates every action, rule-decided or not")
+  ComponentDb(store, "InvestigationStore", "Store", "Steps with decidedBy")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(orch, session, "Takes a SessionSnapshot")
+Rel(orch, heur, "next(snapshot)")
+Rel(heur, playbook, "Evaluates the stage's rules")
+Rel(match, session, "Adds scores as observations")
+Rel(orch, source, "next(verdict, signal)")
+Rel(source, nano, "Only for ambiguous verdicts in full agent mode")
+Rel(orch, validator, "Validates the chosen action")
+Rel(orch, store, "Commits the step with decidedBy")
+@enduml

@@ -1,0 +1,71 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Run the checklist
+
+enum OperatingMode {
+  fullAgent
+  checklist
+}
+
+abstract class NextStepSource <<contract>> {
+  +next(verdict: HeuristicVerdict, signal: AbortSignal): Promise<Decision>
+}
+
+class ModelDecider
+class ChecklistRunner {
+  +next(verdict: HeuristicVerdict, signal: AbortSignal): Promise<Decision>
+}
+
+class ChecklistChoices <<pure>> {
+  +build(verdict: HeuristicVerdict, snapshot: SessionSnapshot): StepChoice[]
+}
+
+class StepChoice {
+  +id: string
+  +label: string
+  +action: AgentAction
+  +recommended: boolean
+}
+
+class PersonPrompt {
+  +kind: "question"
+  +title: string
+  +detail: string
+  +answers: string[]
+}
+
+class PromptChannel {
+  +post(prompt: PersonPrompt): Promise<PromptResponse>
+}
+
+class ModeController {
+  +mode: Signal<OperatingMode>
+  +source(): NextStepSource
+  +fallBack(reason: string): void
+}
+
+class StepLabeller <<pure>> {
+  +label(call: PendingCall, kb: KnowledgeBase): StepLabel
+}
+
+NextStepSource <|-- ModelDecider
+NextStepSource <|-- ChecklistRunner
+ChecklistRunner ..> ChecklistChoices
+ChecklistChoices ..> StepChoice : builds
+ChecklistChoices ..> StepLabeller : labels
+ChecklistRunner ..> PromptChannel : posts
+ChecklistRunner ..> PersonPrompt
+ModeController --> OperatingMode
+ModeController ..> NextStepSource : provides
+@enduml

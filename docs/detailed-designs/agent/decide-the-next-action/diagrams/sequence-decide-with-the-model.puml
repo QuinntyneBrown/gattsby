@@ -1,0 +1,64 @@
+@startuml
+title UML sequence behaviour — Decide with the model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+  participant "ModelDecider" as decider
+  participant "DecisionStateBuilder" as builder
+  participant "PromptBudget" as budget
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ToolRegistry" as registry
+  participant "HypothesisTracker" as hypo
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+orch -> orch : New AbortController for step 9
+orch -> heur : next(identify, observations)
+heur --> orch : ambiguous: 2 candidate steps (FR-046)
+orch -> decider : next(verdict ambiguous, signal)
+decider -> builder : build(session)
+builder -> store : Last 5 step summaries (FR-041)
+store --> builder : 5 one-line summaries, no bytes
+builder -> hypo : current()
+hypo --> builder : FTMS treadmill, 0.35
+builder -> registry : toolListFor(identify, capabilities) (FR-071)
+registry --> builder : allowed tools
+builder --> decider : DecisionState: facts, hypothesis, summaries, stage, tools
+decider -> budget : fit(system + tools + state, inputBudget)
+budget -> model : measure(prompt)
+model --> budget : token count
+budget --> decider : Fitted prompt; safety part kept (NFR-020)
+decider -> decider : Start 10 s timer on the step signal (FR-047)
+decider -> model : prompt(text, responseConstraint: one of 5 actions, signal) (FR-042)
+model -> nano : LanguageModel prompt()
+nano --> model : {"action":"call_tool","tool":"read_device_info",...}
+model --> decider : raw answer
+decider -> decider : Clear timer; record buildMs and modelMs
+decider --> orch : Decision answered
+orch -> validator : parse and validate raw answer (FR-043)
+validator --> orch : PendingCall read_device_info
+orch -> store : Record decision timing (NFR-002)
+note over orch : The validated call runs as in validate-and-run-an-action
+@enduml

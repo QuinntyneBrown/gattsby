@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Show a running step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "StageTrack" as track
+  participant "ActivityFeedList" as list
+  participant "RunningStep" as running
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "InvestigationSession" as session
+  participant "ActivityFeed" as feed
+  participant "StepLabeller" as labeller
+  participant "ToolExecutor" as executor
+end box
+
+orch -> session : stage = identify
+orch -> feed : stage(identify)
+session --> page : stage signal
+page -> track : Identify: now
+page --> person : "Agent · Identify" (FR-048)
+orch -> labeller : label(read_device_info)
+labeller --> orch : running "Reading the maker and model"
+orch -> session : runningStep = label
+orch -> feed : startStep(read_device_info)
+feed --> page : entries
+page -> list : Running entry; aria-busy true
+page -> running : "Now · Reading the maker and model"
+running --> person : Announced in the polite live region
+orch -> executor : run(pendingCall)
+executor --> orch : ToolResult ok, summary
+orch -> feed : completeStep(id, result, observations)
+orch -> session : runningStep = none
+page -> list : "Read the maker, model and firmware · 1 s · Johnson Health Tech · model T202 · firmware 2.14.0"
+@enduml

@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Refuse an action
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "StopConditions" as stop
+  participant "ModeController" as mode
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ToolRegistry" as registry
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+  participant "WebBluetoothBleLayer" as ble
+end box
+
+orch -> validator : validate(action, snapshot, model)
+validator -> registry : get(tool)
+alt The tool is not registered
+  registry --> validator : undefined
+  validator --> orch : ActionRefusal UNKNOWN_TOOL
+else send_command before request_control succeeded
+  registry --> validator : send_command, precondition controlGranted
+  validator -> validator : controlGranted is false
+  validator --> orch : ActionRefusal PRECONDITION_FAILED
+else The input misses a required field
+  registry --> validator : definition with input schema
+  validator -> validator : SchemaValidator reports a missing field
+  validator --> orch : ActionRefusal INVALID_INPUT
+end
+note over orch, ble : Nothing runs: no BLE call, no prompt to the person (FR-043)
+orch -> store : commitStep(outcome refused, code, raw action as text)
+orch -> orch : Add the refusal's one-line reason to the recent summaries
+note right of orch : The model sees the reason in the next DecisionState
+orch -> stop : recordStep(no new observation)
+opt Third refusal in a row
+  orch -> mode : fallBack(invalidActions) (FR-006)
+  mode -> store : Record the 3 rejected actions
+end
+@enduml

@@ -1,0 +1,124 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Validate and run an action
+
+enum ActionKind {
+  call_tool
+  ask_user
+  update_hypothesis
+  request_missing_tool
+  finish
+}
+
+enum DecidedBy {
+  rule
+  model
+  person
+}
+
+enum StepOutcome {
+  ok
+  failed
+  refused
+  timedOut
+  aborted
+}
+
+class AgentAction {
+  +action: ActionKind
+  +tool?: string
+  +input?: object
+  +reason?: string
+}
+
+class PendingCall {
+  +id: string
+  +tool: ToolDefinition
+  +input: object
+  +decidedBy: DecidedBy
+  +stage: PlaybookStage
+  +reason?: string
+}
+
+class ActionRefusal {
+  +code: ToolErrorCode
+  +reason: string
+  +rawAction: string
+  +decidedBy: DecidedBy
+}
+
+class ActionValidator {
+  +parse(raw: string): AgentAction | ActionRefusal
+  +validate(action: AgentAction, snapshot: SessionSnapshot, by: DecidedBy): PendingCall | ActionRefusal
+}
+
+class SchemaValidator <<pure>> {
+  +check(schema: JsonSchema, value: unknown): SchemaIssue[]
+}
+
+class ToolExecutor {
+  +run(call: PendingCall, signal: AbortSignal): Promise<ToolResult<unknown>>
+}
+
+class ResultSummary <<pure>> {
+  +normalise(text: string): string
+}
+
+class ToolResult<T> {
+  +ok: boolean
+  +summary: string
+  +data: T
+  +error: ToolError
+  +evidence: string[]
+}
+
+interface "Tool<I, O>" as Tool {
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class InvestigationStep {
+  +number: number
+  +stage: PlaybookStage
+  +mode: OperatingMode
+  +decidedBy: DecidedBy
+  +outcome: StepOutcome
+  +toolName: string
+  +result: ToolResult
+  +approvalId: string | null
+}
+
+class ToolRegistry {
+  +get(name: string): ToolDefinition | undefined
+}
+
+class ApprovalGate {
+  +request(call: PendingCall, ctx: ToolContext): Promise<ApprovalToken | ToolError>
+}
+
+ActionValidator ..> AgentAction : parses
+ActionValidator ..> PendingCall : returns
+ActionValidator ..> ActionRefusal : returns
+ActionValidator ..> SchemaValidator
+ActionValidator ..> ToolRegistry : resolves tool
+ToolExecutor ..> PendingCall : runs
+ToolExecutor ..> ApprovalGate : write or control
+ToolExecutor ..> Tool : run
+ToolExecutor ..> ResultSummary
+Tool ..> ToolResult : returns
+InvestigationStep --> StepOutcome
+InvestigationStep --> DecidedBy
+InvestigationStep *-- ToolResult
+AgentAction --> ActionKind
+PendingCall --> DecidedBy
+@enduml

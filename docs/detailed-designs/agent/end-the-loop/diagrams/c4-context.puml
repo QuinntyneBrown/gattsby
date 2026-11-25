@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — End the loop
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, Prompt API, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Taps Stop or Emergency stop; reads the verdict")
+Rel(gattsby, chrome, "Disconnects; aborts a pending model call", "Web Bluetooth, Prompt API")
+Rel(chrome, device, "GATT disconnect over Bluetooth LE")
+@enduml

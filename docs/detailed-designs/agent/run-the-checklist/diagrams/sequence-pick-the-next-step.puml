@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Pick the next step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+  participant "ChecklistRunner" as runner
+  participant "ChecklistChoices" as choices
+  participant "PromptChannel" as channel
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+
+orch -> heur : next(snapshot at Identify)
+heur --> orch : decided: read_device_info (read)
+orch -> runner : next(decided, signal) (FR-049)
+runner -> choices : build(decided, snapshot)
+choices --> runner : Read device information (recommended), Match known profiles, Record data for 10 s, Scan again
+runner -> channel : post(question "Pick the next step")
+channel -> card : Show 4 choices; "Recommended: read device information."
+person -> card : Tap "Read device information"
+card --> channel : PromptResponse
+channel --> runner : choice
+runner --> orch : Decision read_device_info, decidedBy person
+orch -> validator : validate(action, person) (FR-043)
+validator --> orch : PendingCall
+orch -> executor : run(pendingCall, signal)
+executor -> ble : read Device Information
+ble --> executor : values
+executor -> store : commitStep(mode checklist, decidedBy person) (FR-005)
+note over orch, store : No model call; the model adapter is not loaded
+@enduml

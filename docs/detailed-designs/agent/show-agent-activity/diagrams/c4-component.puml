@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Show agent activity
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Writes stage changes, messages and steps")
+  Component(labeller, "StepLabeller", "Pure helper", "Plain-language running, purpose and detail")
+  Component(feed, "ActivityFeed", "Service", "Windowed signal of ActivityEntry")
+  Component(session, "InvestigationSession", "Signals", "Mode, stage, stage statuses, running step")
+  Component(page, "InvestigationPage", "Angular page", "Reads signals; passes plain inputs")
+  Component(track, "StageTrack", "Presentation component", "7 stages, status in text")
+  Component(list, "ActivityFeedList", "Presentation component", "Ordered list; text only")
+  Component(running, "RunningStep", "Presentation component", "Now: the running step in the polite live region")
+  ComponentDb(store, "InvestigationStore", "Store", "Committed steps")
+}
+
+Rel(orch, labeller, "label(pendingCall)")
+Rel(orch, feed, "startStep, completeStep, say, stage")
+Rel(orch, session, "Sets stage and runningStep")
+Rel(feed, store, "Reads older entries")
+Rel(page, feed, "entries()")
+Rel(page, session, "stage(), mode(), runningStep()")
+Rel(page, track, "stages")
+Rel(page, list, "entries, mode")
+Rel(page, running, "label")
+Rel(person, page, "Reads")
+@enduml
