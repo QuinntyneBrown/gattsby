@@ -74,14 +74,14 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
       resolve();
       return;
     }
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
-      },
-      { once: true },
-    );
+    const abort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', abort, { once: true });
   });
 }

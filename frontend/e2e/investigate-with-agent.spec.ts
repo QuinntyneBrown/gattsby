@@ -247,3 +247,76 @@ test.describe('The model returns unstructured or forbidden actions', () => {
     expect(fakeBluetooth.writes()).toEqual([]);
   });
 });
+
+test.describe('The model takes longer than ten seconds', () => {
+  test.use({
+    bluetooth: ambiguousTreadmill,
+    model: {
+      availability: 'available',
+      responses: [
+        { rawText: '{}', delayMs: 30_000 },
+        { rawText: '{}', delayMs: 30_000 },
+      ],
+    },
+  });
+
+  test('aborts both timed-out calls and records a verdict after the second', async ({
+    page,
+    fakeModel,
+  }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect.poll(() => fakeModel.prompts().length).toBe(1);
+    await investigation.waitForPrompt('Choosing the next step');
+    await page.clock.runFor(10_050);
+    await expect.poll(() => fakeModel.prompts().length).toBe(2);
+    await page.clock.runFor(10_050);
+    await expect(new VerdictPage(page).title).toHaveText('Partially decoded');
+    const id = investigation.id();
+    const records = new StoredRecords(page);
+    const calls = (await records.steps(id)).filter((step) => step.decidedBy === 'model');
+    expect(calls.map((step) => step.result.error?.code)).toEqual(['TIMEOUT', 'TIMEOUT']);
+    expect(await records.investigation(id)).toMatchObject({
+      modelConsultations: 2,
+      verdict: { stopReason: 'failure' },
+    });
+    expect(fakeModel.calls().filter((call) => call === 'destroy')).toHaveLength(3);
+  });
+
+  test('emergency stop aborts the pending model call before the timeout', async ({
+    page,
+    fakeModel,
+    fakeBluetooth,
+  }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect.poll(() => fakeModel.prompts().length).toBe(1);
+    const start = await page.evaluate(() => performance.now());
+    await investigation.emergencyStop.click();
+    await expect(new VerdictPage(page).title).toBeVisible();
+    expect((await page.evaluate(() => performance.now())) - start).toBeLessThan(10_000);
+    const id = investigation.id();
+    const records = new StoredRecords(page);
+    const calls = (await records.steps(id)).filter((step) => step.decidedBy === 'model');
+    expect(calls.map((step) => step.result.error?.code)).toEqual(['ABORTED']);
+    expect(await records.investigation(id)).toMatchObject({
+      verdict: { stopReason: 'emergencyStop' },
+    });
+    expect(fakeBluetooth.writes()).toEqual([]);
+  });
+
+  test('leaving during a model call releases it and leaves Home open', async ({
+    page,
+    fakeModel,
+  }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect.poll(() => fakeModel.prompts().length).toBe(1);
+    const id = investigation.id();
+    await investigation.leave.click();
+    await expect.poll(() => fakeModel.calls().filter((call) => call === 'destroy').length).toBe(2);
+    await page.clock.runFor(500);
+    await expect(page).toHaveURL('/');
+    expect(await new StoredRecords(page).investigation(id)).toMatchObject({ verdict: null });
+  });
+});

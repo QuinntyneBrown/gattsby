@@ -90,6 +90,7 @@ export class PlaybookOrchestrator {
   private tracker: HypothesisTracker | null = null;
   private modelSession: ModelSession | null = null;
   private abort = new AbortController();
+  private leaving = false;
   private stopReason: StopReason | null = null;
   private concludeNow = false;
   private observationCounter = 0;
@@ -260,6 +261,7 @@ export class PlaybookOrchestrator {
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
   async leave(): Promise<void> {
+    this.leaving = true;
     this.abort.abort();
     this.prompts.cancel();
     this.releaseModel();
@@ -269,7 +271,7 @@ export class PlaybookOrchestrator {
 
   private async loop(): Promise<void> {
     const id = this.investigationSignal()!.id;
-    while (this.statusSignal() === 'running') {
+    while (!this.leaving && this.statusSignal() === 'running') {
       const outcome = nextOutcome(this.ruleContext(), this.concludeNow);
       if (!outcome) break;
       let action: RuleAction;
@@ -297,6 +299,7 @@ export class PlaybookOrchestrator {
             this.config.modelTimeoutMs ?? 10_000,
           );
           this.modelThinkingSignal.set(false);
+          if (this.leaving) return;
           modelDecision = reply.decision;
           if ('error' in reply) {
             refusal = reply.error;
@@ -312,6 +315,7 @@ export class PlaybookOrchestrator {
           }
         } else {
           const chosen = await this.decider.decide(outcome);
+          if (this.leaving) return;
           if (!chosen) {
             this.concludeNow = true;
             continue;
@@ -343,10 +347,12 @@ export class PlaybookOrchestrator {
         throw new Error('The verdict was refused twice; no verdict is supported.');
       }
       if (!this.concludeNow) {
+        const next = nextOutcome(this.ruleContext());
+        const checksDone = next?.kind === 'decided' && next.action.tool === 'finish';
         const reason = checkStop(
           { steps: this.steps().length, noProgressRun: this.noProgressRun },
           this.hypothesis()?.confidence ?? 0,
-          false,
+          checksDone,
           this.config,
         );
         if (reason) {
@@ -448,6 +454,7 @@ export class PlaybookOrchestrator {
     } else {
       result = await executeTool(tool, action.input, ctx, () => handedOut);
     }
+    if (this.leaving) return true;
     const step: Step = {
       investigationId: id,
       n,

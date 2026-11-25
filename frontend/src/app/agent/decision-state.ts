@@ -221,7 +221,7 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       };
     }
     case 'finish':
-      return { ...next, finished: true, connected: false };
+      return step.result.ok ? { ...next, finished: true, connected: false } : next;
     default:
       return step.decidedBy === 'orchestrator' && step.ruleId === 'identify.ambiguous'
         ? { ...next, ambiguityResolved: true }

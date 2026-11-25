@@ -21,8 +21,9 @@ create and the only form `ToolExecutor` accepts
 The person sees a refusal only through its effects: no approval prompt opens for an unsafe value (see
 the keep-commands-conservative design), the feed notes that the agent asked for a stop (see the
 emergency-stop design), and after three refusals in a row the mode banner announces checklist mode
-(`docs/mocks/notifications/mode-banner/warning.html`; FR-006). The mocks draw no feed entry for a
-refusal; its wording, if one is shown, is `<TO SUPPLY>` (A-01).
+(`docs/mocks/notifications/mode-banner/warning.html`; FR-006). The
+[`model-refusal` mock](../../../mocks/pages/investigation/model-refusal.html) shows the refusal's
+plain-text reason in the activity feed while the agent considers another step.
 
 ## Description
 
