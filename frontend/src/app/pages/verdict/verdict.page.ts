@@ -9,7 +9,7 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
 import { verdictView, type VerdictView } from './verdict-view';
 
 // The Verdict page at /investigations/:id/verdict (docs/mocks/pages/verdict/*.html; FR-057). The
-// device is already disconnected when it appears (FR-018). Export arrives with journey 4.
+// device is already disconnected when it appears (FR-018).
 @Component({
   selector: 'g-verdict-page',
   imports: [RouterLink, ConfidenceBadgeComponent, VerdictMarkComponent],
@@ -124,6 +124,9 @@ import { verdictView, type VerdictView } from './verdict-view';
       </main>
       <div class="action-bar">
         <div class="action-bar__inner">
+          @if (record()?.investigation?.profileId; as profileId) {
+            <a class="btn btn--lg" [routerLink]="['/profiles', profileId]">Open device profile</a>
+          }
           <button
             class="btn btn--primary btn--lg"
             type="button"

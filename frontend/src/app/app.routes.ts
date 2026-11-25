@@ -24,6 +24,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/verdict/verdict.page').then((m) => m.VerdictPage),
   },
   {
+    path: 'profiles/:id',
+    title: 'Device profile · Gattsby',
+    loadComponent: () =>
+      import('./pages/device-profile/device-profile.page').then((m) => m.DeviceProfilePage),
+  },
+  {
     path: '**',
     title: 'Not found · Gattsby',
     loadComponent: () => import('./pages/not-found/not-found.page').then((m) => m.NotFoundPage),

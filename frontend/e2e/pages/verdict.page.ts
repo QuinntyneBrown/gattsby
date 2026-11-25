@@ -27,4 +27,8 @@ export class VerdictPage {
       .locator('li')
       .filter({ has: this.page.locator('.group__k', { hasText: key }) });
   }
+
+  get deviceProfile(): Locator {
+    return this.page.getByRole('link', { name: 'Open device profile' });
+  }
 }

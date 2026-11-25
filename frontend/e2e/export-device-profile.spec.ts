@@ -10,12 +10,31 @@ import type { FakeBluetooth } from './fixtures/fake-bluetooth';
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
+import { DeviceProfilePage } from './pages/device-profile.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { VerdictPage } from './pages/verdict.page';
 
 test.use({
   bluetooth: { devices: [devices.treadmill.id], chooser: [{ pick: devices.treadmill.id }] },
+});
+
+// Given a saved verdict, when the person opens its profile, then the recorded
+// decoding rules and statuses are visible and the page works after reload.
+test('opens the saved device profile and explains an unreadable profile', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  await finishTreadmill(page, fakeBluetooth);
+  const profile = new DeviceProfilePage(page);
+  await new VerdictPage(page).deviceProfile.click({ timeout: 3_000 });
+  await expect(profile.verdict).toBeVisible();
+  await expect(profile.readableData).toContainText('0x2ACD');
+  await expect(profile.readableData).toContainText('bytes 2–3');
+  await page.reload();
+  await expect(profile.readableData).toContainText('confirmed');
+  await profile.open('p-missing');
+  await expect(profile.error).toContainText('This profile couldn’t be opened');
 });
 
 async function finishTreadmill(page: Page, bluetooth: FakeBluetooth): Promise<string> {

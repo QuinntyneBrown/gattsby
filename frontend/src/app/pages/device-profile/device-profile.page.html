@@ -1,0 +1,219 @@
+<div class="app app--fixed">
+  <header class="appbar">
+    <a
+      class="btn btn--ghost btn--icon"
+      [routerLink]="
+        profile.hasValue() ? ['/investigations', profile.value().investigationId, 'verdict'] : ['/']
+      "
+      aria-label="Back"
+    >
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+    </a>
+    <div class="appbar__titles"><p class="appbar__title">Device profile</p></div>
+  </header>
+  <main id="main" class="scroll" tabindex="-1" [attr.aria-busy]="profile.isLoading()">
+    <div class="page">
+      @if (profile.error()) {
+        <div class="empty" role="alert">
+          <h1 class="empty__title">This profile couldn’t be opened</h1>
+          <p>It may be missing or saved in a format this version of Gattsby can’t read.</p>
+          <a class="btn btn--lg" routerLink="/">Go to home</a>
+        </div>
+      } @else if (profile.hasValue()) {
+        @let p = profile.value();
+        <div class="profile-grid">
+          <div class="profile-main">
+            @if (p.identity.maker) {
+              <p class="text-muted text-sm">
+                <bdi>{{ p.identity.maker }}</bdi>
+              </p>
+            }
+            <h1>
+              <bdi>{{ p.identity.displayName }}</bdi>
+            </h1>
+            <p class="cluster">
+              <g-verdict-mark [kind]="p.verdict.kind" />
+              <strong>{{ p.verdict.label }}</strong>
+              @if (p.protocol?.variant) {
+                <span class="text-muted"
+                  ><bdi>{{ p.protocol?.variant }}</bdi></span
+                >
+              }
+            </p>
+            <p class="fine-print">Saved to this device.</p>
+            <button
+              class="btn btn--primary btn--lg investigate"
+              type="button"
+              [disabled]="starting()"
+              (click)="investigateAgain()"
+            >
+              Investigate again
+            </button>
+            @if (startFailed()) {
+              <p role="alert">Couldn’t start a new investigation. Try again.</p>
+            }
+            <section>
+              <h2 class="section-title">Readable data</h2>
+              @if (p.metrics.length) {
+                <div class="table-scroll">
+                  <table class="data-table">
+                    <caption class="visually-hidden">
+                      Readable metrics and how to decode them
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Metric and decoding rule</th>
+                        <th scope="col">Rate</th>
+                        <th scope="col">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (metric of p.metrics; track metric.characteristic + metric.metric) {
+                        <tr>
+                          <td>
+                            {{ metric.label }}
+                            <span class="data-table__unit">{{ metric.unit }}</span>
+                            <span class="data-table__rule">
+                              {{ shortUuid(metric.characteristic) }} ·
+                              @if (metric.rule.kind === 'offset') {
+                                bytes {{ metric.rule.offset }}–{{
+                                  metric.rule.offset + metric.rule.length - 1
+                                }}
+                              } @else {
+                                flag bit {{ metric.rule.flagBit }}
+                              }
+                              · {{ metric.type }} · ×{{ metric.scale }}
+                            </span>
+                          </td>
+                          <td class="num">
+                            {{
+                              metric.rateHz === undefined
+                                ? '—'
+                                : (metric.rateHz | number: '1.0-2') + ' Hz'
+                            }}
+                          </td>
+                          <td class="tag">
+                            <g-confidence-badge [word]="statusWords[metric.status]" />
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p class="text-muted">No readable data established.</p>
+              }
+            </section>
+            <section>
+              <h2 class="section-title">Controllable</h2>
+              @if (p.features.length) {
+                <table class="data-table">
+                  <caption class="visually-hidden">
+                    Controllable features and how to command them
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Feature and command</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (feature of p.features; track feature.feature) {
+                      <tr>
+                        <td>
+                          {{ feature.feature }}
+                          <span class="data-table__rule">
+                            op {{ feature.command.opCode }}
+                            @if (feature.range; as range) {
+                              · {{ range.min }}–{{ range.max }}
+                              {{ feature.command.parameter?.unit }}
+                            }
+                          </span>
+                        </td>
+                        <td class="tag">
+                          <g-confidence-badge [word]="statusWords[feature.status]" />
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              } @else {
+                <p class="text-muted">No controllable features established.</p>
+              }
+            </section>
+            @if (p.undetermined.length || p.verdict.kind !== 'connected') {
+              <section>
+                <h2 class="section-title">Couldn’t determine</h2>
+                <p>{{ p.verdict.summary }}</p>
+                @for (item of p.undetermined; track $index) {
+                  <p>{{ item.subject }} · {{ item.reason }}</p>
+                }
+              </section>
+            }
+          </div>
+          <aside class="profile-aside" aria-label="Identity, evidence and notes">
+            <section>
+              <h2 class="section-title">Identity</h2>
+              <dl class="kv kv--narrow">
+                <dt>Advertised</dt>
+                <dd>
+                  <bdi>{{ p.identity.advertisedName ?? '—' }}</bdi>
+                </dd>
+                <dt>Maker</dt>
+                <dd>
+                  <bdi>{{ p.identity.maker ?? '—' }}</bdi>
+                </dd>
+                <dt>Model</dt>
+                <dd>
+                  <bdi>{{ p.identity.model ?? '—' }}</bdi>
+                </dd>
+                <dt>Firmware</dt>
+                <dd>
+                  <bdi>{{ p.identity.firmware ?? '—' }}</bdi>
+                </dd>
+                <dt>Services</dt>
+                <dd>
+                  @for (uuid of p.services.discovered; track uuid) {
+                    {{ shortUuid(uuid) }}
+                  } @empty {
+                    —
+                  }
+                </dd>
+                @if (p.services.unreachable.length) {
+                  <dt>Not reachable</dt>
+                  <dd>
+                    @for (entry of p.services.unreachable; track $index) {
+                      <div>
+                        {{ entry.uuid ? shortUuid(entry.uuid) : 'Services outside the known list' }}
+                      </div>
+                    }
+                  </dd>
+                }
+              </dl>
+            </section>
+            <section>
+              <h2 class="section-title">Evidence</h2>
+              <p class="text-sm text-muted">
+                {{ p.counts.steps }} steps, {{ p.counts.packets }} packets,
+                {{ p.counts.approvedCommands }} approved commands.
+              </p>
+            </section>
+            <section>
+              <h2 class="section-title">Notes</h2>
+              <p class="fine-print">
+                @if (p.location) {
+                  <bdi>{{ p.location }}</bdi> ·
+                }
+                {{ p.createdAt | date: 'mediumDate' }}
+              </p>
+            </section>
+          </aside>
+        </div>
+      } @else {
+        <p role="status">Loading the device profile</p>
+        <span class="skeleton skeleton--title"></span>
+        <span class="skeleton skeleton--text"></span>
+      }
+    </div>
+  </main>
+</div>
