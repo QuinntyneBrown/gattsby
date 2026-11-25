@@ -1,1 +1,1 @@
-export type ConfirmationMetric = 'speed' | 'heartRate';
+export type ConfirmationMetric = 'speed' | 'heartRate' | 'incline';

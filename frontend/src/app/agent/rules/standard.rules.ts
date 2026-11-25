@@ -116,4 +116,50 @@ export const STANDARD_RULES: readonly StageRule[] = [
         answers: ['Yes', 'No'],
       }),
   },
+  {
+    id: 'standard.incline-action',
+    stage: 'standard',
+    when: ({ state }) =>
+      state.connected &&
+      state.speedConfirmation === 'confirmed' &&
+      state.inclineAction === null &&
+      state.inclineBaseline !== null &&
+      state.inclineBaseline <= 1.5 &&
+      state.machineFeatures.includes('Inclination'),
+    then: () =>
+      decided('standard.incline-action', 'standard', 'request_action', {
+        instruction: 'Raise the incline to 2%, and keep the same speed.',
+        needsReady: false,
+        confirmMetric: 'incline',
+        why: 'I’ll check that the decoded incline follows the console.',
+      }),
+  },
+  {
+    id: 'standard.confirm-incline',
+    stage: 'standard',
+    when: (ctx) =>
+      typeof ctx.state.inclineAction === 'number' &&
+      ctx.state.inclineConfirmation === null &&
+      ctx.state.standardRecordingId !== null &&
+      !!standardPath(ctx),
+    then: (ctx) =>
+      decided('standard.confirm-incline', 'standard', 'decode_standard', {
+        doneAt: ctx.state.inclineAction,
+        characteristic: standardPath(ctx)!.characteristic,
+        recordingId: ctx.state.standardRecordingId,
+      }),
+  },
+  {
+    id: 'standard.incline-follow-up',
+    stage: 'standard',
+    when: ({ state }) => state.inclineConfirmation === 'notConfirmed',
+    then: () =>
+      decided('standard.incline-follow-up', 'standard', 'ask_user', {
+        question: 'Does the console show 2% incline?',
+        sequence: 'Incline not confirmed',
+        detail:
+          'The data didn’t show the expected change within 15 s. Your answer is saved with the readings.',
+        answers: ['Yes', 'No'],
+      }),
+  },
 ];

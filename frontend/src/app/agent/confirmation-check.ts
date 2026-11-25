@@ -9,34 +9,46 @@ import { ToolError } from '../tools/tool-error';
 
 const BASELINE_LIMIT = 500;
 const WINDOW_MS = 15_000;
-const MIN_CHANGE = { speed: 0.5, heartRate: 5 } as const;
+const MIN_CHANGE = { speed: 0.5, heartRate: 5, incline: 0.5 } as const;
+const PACE_METRICS = new Map<string, number>([
+  ['distance', 1],
+  ['elapsed', 1],
+  ['cadence', 1],
+  ['power', 1],
+]);
 
 @Injectable()
 export class ConfirmationCheck {
   private readonly clock = inject(Clock);
-  private readonly baseline: Record<ConfirmationMetric, MetricSample[]> = {
+  private readonly baseline: Record<Exclude<ConfirmationMetric, 'incline'>, MetricSample[]> = {
     speed: [],
     heartRate: [],
   };
   private metric: ConfirmationMetric = 'speed';
   private reference: MetricSample | null = null;
   private qualifying: MetricSample | null = null;
-  private baselineDistance: MetricSample | null = null;
-  private qualifyingDistance: MetricSample | null = null;
+  private readonly paceBaseline = new Map<string, MetricSample>();
+  private readonly paceMatches = new Map<
+    string,
+    { field: DecodedMetric; baseline: MetricSample; t: number; rawLogId: string }
+  >();
+  private latestIncline: MetricSample | null = null;
   private openedAt: number | null = null;
   private wake: (() => void) | null = null;
 
   begin(metric: ConfirmationMetric): void {
     this.metric = metric;
-    this.reference = baselineMedian(this.baseline[metric]);
+    this.reference =
+      metric === 'incline' ? this.latestIncline : baselineMedian(this.baseline[metric]);
     this.qualifying = null;
-    this.qualifyingDistance = null;
+    this.paceMatches.clear();
     this.openedAt = this.clock.now();
   }
 
   sample(fields: readonly DecodedMetric[], rawLogId: string, t: number, recording: boolean): void {
     const current = fields.find((field) => field.metric === this.metric);
-    const distance = fields.find((field) => field.metric === 'distance');
+    const incline = fields.find((field) => field.metric === 'incline');
+    if (incline) this.latestIncline = { value: incline.value, t, rawLogId };
     if (recording) {
       for (const metric of ['speed', 'heartRate'] as const) {
         const baseline = this.baseline[metric];
@@ -44,7 +56,11 @@ export class ConfirmationCheck {
         if (field && baseline.length < BASELINE_LIMIT)
           baseline.push({ value: field.value, t, rawLogId });
       }
-      if (distance) this.baselineDistance = { value: distance.value, t, rawLogId };
+      for (const field of fields) {
+        if (PACE_METRICS.has(field.metric)) {
+          this.paceBaseline.set(field.metric, { value: field.value, t, rawLogId });
+        }
+      }
       return;
     }
     if (this.openedAt === null || !this.reference || !current) return;
@@ -52,15 +68,20 @@ export class ConfirmationCheck {
       current.value - this.reference.value >= MIN_CHANGE[this.metric]
         ? { value: current.value, t, rawLogId }
         : null;
-    if (
-      this.qualifying &&
-      this.metric === 'speed' &&
-      current.value > 0 &&
-      distance &&
-      this.baselineDistance &&
-      distance.value > this.baselineDistance.value
-    ) {
-      this.qualifyingDistance ??= { value: distance.value, t, rawLogId };
+    if (this.qualifying && this.metric === 'speed' && current.value > 0) {
+      for (const field of fields) {
+        const baseline = this.paceBaseline.get(field.metric);
+        const minimum = PACE_METRICS.get(field.metric);
+        if (
+          baseline &&
+          minimum !== undefined &&
+          !this.paceMatches.has(field.metric) &&
+          field.value - baseline.value >= minimum &&
+          (field.metric !== 'elapsed' || t - baseline.t >= 1000)
+        ) {
+          this.paceMatches.set(field.metric, { field, baseline, t, rawLogId });
+        }
+      }
     }
     if (this.hasResult()) this.wake?.();
   }
@@ -91,23 +112,26 @@ export class ConfirmationCheck {
     }
     const candidate = this.qualifying;
     const qualifying = candidate && candidate.t <= deadline ? candidate : null;
-    const farther = this.qualifyingDistance;
-    const distance = qualifying && farther && farther.t <= deadline ? farther : null;
+    const paceMatches = qualifying
+      ? Array.from(this.paceMatches.values()).filter((sample) => sample.t <= deadline)
+      : [];
     this.openedAt = null;
     return {
       baseline: this.reference,
       metric: this.metric,
       qualifying,
       startedAt,
-      baselineDistance: this.baselineDistance,
-      distance,
+      paceMatches,
+      inclineBaseline: this.latestIncline?.value ?? null,
     };
   }
 
   private hasResult(): boolean {
     return (
       !!this.qualifying &&
-      (this.metric !== 'speed' || !this.baselineDistance || !!this.qualifyingDistance)
+      (this.metric !== 'speed' ||
+        !this.paceBaseline.has('distance') ||
+        this.paceMatches.has('distance'))
     );
   }
 }

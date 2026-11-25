@@ -36,6 +36,11 @@ export class FakeBluetoothApi extends EventTarget {
     this.devices.forEach((device) => (device.state.effort = effort));
   }
 
+  /** The incline the person sets on the console, in percent. */
+  setIncline(percent: number): void {
+    this.devices.forEach((device) => (device.state.values['incline'] = percent));
+  }
+
   async getAvailability(): Promise<boolean> {
     this.report({ kind: 'bluetooth-call', method: 'getAvailability', detail: '' });
     return this.script.available ?? true;

@@ -4,6 +4,7 @@
 // `__gattsbyReport` that the fixture exposes, so the records survive a reload.
 
 import { FakeBluetoothApi } from './fake-bluetooth-api';
+import { canonicalUuid } from './bluetooth-uuid';
 import { FakeLanguageModel } from './fake-language-model';
 import { SCRIPTED_DEVICES } from './scripted-devices';
 import type { SimulationConfig } from './simulation-config';
@@ -11,7 +12,7 @@ import type { Report, SimulationEvent } from './simulation-event';
 
 interface SimulationGlobals {
   __gattsbyReport?: (event: SimulationEvent) => unknown;
-  __gattsbyFakes?: { setEffort(effort: number): void };
+  __gattsbyFakes?: { setEffort(effort: number): void; setIncline(percent: number): void };
   LanguageModel?: unknown;
 }
 
@@ -24,14 +25,29 @@ function install(config: SimulationConfig): void {
     if (!device) {
       throw new Error(`No scripted device "${id}".`);
     }
-    return device;
+    const periods = config.bluetooth.notificationPeriods;
+    if (!periods) return device;
+    return {
+      ...device,
+      services: device.services.map((service) => ({
+        ...service,
+        characteristics: service.characteristics.map((characteristic) => ({
+          ...characteristic,
+          notificationIntervalMs:
+            periods[canonicalUuid(characteristic.uuid)] ?? characteristic.notificationIntervalMs,
+        })),
+      })),
+    };
   });
   const bluetooth = new FakeBluetoothApi(devices, config.bluetooth, report);
   Object.defineProperty(Navigator.prototype, 'bluetooth', {
     configurable: true,
     get: () => bluetooth,
   });
-  globals.__gattsbyFakes = { setEffort: (effort) => bluetooth.setEffort(effort) };
+  globals.__gattsbyFakes = {
+    setEffort: (effort) => bluetooth.setEffort(effort),
+    setIncline: (percent) => bluetooth.setIncline(percent),
+  };
 
   delete globals.LanguageModel;
   if (config.model.availability !== 'absent') {

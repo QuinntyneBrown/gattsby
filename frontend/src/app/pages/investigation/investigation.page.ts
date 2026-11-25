@@ -145,13 +145,15 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
                     }
                     @for (field of metrics(); track field.metric) {
                       <div class="reading">
-                        <span class="reading__label">{{ field.label }}</span>
-                        @if (!orchestrator.confirmedMetrics().has(field.metric)) {
-                          <span aria-hidden="true">~</span>
-                          <span class="visually-hidden">likely</span>
-                        } @else {
-                          <span class="visually-hidden">confirmed</span>
-                        }
+                        <span class="reading__label">
+                          <span>{{ field.label }}</span>
+                          @if (!orchestrator.confirmedMetrics().has(field.metric)) {
+                            <span aria-hidden="true">~</span>
+                            <span class="visually-hidden">likely</span>
+                          } @else {
+                            <span class="visually-hidden">confirmed</span>
+                          }
+                        </span>
                         <span class="reading__value">{{
                           metricValue(field.value, field.scale)
                         }}</span>
@@ -198,7 +200,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
             <div class="section-head">
               <h2 class="section-title">Live readings</h2>
               @if (connected() && liveRate(); as rate) {
-                <span class="live-badge">{{ rate.toFixed(rate < 1 ? 1 : 0) }} Hz</span>
+                <span class="live-badge">{{ rate }} Hz</span>
               }
             </div>
             @if (metrics().length > 0) {
@@ -268,7 +270,10 @@ export class InvestigationPage implements OnInit, OnDestroy {
   protected readonly prompts = inject(PromptChannel);
   private readonly live = inject(LiveMetrics);
   protected readonly metrics = this.live.metrics;
-  protected readonly liveRate = this.live.rateHz;
+  protected readonly liveRate = computed(() => {
+    const rate = this.live.rateHz();
+    return rate === null ? null : Math.round(rate * 10) / 10;
+  });
   private readonly router = inject(Router);
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
 

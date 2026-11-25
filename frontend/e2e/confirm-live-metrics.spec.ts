@@ -58,7 +58,7 @@ test('Given an FTMS treadmill exposes the feature bits and a speed range, when I
 test.describe('FTMS indoor bike', () => {
   test.use({ bluetooth: { devices: [devices.bike.id], chooser: [{ pick: devices.bike.id }] } });
 
-  test('Given an FTMS bike, when the person pedals harder and speed rises, then the app shows live cadence and issues Connected — FTMS', async ({
+  test('Given an FTMS bike, when pedalling faster raises speed, cadence and power, then the Connected — FTMS verdict confirms each reading', async ({
     page,
     fakeBluetooth,
   }) => {
@@ -78,8 +78,31 @@ test.describe('FTMS indoor bike', () => {
     await expect(verdict.title).toHaveText('Connected — FTMS');
     expect(await page.evaluate(() => performance.now())).toBeLessThan(180_000);
     await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
+    await expect(verdict.item('Can read', 'Cadence')).toContainText('120.0 rpm');
+    await expect(verdict.item('Can read', 'Power')).toContainText('150 W');
     expect(fakeBluetooth.writes()).toEqual([]);
   });
+});
+
+test('Given the treadmill confirms speed, when the person raises incline on the console, then its live rise confirms it and retains the earlier evidence', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const investigation = await startRecording(page, fakeBluetooth);
+  await page.clock.runFor(11_000);
+  await investigation.waitForPrompt('Now speed up to about 6 km/h. Change only the speed.');
+  await fakeBluetooth.setEffort(2);
+  await page.clock.runFor(1_100);
+  await investigation.choose('Done');
+  await investigation.waitForPrompt('Raise the incline to 2%, and keep the same speed.');
+  await fakeBluetooth.setIncline(2);
+  await page.clock.runFor(1_100);
+  await investigation.choose('Done');
+  const verdict = new VerdictPage(page);
+  await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
+  await expect(verdict.item('Can read', 'Incline')).toContainText('2.0 %');
+  await expect(verdict.item('Can read', 'Elapsed')).toContainText('confirmed');
+  expect(fakeBluetooth.writes()).toEqual([]);
 });
 
 test.describe('Heart-rate strap', () => {
@@ -231,6 +254,8 @@ test(
     await fakeBluetooth.setEffort(2);
     await page.clock.runFor(2_100);
     await investigation.choose('Done');
+    await investigation.waitForPrompt('Raise the incline to 2%, and keep the same speed.');
+    await investigation.choose('Skip');
 
     const verdict = new VerdictPage(page);
     await expect(verdict.title).toHaveText('Connected — FTMS');

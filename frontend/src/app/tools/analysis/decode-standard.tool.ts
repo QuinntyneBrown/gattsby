@@ -65,13 +65,19 @@ export const decodeStandardTool = entry<DecodeStandardInput, unknown>({
       return ok(`Decoded ${analysis.values.length} notifications.`, analysis, [recordingId]);
     }
     if (!Number.isFinite(input.doneAt)) return fail('INVALID_INPUT', 'The action time is missing.');
-    const { metric, baseline, qualifying, startedAt, baselineDistance, distance } =
+    const { metric, baseline, qualifying, startedAt, paceMatches, inclineBaseline } =
       await ctx.confirmationCheck.finish(input.doneAt, ctx.ble, ctx.signal);
     const confirmed = !!(baseline && qualifying && startedAt !== null);
-    const confirmations = new Map<string, readonly string[]>();
-    const label = metric === 'speed' ? 'Speed' : 'Heart rate';
-    const unit = metric === 'speed' ? 'km/h' : 'BPM';
-    const precision = metric === 'speed' ? 1 : 0;
+    const confirmations = new Map(
+      ctx.state.readableMetrics
+        .filter((entry) => entry.status === 'confirmed')
+        .map((entry) => [entry.metric, entry.evidence] as const),
+    );
+    const { label, unit, precision } = {
+      speed: { label: 'Speed', unit: 'km/h', precision: 1 },
+      incline: { label: 'Incline', unit: '%', precision: 1 },
+      heartRate: { label: 'Heart rate', unit: 'BPM', precision: 0 },
+    }[metric];
     const summary = confirmed
       ? `${label} went from ${baseline.value.toFixed(precision)} to ${qualifying.value.toFixed(precision)} ${unit} within ${Math.ceil((qualifying.t - startedAt) / 1000)} s.`
       : `${label} did not move enough to confirm it.`;
@@ -87,21 +93,19 @@ export const decodeStandardTool = entry<DecodeStandardInput, unknown>({
     if (confirmed) {
       confirmations.set(metric, [observation, baseline.rawLogId, qualifying.rawLogId]);
     }
-    if (baselineDistance && distance) {
-      const distanceObservation = ctx.observe({
+    for (const match of paceMatches) {
+      const field = match.field;
+      const refs = [match.baseline.rawLogId, match.rawLogId];
+      const paceObservation = ctx.observe({
         kind: 'metric-confirmed',
-        subject: 'distance',
+        subject: field.metric,
         value: 'confirmed',
-        text: `Distance: ${distance.value} m`,
+        text: `${field.label}: ${field.value.toFixed(field.scale < 1 ? 1 : 0)} ${field.unit}`,
         tag: 'confirmed',
-        evidence: [baselineDistance.rawLogId, distance.rawLogId],
+        evidence: refs,
       });
-      evidence.push(distanceObservation);
-      confirmations.set('distance', [
-        distanceObservation,
-        baselineDistance.rawLogId,
-        distance.rawLogId,
-      ]);
+      evidence.push(paceObservation);
+      confirmations.set(field.metric, [paceObservation, ...refs]);
     }
     const { resolveReadableMetrics } = await import('../../outcome/readable-metric-resolver');
     const readableMetrics = resolveReadableMetrics(
@@ -118,6 +122,7 @@ export const decodeStandardTool = entry<DecodeStandardInput, unknown>({
         confirmed,
         statistics: analysis.statistics,
         errors: analysis.errors,
+        inclineBaseline,
         readableMetrics,
       },
       evidence,
