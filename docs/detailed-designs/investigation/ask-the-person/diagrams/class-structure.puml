@@ -1,0 +1,119 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Ask the person
+
+enum PromptKind {
+  question
+  action
+  approval
+  tap
+  photo
+}
+
+class PersonPrompt {
+  +id: string
+  +kind: PromptKind
+  +title: string
+  +why: string | null
+  +sequence: string | null
+  +answers: string[]
+  +allowFreeText: boolean
+  +needsReady: boolean
+  +expectedSeconds: number | null
+  +skippable: boolean
+}
+
+class PromptResponse {
+  +promptId: string
+  +answer: string | null
+  +freeText: string | null
+  +skipped: boolean
+  +readyAt: number | null
+  +doneAt: number | null
+  +respondedAt: number
+}
+
+class AskUserInput {
+  +question: string <<max 140>>
+  +answers: string[] <<2 to 6, each max 40>>
+  +allowFreeText: boolean
+}
+
+class AskUserOutput {
+  +answer: string
+  +freeText: string <<max 500>>
+  +skipped: boolean
+}
+
+class RequestActionInput {
+  +instruction: string <<max 140>>
+  +needsReady: boolean
+  +expectedSeconds: number <<5 to 120>>
+}
+
+class RequestActionOutput {
+  +readyAt: number
+  +doneAt: number
+  +skipped: boolean
+}
+
+class PromptChannel {
+  -inactivityMs: number = 120000
+  +current: Signal<PersonPrompt | null>
+  +post(prompt: PersonPrompt, signal: AbortSignal): Promise<PromptResponse>
+  +respond(response: PromptResponse): void
+  +complete(promptId: string): void
+  +cancel(): void
+}
+
+class askUserTool <<ToolDefinition>> {
+  +name: "ask_user"
+  +safetyClass: "n/a"
+  +run(input: AskUserInput, ctx: ToolContext): Promise<ToolResult<AskUserOutput>>
+}
+
+class requestActionTool <<ToolDefinition>> {
+  +name: "request_action"
+  +safetyClass: "n/a"
+  +run(input: RequestActionInput, ctx: ToolContext): Promise<ToolResult<RequestActionOutput>>
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+  +readyTapped: boolean
+  +responded: output<PromptResponse>
+}
+
+class AnswerButtons <<component>> {
+  +answers: input<string[]>
+  +picked: output<string>
+}
+
+class StillThereDialog <<component>> {
+  +variant: input<"stillThere" | "paused">
+  +decided: output<"continue" | "stop">
+}
+
+askUserTool ..> AskUserInput
+askUserTool ..> AskUserOutput
+requestActionTool ..> RequestActionInput
+requestActionTool ..> RequestActionOutput
+askUserTool --> PromptChannel : post
+requestActionTool --> PromptChannel : post
+PromptChannel ..> PersonPrompt
+PromptChannel ..> PromptResponse
+PromptChannel ..> StillThereDialog : after 2 minutes
+PromptCard *-- AnswerButtons
+PersonPrompt --> PromptKind
+@enduml

@@ -1,0 +1,76 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Run a model on phones
+
+abstract class ModelAdapter <<contract>> {
+  +contextWindow: number
+  +availability(): Promise<ModelAvailability>
+  +downloadInfo(): Promise<DownloadInfo>
+  +download(onProgress: (percent: number) => void, signal: AbortSignal): Promise<void>
+  +createSession(): Promise<ModelSession>
+  +measureTokens(text: string): Promise<number>
+  +readImage(blob: Blob): Promise<string | ToolError>
+}
+
+abstract class ModelSession <<contract>> {
+  +promptAction(prompt: string, schema: JsonSchema, signal: AbortSignal): Promise<unknown>
+  +destroy(): void
+}
+
+class PromptApiModelAdapter
+class WebGpuModelAdapter {
+  -worker: Worker | null
+  -manifest: PhoneModelManifest
+}
+class WebGpuModelSession {
+  -worker: Worker
+}
+
+class PhoneModelManifest {
+  +id: string <<TO SUPPLY, OQ-02>>
+  +files: string[]
+  +totalBytes: number
+  +contextWindow: number
+  +runtime: "transformers.js" | "webllm" <<TO SUPPLY>>
+}
+
+class DownloadInfo {
+  +bytes: number | null
+  +onMobileData: boolean | null
+}
+
+class ModelAdapterLoader {
+  +load(): Promise<ModelAdapter | null>
+}
+
+class ModelDownloadController {
+  +info: Signal<DownloadInfo | null>
+  +progress: Signal<number>
+  +start(): Promise<void>
+}
+
+class ModelDecider {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+}
+
+ModelAdapter <|-- PromptApiModelAdapter
+ModelAdapter <|-- WebGpuModelAdapter
+ModelSession <|-- WebGpuModelSession
+WebGpuModelAdapter ..> WebGpuModelSession : creates
+WebGpuModelAdapter --> PhoneModelManifest
+ModelAdapter ..> DownloadInfo
+ModelAdapterLoader ..> ModelAdapter : imports one
+ModelDecider ..> ModelAdapter : contract only
+ModelDownloadController ..> ModelAdapter : contract only
+@enduml

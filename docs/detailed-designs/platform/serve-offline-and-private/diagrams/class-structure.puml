@@ -1,0 +1,81 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Serve offline and private
+
+class SecurityHeaders <<headers file>> {
+  +Strict-Transport-Security: "max-age=<TO SUPPLY>; includeSubDomains"
+  +Content-Security-Policy: CspDirectives
+  +Referrer-Policy: "no-referrer"
+  +X-Content-Type-Options: "nosniff"
+  {field} +Permissions-Policy: "bluetooth=(self), camera=(self)"
+}
+
+class CspDirectives {
+  +default-src: "'self'"
+  +script-src: "'self'"
+  +style-src: "'self' <TO SUPPLY>"
+  +connect-src: "'self'"
+  +img-src: "'self' blob:"
+  +font-src: "'self'"
+  +worker-src: "'self'"
+  +manifest-src: "'self'"
+  +object-src: "'none'"
+  +base-uri: "'none'"
+  +frame-ancestors: "'none'"
+  +require-trusted-types-for: "'script'"
+  +trusted-types: "angular gattsby"
+}
+
+class NgswConfig <<ngsw-config.json>> {
+  +index: "/index.html"
+  +assetGroups: [app prefetch, lazy prefetch, knowledge-base prefetch, fonts prefetch]
+  +dataGroups: []
+  +navigationUrls: SPA routes
+}
+
+class WebManifest <<manifest.webmanifest>> {
+  +name: "Gattsby"
+  +display: "standalone"
+  +start_url: "/"
+  +icons: Icon[]
+}
+
+class InitialBundleCheck <<script>> {
+  +budgetBytes: number = 256000
+  +run(statsPath: string): ExitCode
+}
+
+class HeaderCheck <<script>> {
+  +run(url: string): ExitCode
+}
+
+class AppShell <<component>> {
+  -updateReady: Signal<boolean>
+  +onVersionReady(event: VersionReadyEvent): void
+}
+
+class appRoutes <<Routes>> {
+  +"/start": loadComponent ReadinessPage
+  +"/": loadComponent HomePage
+  +"/investigations/:id": loadComponent InvestigationPage
+  +"...": one lazy route per page
+}
+
+SecurityHeaders *-- CspDirectives
+HeaderCheck ..> SecurityHeaders : asserts
+InitialBundleCheck ..> appRoutes : initial chunk only
+AppShell ..> appRoutes
+AppShell ..> NgswConfig : SwUpdate
+WebManifest ..> AppShell : installs
+@enduml

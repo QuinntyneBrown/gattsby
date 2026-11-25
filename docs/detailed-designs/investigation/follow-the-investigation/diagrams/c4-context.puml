@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Follow the investigation
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+
+Rel(gattsby, person, "Shows the stage, the running step and the activity feed; announces prompts")
+Rel(person, gattsby, "Reads at arm's length; operates by touch, keyboard or screen reader")
+Rel(gattsby, chrome, "Runs each step", "Web Bluetooth, Prompt API")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

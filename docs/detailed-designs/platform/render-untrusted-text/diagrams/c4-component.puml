@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Render untrusted text
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "device.name, values as bytes")
+  Component(session, "ModelSession", "Model adapter", "Model output as unknown JSON")
+  Component(validator, "ActionValidator / SchemaValidator", "Services", "Precompiled schemas; length limits; no eval")
+  Component(importer, "ImportService", "Store", "Size, JSON, prototype keys, schema")
+  Component(views, "ActivityFeed, PromptCard, ByteTable, VerdictSummary", "Angular components", "Interpolation and <bdi> only")
+  Component(text, "toDisplayText", "Pure helper", "Strips control characters; caps length")
+  Component(policy, "TrustedTypesPolicy", "Security", "The gattsby policy: script URLs from 'self' only; no HTML")
+  Component(exporter, "ExportService", "Store", "Safe file names from device names")
+}
+System_Ext(chrome, "Chrome", "Trusted Types enforcement")
+
+Rel(session, validator, "Untrusted action")
+Rel(ble, views, "Device name, hex")
+Rel(validator, views, "Validated text fields")
+Rel(importer, views, "Imported strings")
+Rel(views, text, "Formats each string")
+Rel(exporter, text, "Builds the file name")
+Rel(policy, chrome, "Registers the gattsby policy")
+Rel(chrome, views, "Throws on any HTML sink")
+@enduml

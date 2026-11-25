@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Prepare the device and the person
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "PlaybookRules" as rules
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+orch -> rules : next(state) at Prepare
+rules --> orch : decided: ask_user machine type
+orch -> channel : post(question 1 of 3, 6 answers)
+channel -> card : "What kind of machine is it?" + Don't know (FR-050)
+person -> card : Tap Treadmill
+card --> channel : answer Treadmill
+channel --> orch : PromptResponse
+orch -> store : commitStep(answer, machineType treadmill)
+orch -> rules : next(state)
+rules -> kb : brandSuggestions(treadmill)
+kb --> rules : Horizon, NordicTrack, Sole, ...
+rules --> orch : decided: ask_user brand, allowFreeText
+orch -> channel : post(question 2 of 3)
+alt Person types or picks a brand
+  person -> card : "Horizon, on the console"
+  card --> channel : freeText
+else Person answers Don't know
+  person -> card : Tap Don't know
+  card --> channel : answer Don't know
+  note right of orch : Unknown, not an error (FR-008)
+end
+orch -> store : commitStep(answer, brand)
+orch -> channel : request_action "Switch it on, then disconnect the gym's app, phones, watches" (needsReady false)
+person -> card : Tap Done
+channel --> orch : doneAt
+orch -> store : commitStep(action done)
+orch -> orch : Stage Find
+@enduml

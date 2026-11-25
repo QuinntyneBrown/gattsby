@@ -1,0 +1,43 @@
+@startuml
+title UML sequence behaviour — Decide one step through the phone model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ModelDecider" as md
+  participant "ActionValidator" as val
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebGpuModelSession" as session
+end box
+box "Browser and device" #F2F4F7
+  participant "Phone model worker" as worker
+end box
+
+orch -> md : decide(state, signal)
+md -> session : promptAction(prompt, ActionSchema, signal)
+session -> worker : postMessage(prompt, schema)
+alt Answers within 10 s
+  worker -> worker : Constrained decoding to the schema <TO SUPPLY>
+  worker --> session : JSON text
+  session --> md : unknown
+  md -> val : validate(action)
+  val --> orch : AgentAction, same path as Gemini Nano (FR-074)
+else Times out or aborted
+  md -> session : signal aborted
+  session -> worker : postMessage(abort)
+  md --> orch : TIMEOUT; counts toward the fallback (FR-006)
+end
+@enduml

@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Download the on-device model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelDownloadController" as ctl
+  participant "PromptApiModelAdapter" as adapter
+end box
+box "Browser and device" #F2F4F7
+  participant "Prompt API" as api
+end box
+
+page -> person : "Download the on-device model?" about 2.2 GB, free disk space
+note over page : Nothing downloads before the tap (FR-004)
+person -> page : Tap Download the on-device model
+page -> ctl : start()
+ctl -> adapter : download(onProgress)
+adapter -> api : LanguageModel.create({ monitor })
+loop downloadprogress events
+  api --> adapter : loaded 0.62
+  adapter --> ctl : onProgress(62)
+  ctl --> page : progress 62
+end
+ctl -> ctl : Re-emit the last value every 1,000 ms
+page -> person : Progress bar "62%"; Start with the checklist stays offered
+alt Download completes
+  api --> adapter : session ready
+  adapter -> adapter : destroy() the probe session
+  ctl --> page : availability available
+  page -> person : "Ready to investigate." Full agent mode
+else Download fails
+  api --> adapter : error
+  ctl --> page : error, progress 38
+  page -> person : "The model download stopped." Retry the download, Start with the checklist
+  person -> page : Tap Retry the download
+  page -> ctl : retry()
+end
+@enduml

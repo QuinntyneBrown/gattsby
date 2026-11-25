@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Ask a question with suggested answers
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as exec
+  participant "ActionValidator" as val
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "askUserTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+exec -> val : call_tool ask_user (question, answers, allowFreeText)
+alt Question over 140 chars, or answers not 2 to 6
+  val --> exec : INVALID_INPUT (TOOL-025)
+else Valid
+  val --> exec : ok
+  exec -> tool : run(input, ctx)
+  tool -> tool : Append "Don't know" if absent
+  tool -> channel : post(question)
+  channel -> card : One question; answers 48 x 48 px (FR-050)
+  card -> person : Announced in the polite live region
+  alt Taps a suggested answer
+    person -> card : "Horizon"
+  else Types a free-text answer
+    person -> card : Up to 500 characters
+    card -> card : Keep at most 500 characters, as text
+  else Taps Don't know
+    person -> card : "Don't know"
+  else Taps Skip
+    person -> card : Skip (FR-052)
+  end
+  card --> channel : PromptResponse
+  channel --> tool : response
+  tool --> exec : ToolResult { answer, freeText, skipped }
+  exec -> store : commitStep(question with answer, or skip observation)
+end
+@enduml

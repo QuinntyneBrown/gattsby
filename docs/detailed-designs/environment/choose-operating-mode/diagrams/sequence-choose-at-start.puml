@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Choose the mode at the start of an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ModeSelector" as sel
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as adapter
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Prompt API" as api
+end box
+
+orch -> sel : select(preference)
+sel -> store : Read useAgent setting
+store --> sel : useAgent
+alt The person chose checklist mode
+  sel --> orch : checklist, personChoseChecklist
+  note right of orch : No model call is made (FR-005)
+else Model available
+  sel -> adapter : availability()
+  adapter -> api : LanguageModel.availability(options)
+  api --> adapter : "available"
+  sel -> adapter : createSession()
+  adapter -> api : LanguageModel.create(options)
+  alt Session created
+    api --> adapter : session
+    sel --> orch : agent, modelAvailable
+  else Creation fails
+    api --> adapter : error
+    sel --> orch : checklist, sessionFailed (FR-006)
+  end
+else Unavailable, downloadable or downloading
+  sel --> orch : checklist, modelUnavailable
+end
+orch -> orch : Use ModelDecider or ChecklistDecider
+orch -> store : Record the mode with the investigation (FR-007)
+orch -> orch : App bar reads "Agent" or "Checklist"
+@enduml

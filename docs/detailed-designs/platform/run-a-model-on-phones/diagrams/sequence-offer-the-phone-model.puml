@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Offer the phone model on Chrome for Android
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelAdapterLoader" as loader
+  participant "WebGpuModelAdapter" as gpu
+  participant "ModelDownloadController" as dl
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+
+page -> loader : load()
+loader -> chrome : 'LanguageModel' in globalThis?
+chrome --> loader : false (Chrome for Android)
+alt Phone model enabled (OQ-01) and WebGPU present
+  loader -> gpu : import()
+  gpu -> chrome : navigator.gpu.requestAdapter()
+  chrome --> gpu : adapter
+  loader --> page : WebGpuModelAdapter
+  page -> dl : info()
+  dl -> gpu : downloadInfo()
+  gpu --> dl : bytes from the manifest; onMobileData if known
+  page -> person : Size and mobile-data cost before any download (FR-074)
+  person -> page : Tap Download
+  page -> dl : start()
+  dl -> gpu : download(onProgress)
+  gpu -> chrome : fetch weights from 'self' into Cache Storage
+  gpu --> dl : progress
+  dl --> page : percent
+else No WebGPU, or the phone model not enabled
+  loader --> page : null
+  page -> person : Checklist mode, as today (A-02)
+end
+@enduml

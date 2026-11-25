@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Choose the operating mode
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Readiness and settings pages, mode selector, orchestrator, model adapter")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "The mode preference; the mode of each step and each mode change")
+}
+System_Ext(chrome, "Chrome", "Prompt API with Gemini Nano")
+
+Rel(person, spa, "Taps Download, Use checklist mode instead, or the settings switch", "Touch or keyboard")
+Rel(spa, chrome, "availability(), create() with a download monitor", "Prompt API")
+Rel(spa, idb, "Reads the preference; records the mode and every fallback")
+@enduml

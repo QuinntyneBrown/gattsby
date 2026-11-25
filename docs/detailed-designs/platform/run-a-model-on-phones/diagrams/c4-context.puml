@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Run a model on phones
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Chrome for Android: Web Bluetooth, WebGPU, Cache Storage, IndexedDB")
+System_Ext(host, "Static host", "HTTPS host that serves Gattsby's static files and headers")
+
+Rel(person, gattsby, "Sees the phone model's size and mobile-data cost; taps Download")
+Rel(host, gattsby, "Serves the phone model's files from Gattsby's own origin", "HTTPS")
+Rel(gattsby, chrome, "Runs the phone model on the GPU", "WebGPU")
+@enduml

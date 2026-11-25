@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — A guard fails a spec
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Test fixtures (never product code)" #F2F4F7
+  participant "gattsby-test.ts" as fx
+  participant "ApprovalDialog page object" as po
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "Gattsby web app" as app
+end box
+box "Browser and device" #F2F4F7
+  participant "FakeBluetoothApi" as fake
+  participant "FakeLanguageModel" as flm
+end box
+
+alt Unexpected Bluetooth call
+  app -> fake : readValue() on an unscripted characteristic
+  fake -> fake : Record in unexpected; reject with NotSupportedError
+else Unapproved write
+  app -> fake : writeValueWithResponse(02 E8 03)
+  fake -> fake : Record write with time
+  fx -> po : Approvals recorded by taps on Send
+  fx -> fx : No approval for 0x2AD9, 02 E8 03 before it
+else Unexpected model call
+  app -> flm : prompt() beyond the script
+  flm -> flm : Record; reject
+else Request off localhost
+  app -> fx : GET https://other.example/
+  fx -> fx : route() aborts and records
+else Page error or CSP violation
+  app -> fx : pageerror or securitypolicyviolation
+end
+fx -> fx : Teardown: any record fails the spec
+@enduml

@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Ask for a physical action and wait for it
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "baselineVsActivityTool" as rec
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+
+rec -> channel : post(action "Pedal harder", needsReady true, expectedSeconds 10)
+channel -> card : Instruction with Ready only (TOOL-026)
+card -> person : "Pedal harder. Tap Ready when you are."
+note over card : Done is not offered before Ready
+person -> card : Tap Ready
+card --> channel : readyAt
+channel --> rec : ready
+rec -> ble : subscribe and record for 10 s (FR-051)
+note over rec, ble : Recording starts only after Ready
+card -> person : Done offered
+alt The recording ends first
+  ble --> rec : 10 s of notifications
+  rec -> channel : complete(promptId)
+else The person taps Done
+  person -> card : Tap Done
+  card --> channel : doneAt
+  channel --> rec : done
+  rec -> ble : stop recording
+end
+rec -> rec : Analyse only after Done or the recording's end
+@enduml

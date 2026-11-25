@@ -1,0 +1,90 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Start an investigation
+
+enum MachineType {
+  treadmill
+  bike
+  rower
+  crossTrainer
+  heartRateSensor
+  other
+  unknown
+}
+
+class Investigation {
+  +id: string
+  +startedAt: number
+  +mode: OperatingMode
+  +appVersion: string
+  +kbVersion: string
+  +stage: Stage
+  +status: InvestigationStatus
+  +machineType: MachineType
+  +brand: string | null
+  +locationLabel: string | null
+  +lastCompletedStep: number
+}
+
+class NewInvestigation {
+  +mode: OperatingMode
+  +appVersion: string
+  +kbVersion: string
+}
+
+abstract class InvestigationStore <<contract>> {
+  +create(init: NewInvestigation): Promise<Investigation>
+  +requestPersistence(): Promise<boolean>
+  +setLocationLabel(id: string, label: string | null): Promise<void>
+  +commitStep(commit: StepCommit): Promise<void>
+}
+
+class HomePage <<component>> {
+  +identify(): Promise<void>
+}
+
+abstract class AgentOrchestrator <<contract>> {
+  +start(id: string): Promise<void>
+}
+
+class PlaybookRules {
+  +next(state: PlaybookState): RuleOutcome
+  -prepare(state: PlaybookState): RuleOutcome
+}
+
+class KnowledgeBase {
+  +version: string
+  +vendors: VendorSignature[]
+  +brandSuggestions(type: MachineType): string[]
+}
+
+class AddNoteDialog <<component>> {
+  +locationLabel: input<string | null>
+  +saved: output<NoteInput>
+}
+
+class ProfileBuilder {
+  +build(investigation: Investigation, ...): DeviceProfile
+}
+
+HomePage ..> InvestigationStore : create, requestPersistence
+HomePage ..> AgentOrchestrator : start(id)
+HomePage ..> KnowledgeBase : version
+InvestigationStore ..> Investigation : stores
+InvestigationStore ..> NewInvestigation : takes
+Investigation --> MachineType
+PlaybookRules ..> KnowledgeBase : brand suggestions
+AddNoteDialog ..> Investigation : locationLabel
+ProfileBuilder ..> Investigation : copies locationLabel
+@enduml

@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Check capabilities
+
+enum CapabilityStatus {
+  checking
+  available
+  needsAction
+  notAvailable
+}
+
+class Capabilities {
+  +secureContext: boolean
+  +bluetooth: { api: boolean, adapterAvailable: boolean, blocked: boolean }
+  +model: { api: boolean, availability: ModelAvailability, imageInput: boolean }
+  +watchAdvertisements: boolean
+  +requestLEScan: boolean
+  +getDevices: boolean
+  +camera: boolean
+  +storage: { open: boolean, persisted: boolean, quotaBytes: number, usageBytes: number }
+  +platform: { os: string, browser: string, version: number, mobile: boolean }
+}
+
+class CapabilityItem {
+  +id: "browser" | "bluetooth" | "model" | "advertisements" | "camera" | "storage"
+  +label: string
+  +detail: string
+  +status: CapabilityStatus
+  +action: string | null
+}
+
+abstract class CapabilityDetector <<contract>> {
+  +detect(): Promise<Capabilities>
+}
+
+class BrowserCapabilityDetector {
+  -probeTimeoutMs: number = 1000
+  +detect(): Promise<Capabilities>
+  -probe<T>(run: () => Promise<T>, fallback: T): Promise<T>
+  -platform(): Capabilities["platform"]
+}
+
+abstract class BleLayer <<contract>> {
+  +availability(): Promise<BleAvailability>
+}
+
+abstract class ModelAdapter <<contract>> {
+  +availability(): Promise<ModelAvailability>
+  +imageInput(): Promise<boolean>
+}
+
+abstract class CameraAdapter <<contract>> {
+  +availability(): boolean
+}
+
+abstract class InvestigationStore <<contract>> {
+  +usage(): Promise<StorageUsage>
+}
+
+class ReadinessPage <<component>> {
+  +capabilities: Signal<Capabilities | null>
+  +items: Signal<CapabilityItem[]>
+  +canStart: Signal<boolean>
+  +recheck(): Promise<void>
+}
+
+class CapabilityList <<component>> {
+  +items: input<CapabilityItem[]>
+}
+
+class checkCapabilitiesTool <<ToolDefinition>> {
+  +name: "check_capabilities"
+  +safetyClass: "read"
+  +stages: ["prepare"]
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<Capabilities>>
+}
+
+CapabilityDetector <|-- BrowserCapabilityDetector
+BrowserCapabilityDetector ..> BleLayer : asks
+BrowserCapabilityDetector ..> ModelAdapter : asks (dynamic import)
+BrowserCapabilityDetector ..> CameraAdapter : asks (dynamic import)
+BrowserCapabilityDetector ..> InvestigationStore : asks
+BrowserCapabilityDetector ..> Capabilities : returns
+ReadinessPage ..> CapabilityDetector : detect()
+ReadinessPage ..> CapabilityItem : maps with toCapabilityItems()
+ReadinessPage ..> CapabilityList : renders
+CapabilityItem --> CapabilityStatus
+checkCapabilitiesTool ..> CapabilityDetector : detect()
+@enduml

@@ -1,0 +1,38 @@
+@startuml
+title UML sequence behaviour — Refuse every request off the app's origin
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "Gattsby web app" as app
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome CSP" as csp
+  participant "Other origin" as other
+end box
+box "Test fixtures (never product code)" #F2F4F7
+  participant "Playwright network guard" as guard
+end box
+
+alt In the deployed app
+  app -> csp : fetch("https://other.example/…")
+  csp -> csp : connect-src 'self' (NFR-012)
+  csp --> app : Blocked; securitypolicyviolation
+  note right of other : No request leaves the device
+else In a behaviour spec
+  app -> guard : Any request to a host other than localhost
+  guard -> guard : Abort and record
+  guard --> app : Spec fails at teardown (NFR-012)
+end
+@enduml

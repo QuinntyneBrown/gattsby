@@ -1,0 +1,13 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Simulate devices and the model
+
+Person(dev, "Developer or CI", "Runs the behaviour specs, or demonstrates Gattsby with a simulated device")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chromium under Playwright", "Runs Gattsby with a fake navigator.bluetooth and a fake LanguageModel")
+
+Rel(dev, chrome, "Runs specs; picks a simulated device in a development build")
+Rel(chrome, gattsby, "Hosts Gattsby with scripted devices and model actions in place of real ones")
+Rel(gattsby, chrome, "Calls Web Bluetooth and the Prompt API as usual")
+@enduml

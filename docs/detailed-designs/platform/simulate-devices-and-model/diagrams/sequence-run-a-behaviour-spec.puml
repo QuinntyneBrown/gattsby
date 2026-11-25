@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Run a behaviour spec with the FTMS treadmill
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Playwright spec" as spec
+box "Test fixtures (never product code)" #F2F4F7
+  participant "gattsby-test.ts" as fx
+  participant "Page objects" as po
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "PromptApiModelAdapter" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "FakeBluetoothApi" as fake
+  participant "FakeLanguageModel" as flm
+end box
+
+spec -> fx : test(FTMS treadmill, agent mode)
+fx -> fake : addInitScript: navigator.bluetooth = FakeBluetoothApi(ftmsTreadmill)
+fx -> flm : addInitScript: LanguageModel = FakeLanguageModel(script)
+fx -> fx : page.clock.install(); route guard; pageerror listener
+spec -> po : home.identify(); answer Prepare prompts
+po -> ble : (via the app) requestDevice on "Find the device"
+ble -> fake : requestDevice(filters, optionalServices)
+fake -> fake : Chooser script picks HZN-T202-4F1A
+fake --> ble : FakeBluetoothDevice
+ble -> fake : connect, getPrimaryServices, read 0x2A29
+fake --> ble : Scripted values
+model -> flm : prompt(state, responseConstraint)
+flm --> model : Scripted action JSON
+spec -> po : investigation.tapReady()
+spec -> fake : setEffort(walkFaster)
+fake --> ble : Treadmill Data notifications, speed 3.0 to 6.0 km/h
+spec -> po : verdict.read()
+po --> spec : "Connected — FTMS", speed and distance confirmed
+fx -> fx : Teardown guards pass (NFR-023)
+@enduml

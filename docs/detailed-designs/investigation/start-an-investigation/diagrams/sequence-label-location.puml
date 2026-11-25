@@ -1,0 +1,44 @@
+@startuml
+title UML sequence behaviour — Label the location
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationMenuDialog" as menu
+  participant "AddNoteDialog" as dialog
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ProfileBuilder" as profile
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+person -> menu : Options, "Add a note or the location"
+menu -> dialog : Open with the current label
+person -> dialog : Type "Decathlon, Lille"
+person -> dialog : Tap Save
+alt Nothing entered
+  dialog -> person : "Nothing to save yet" summary; input kept
+else Label entered
+  dialog -> store : setLocationLabel(i-42, "Decathlon, Lille") (FR-010)
+  store --> dialog : saved
+end
+note over dialog, store : No call to navigator.geolocation, ever (FR-010)
+...At the verdict...
+profile -> store : get(i-42)
+store --> profile : locationLabel
+profile -> profile : Copy locationLabel into the device profile
+@enduml

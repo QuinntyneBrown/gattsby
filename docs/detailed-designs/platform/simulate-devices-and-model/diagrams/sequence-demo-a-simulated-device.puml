@@ -1,0 +1,41 @@
+@startuml
+title UML sequence behaviour — Demonstrate with a simulated device
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Developer" as dev
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "SimulatedChooserDialog" as chooser
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "FakeBluetoothApi" as fake
+  participant "navigator.bluetooth" as real
+end box
+
+alt Development build (ng serve)
+  dev -> ble : Tap "Find the device"
+  ble -> fake : requestDevice() through the BLUETOOTH token (provideSimulation)
+  fake -> chooser : List scripted devices
+  dev -> chooser : Pick "FTMS treadmill (simulated)"
+  chooser --> fake : choice
+  fake --> ble : FakeBluetoothDevice
+else Production build
+  dev -> ble : Tap "Find the device"
+  ble -> real : requestDevice() through the BLUETOOTH token (navigator.bluetooth)
+  note right of real : Simulation code is not in the bundle; no simulated device is offered (NFR-023)
+end
+@enduml

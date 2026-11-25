@@ -1,0 +1,48 @@
+@startuml
+title UML sequence behaviour — Show hostile text literally, through export and import
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ActionValidator" as val
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "ModelSession" as model
+  participant "ExportService / ImportService" as io
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+device -> ble : name "<img src=x onerror=alert(1)>"
+ble --> feed : advertisedName (string)
+feed -> feed : {{ toDisplayText(name) }} inside <bdi>
+feed -> person : Shows <img src=x onerror=alert(1)> literally (NFR-013)
+model -> val : raw output with "<script>alert(1)</script>" in a message
+val -> val : JSON.parse, schema check, length limits; never eval
+val --> feed : Message text
+feed -> person : Shows the <script> text literally (FR-048)
+person -> io : Export full record
+io -> io : File name from toFileNamePart(name): "img-src-x-onerror-alert-1"
+io --> person : record.gattsby.json, strings unchanged as JSON data
+person -> io : Import that file
+io -> io : Size, JSON, prototype keys, schema (NFR-015)
+io --> feed : Strings as data
+feed -> person : Text shown literally again; no script runs
+@enduml

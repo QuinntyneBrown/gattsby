@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Check capabilities
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Readiness page, capability detector, adapters, check_capabilities tool")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Storage usage; the capabilities observation of each investigation")
+}
+System_Ext(chrome, "Chrome", "Web Bluetooth, Prompt API, camera, storage manager")
+
+Rel(person, spa, "Reads each capability and its next action", "Touch or keyboard")
+Rel(spa, chrome, "Checks Bluetooth, model, advertisement scanning, camera and storage", "JavaScript APIs, no prompt")
+Rel(spa, idb, "Opens the database; reads usage; commits the observation")
+@enduml

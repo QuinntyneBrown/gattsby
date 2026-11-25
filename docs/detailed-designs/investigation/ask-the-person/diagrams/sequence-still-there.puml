@@ -1,0 +1,45 @@
+@startuml
+title UML sequence behaviour — Ask Still there after 2 minutes
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+  participant "StillThereDialog" as dialog
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PromptChannel" as channel
+  participant "PlaybookOrchestrator" as orch
+end box
+
+channel -> card : "Raise the incline to 2%" (needsReady)
+channel -> channel : Start the 2-minute inactivity timer
+...2 minutes, no Ready, Done or answer...
+channel -> channel : Timer fires (FR-051)
+channel -> orch : Stop any recording in progress
+channel -> dialog : "Still there?" Picks up at Standard path
+alt Continue
+  person -> dialog : Tap Continue
+  dialog --> channel : continue
+  channel -> card : Show the same prompt again
+  channel -> channel : Restart the timer
+else Stop
+  person -> dialog : Tap Stop
+  dialog --> page : stop
+  channel --> orch : TIMEOUT for the pending tool (TOOL-025)
+  page -> orch : stop('person'), see the stop-pause-and-resume design
+end
+@enduml

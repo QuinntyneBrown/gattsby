@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Stop, pause and resume
+
+enum InvestigationStatus {
+  running
+  paused
+  finished
+}
+
+enum StopReason {
+  finish
+  confidence
+  stepBudget
+  noProgress
+  person
+  emergencyStop
+}
+
+class Investigation {
+  +id: string
+  +status: InvestigationStatus
+  +stage: Stage
+  +lastCompletedStep: number
+  +pausedAt: number | null
+  +deviceId: string | null
+  +advertisedName: string | null
+  +verdictId: string | null
+}
+
+abstract class AgentOrchestrator <<contract>> {
+  +status: Signal<"idle" | "running" | "paused" | "stopping" | "ended">
+  +start(id: string): Promise<void>
+  +pause(): Promise<void>
+  +resume(id: string): Promise<void>
+  +stop(reason: StopReason): Promise<void>
+}
+
+class PlaybookOrchestrator {
+  -loopAbort: AbortController
+  -runLoop(): Promise<void>
+}
+
+class ConnectionReleaser {
+  +release(deadlineMs: number = 2000): Promise<void>
+}
+
+class ConnectionSupervisor {
+  +reconnect(device: SavedDevice): Promise<ToolResult<void>>
+}
+
+class ApprovalLedger {
+  +revokeAll(): void
+}
+
+class VerdictBuilder {
+  +build(investigation: Investigation, reason: StopReason): Verdict
+}
+
+abstract class InvestigationStore <<contract>> {
+  +get(id: string): Promise<Investigation>
+  +list(): Promise<Investigation[]>
+  +setStatus(id: string, status: InvestigationStatus): Promise<void>
+  +commitStep(commit: StepCommit): Promise<void>
+}
+
+class StopInvestigationDialog <<component>> {
+  +deviceName: input<string>
+  +busy: input<boolean>
+  +decided: output<"stop" | "keepGoing">
+}
+
+class StillThereDialog <<component>> {
+  +variant: input<"stillThere" | "paused">
+  +picksUpAt: input<string>
+  +decided: output<"resume" | "stop" | "saveAndExit">
+}
+
+AgentOrchestrator <|-- PlaybookOrchestrator
+PlaybookOrchestrator --> ConnectionReleaser
+PlaybookOrchestrator --> ConnectionSupervisor
+PlaybookOrchestrator --> ApprovalLedger
+PlaybookOrchestrator --> VerdictBuilder
+PlaybookOrchestrator ..> InvestigationStore
+PlaybookOrchestrator ..> StopReason
+Investigation --> InvestigationStatus
+StopInvestigationDialog ..> AgentOrchestrator : via InvestigationPage
+StillThereDialog ..> AgentOrchestrator : via InvestigationPage
+@enduml

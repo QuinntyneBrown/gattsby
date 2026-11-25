@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Simulate devices and the model
+
+Person(dev, "Developer or CI", "Playwright")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Reads the Bluetooth object from the BLUETOOTH token")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "Reads LanguageModel from the LANGUAGE_MODEL token")
+  Component(prov, "provideSimulation", "Development providers", "Overrides BLUETOOTH; adds SimulatedChooserDialog")
+  Component(fakeapi, "FakeBluetoothApi", "Simulation", "Plays a ScriptedDevice: services, values, notifications, drops, encryption")
+  Component(devices, "Scripted devices", "Simulation data", "FTMS treadmill, FTMS bike, heart-rate strap, unknown services, dropping, encrypted")
+}
+Component(fxble, "fake-bluetooth.ts", "Playwright fixture", "Installs FakeBluetoothApi; records every call and write")
+Component(fxlm, "fake-language-model.ts", "Playwright fixture", "Scripted availability, download and actions; records prompts")
+Component(fxtest, "gattsby-test.ts", "Playwright fixture", "Guards: unexpected call, unapproved write, off-localhost request, page error")
+Component(pages, "Page objects", "e2e/pages", "Own every selector; record approvals")
+
+Rel(dev, fxtest, "Runs a spec")
+Rel(fxtest, fxble, "Uses")
+Rel(fxtest, fxlm, "Uses")
+Rel(fxtest, pages, "Uses")
+Rel(fxble, fakeapi, "Installs as navigator.bluetooth")
+Rel(fakeapi, devices, "Plays")
+Rel(prov, fakeapi, "Provides as BLUETOOTH (development build)")
+Rel(ble, fakeapi, "Calls requestDevice, connect, read, write")
+Rel(model, fxlm, "Calls availability, create, prompt")
+@enduml

@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Choose the operating mode
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(readiness, "ReadinessPage", "Angular page, /start", "Offers the download, shows progress, offers checklist mode")
+  Component(download, "ModelDownloadController", "Service", "Signals availability, progress and error; start() and retry()")
+  Component(adapter, "PromptApiModelAdapter", "Model adapter, dynamically imported", "availability(), download(onProgress), createSession()")
+  Component(selector, "ModeSelector", "Service", "Picks agent or checklist at start; counts failures; falls back")
+  Component(orch, "PlaybookOrchestrator", "Service (AgentOrchestrator)", "Swaps ModelDecider for ChecklistDecider at the current stage")
+  Component(banner, "ModeBanner", "Notification", "Running as a checklist / Continuing as a checklist")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Preference, step modes and mode changes")
+}
+System_Ext(chrome, "Chrome", "Prompt API")
+
+Rel(person, readiness, "Taps Download the on-device model")
+Rel(readiness, download, "start(), retry()")
+Rel(download, adapter, "download(onProgress)")
+Rel(adapter, chrome, "LanguageModel.availability() and create({ monitor })")
+Rel(orch, selector, "select() at start; report(failure) during the run")
+Rel(selector, adapter, "availability(), createSession()")
+Rel(selector, store, "Reads useAgent preference")
+Rel(orch, store, "Commits mode per step and ModeChange")
+Rel(orch, banner, "Shows the mode and its reason")
+@enduml

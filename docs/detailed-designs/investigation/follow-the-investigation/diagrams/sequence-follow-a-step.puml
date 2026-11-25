@@ -1,0 +1,48 @@
+@startuml
+title UML sequence behaviour — Follow a step as it runs
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "StageStepper" as stepper
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ToolExecutor" as exec
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ToolRegistry" as reg
+end box
+
+orch -> reg : get("read_device_info")
+reg --> orch : labels running "Reading the maker and model"
+orch -> orch : step.set(read_device_info, label)
+orch --> page : stage Identify, step signal
+page -> stepper : Identify: now (aria-current step)
+page -> feed : Running card "Reading the maker and model" (FR-048)
+feed -> person : "Read-only, takes about a second. Nothing for you to do."
+orch -> exec : run(read_device_info)
+exec --> orch : ToolResult, summary "Johnson Health Tech · model T202 · firmware 2.14.0"
+orch -> orch : feed.update(append tool entry); step.set(null)
+orch --> page : feed signal
+page -> feed : Done card "Read the maker, model and firmware", 1 s, summary as text
+note over feed : Summary at most 200 chars (FR-044), interpolated as text, never HTML
+opt Hypothesis changed
+  orch --> page : feed hypothesis entry 35% to 65%, likely
+  page -> feed : Hypothesis card with ConfidenceBadge word and shape
+end
+@enduml
