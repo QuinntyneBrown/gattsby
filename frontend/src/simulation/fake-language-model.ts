@@ -14,17 +14,21 @@ const DOWNLOAD_STEP_MS = 1000;
 // script's queue of responses.
 export class FakeLanguageModel {
   private readonly responses: ScriptedResponse[];
+  private status: ModelScript['availability'];
+  private downloadFailures: number;
 
   constructor(
-    private readonly script: ModelScript,
+    script: ModelScript,
     private readonly report: Report,
   ) {
     this.responses = [...script.responses];
+    this.status = script.availability;
+    this.downloadFailures = script.downloadFailures ?? 0;
   }
 
   async availability(): Promise<string> {
     this.report({ kind: 'model-call', method: 'availability' });
-    return this.script.availability;
+    return this.status;
   }
 
   async params(): Promise<Record<string, number>> {
@@ -34,16 +38,22 @@ export class FakeLanguageModel {
 
   async create(options: CreateOptions = {}): Promise<FakeLanguageModelSession> {
     this.report({ kind: 'model-call', method: 'create' });
-    if (this.script.availability === 'unavailable') {
+    if (this.status === 'unavailable') {
       throw new DOMException('The model is not available.', 'NotSupportedError');
     }
-    if (this.script.availability !== 'available') {
+    if (this.status !== 'available') {
       const monitor = new EventTarget();
       options.monitor?.(monitor);
       for (const loaded of [0, 0.5, 1]) {
         await new Promise((resolve) => setTimeout(resolve, loaded === 0 ? 0 : DOWNLOAD_STEP_MS));
         monitor.dispatchEvent(Object.assign(new Event('downloadprogress'), { loaded }));
+        if (loaded === 0.5 && this.downloadFailures > 0) {
+          this.downloadFailures--;
+          this.status = 'downloadable';
+          throw new DOMException('Test download failed.', 'NetworkError');
+        }
       }
+      this.status = 'available';
     }
     return new FakeLanguageModelSession(this.responses, this.report);
   }

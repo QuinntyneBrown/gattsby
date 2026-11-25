@@ -2,7 +2,11 @@ import type { Capabilities } from './capabilities';
 import type { CapabilityItem } from './capability-item';
 import { readinessIssue } from './readiness-issue';
 
-export function toCapabilityItems(c: Capabilities | null): CapabilityItem[] {
+export function toCapabilityItems(
+  c: Capabilities | null,
+  model: Capabilities['model']['availability'] | 'failed' | 'idle',
+  progress: number,
+): CapabilityItem[] {
   if (!c) {
     return [
       'Browser',
@@ -53,11 +57,22 @@ export function toCapabilityItems(c: Capabilities | null): CapabilityItem[] {
     },
     {
       label: 'On-device model',
-      detail:
-        c.model.availability === 'available'
-          ? 'Gemini Nano ready · runs offline'
-          : 'Use checklist mode',
-      status: c.model.availability === 'available' ? 'ok' : 'na',
+      detail: {
+        available: 'Gemini Nano ready · runs offline',
+        downloadable: 'Download needed',
+        downloading: 'Downloading Gemini Nano',
+        failed: `Download failed at ${progress}%`,
+        unavailable: 'Not available on this device · use checklist mode',
+        idle: 'Not available on this device · use checklist mode',
+      }[model],
+      status:
+        model === 'available'
+          ? 'ok'
+          : model === 'unavailable'
+            ? 'na'
+            : model === 'downloading'
+              ? 'pending'
+              : 'warn',
     },
     {
       label: 'Advertisement scanning',

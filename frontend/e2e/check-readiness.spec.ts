@@ -1,4 +1,4 @@
-// Traces to: FR-001, FR-002, FR-003, NFR-016, NFR-021, NFR-026, TOOL-001
+// Traces to: FR-001, FR-002, FR-003, FR-004, NFR-016, NFR-021, NFR-026, TOOL-001
 // Given a supported browser with Bluetooth and the model, when Gattsby opens,
 // then Readiness lists the capabilities and Start opens Home without requesting any permission.
 
@@ -105,4 +105,68 @@ test('asks for a re-check when storage cannot open', async ({ page }) => {
   await expect(readiness.capability('Storage')).toContainText('Allow this site to save data');
   await expect(readiness.checkAgain).toBeVisible();
   await expect(readiness.continueButton).toHaveCount(0);
+});
+
+test.describe('The model can be downloaded', () => {
+  test.use({ model: { availability: 'downloadable', responses: [] } });
+  test('waits for a tap and updates progress as Chrome downloads the model', async ({
+    page,
+    fakeModel,
+  }) => {
+    const readiness = new ReadinessPage(page);
+    await readiness.open();
+    await expect(readiness.heading).toHaveText('Download the on-device model?');
+    await page.clock.runFor(3_000);
+    expect(fakeModel.calls()).not.toContain('create');
+    await readiness.download.click();
+    await expect(readiness.heading).toHaveText('Getting the on-device model ready.');
+    await expect(readiness.progress).toHaveAttribute('value', '0');
+    await page.clock.runFor(1_050);
+    await expect(readiness.progress).toHaveAttribute('value', '50');
+    await expect(readiness.continueButton).toBeEnabled();
+    await page.clock.runFor(1_050);
+    await expect(readiness.heading).toHaveText('Ready to investigate.');
+    expect(fakeModel.calls().filter((method) => method === 'create')).toHaveLength(1);
+    expect(fakeModel.calls()).toContain('destroy');
+    expect(fakeModel.prompts()).toEqual([]);
+  });
+});
+
+test.describe('The download fails once', () => {
+  test.use({ model: { availability: 'downloadable', responses: [], downloadFailures: 1 } });
+  test('keeps the percentage and lets the person retry or continue in checklist mode', async ({
+    page,
+  }) => {
+    const readiness = new ReadinessPage(page);
+    await readiness.open();
+    await readiness.download.click();
+    await expect(readiness.progress).toHaveAttribute('value', '0');
+    await page.clock.runFor(1_100);
+    await expect(readiness.heading).toHaveText('The model download stopped.');
+    await expect(readiness.capability('On-device model')).toContainText('Download failed at 50%');
+    await expect(readiness.continueButton).toBeEnabled();
+    await readiness.retryDownload.click();
+    await expect(readiness.progress).toHaveAttribute('value', '0');
+    await page.clock.runFor(2_150);
+    await expect(readiness.heading).toHaveText('Ready to investigate.');
+  });
+});
+
+test.describe('The model is unavailable', () => {
+  test.use({ model: { availability: 'absent', responses: [] } });
+  test('explains the checklist and continues without the Prompt API', async ({
+    page,
+    fakeModel,
+  }) => {
+    const readiness = new ReadinessPage(page);
+    await readiness.open();
+    await expect(readiness.heading).toHaveText('Ready, in checklist mode.');
+    await expect(readiness.capability('On-device model')).toContainText(
+      'Not available on this device',
+    );
+    await readiness.continueButton.click();
+    await expect(page).toHaveURL('/');
+    await expect(new HomePage(page).modeChip).toHaveText('Checklist mode');
+    expect(fakeModel.calls()).toEqual([]);
+  });
 });

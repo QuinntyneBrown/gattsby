@@ -31,6 +31,7 @@ export type ScriptedResponse =
 export interface ModelScript {
   readonly availability: ModelAvailability;
   readonly responses: readonly ScriptedResponse[];
+  readonly downloadFailures?: number;
 }
 
 export interface SimulationConfig {

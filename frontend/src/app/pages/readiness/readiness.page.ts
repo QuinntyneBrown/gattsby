@@ -13,6 +13,7 @@ import { CapabilityDetector } from '../../environment/capability-detector';
 import type { Capabilities } from '../../environment/capabilities';
 import { ReadinessSession } from '../../environment/readiness-session';
 import { canStartInvestigation, readinessIssue } from '../../environment/readiness-issue';
+import { ModelDownloadController } from '../../model/model-download-controller';
 import { BrandComponent } from '../../ui/brand/brand.component';
 import { CapabilityListComponent } from '../../ui/capability-list/capability-list.component';
 
@@ -20,6 +21,15 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
   selector: 'g-readiness-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [BrandComponent, CapabilityListComponent],
+  styles: `
+    progress {
+      width: 100%;
+      accent-color: var(--color-accent);
+    }
+    .mode-note__text + .mode-note__text {
+      margin-top: var(--space-2);
+    }
+  `,
   template: `
     <main
       id="main"
@@ -96,38 +106,127 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
             </div>
           }
         } @else {
-          <div class="readiness__body">
-            <div>
-              <p class="mode-note__title">
-                {{ modelReady() ? 'Full agent mode' : 'Checklist mode' }}
-              </p>
-              <p class="mode-note__text">
-                {{
-                  modelReady()
-                    ? 'The agent runs on Gemini Nano inside Chrome. It plans each step, explains it, and works offline from here on.'
-                    : 'The same playbook guides you through the investigation one step at a time.'
-                }}
-              </p>
-            </div>
-          </div>
-          <div class="readiness__actions">
-            @if (modelReady()) {
-              <button class="btn btn--primary btn--lg" type="button" (click)="continueAs('agent')">
-                Start
-              </button>
-              <button class="btn btn--ghost" type="button" (click)="continueAs('checklist')">
-                Use checklist mode instead
-              </button>
-            } @else {
-              <button
-                class="btn btn--primary btn--lg"
-                type="button"
-                (click)="continueAs('checklist')"
-              >
-                Start in checklist mode
-              </button>
+          @switch (modelState()) {
+            @case ('available') {
+              <div class="readiness__body">
+                <div>
+                  <p class="mode-note__title">Full agent mode</p>
+                  <p class="mode-note__text">
+                    The agent runs on Gemini Nano inside Chrome. It plans each step, explains it,
+                    and works offline from here on.
+                  </p>
+                </div>
+              </div>
+              <div class="readiness__actions">
+                <button
+                  class="btn btn--primary btn--lg"
+                  type="button"
+                  (click)="continueAs('agent')"
+                >
+                  Start
+                </button>
+                <button class="btn btn--ghost" type="button" (click)="continueAs('checklist')">
+                  Use checklist mode instead
+                </button>
+              </div>
             }
-          </div>
+            @case ('downloadable') {
+              <div class="readiness__body">
+                <div>
+                  <p class="mode-note__text">
+                    Chrome downloads the model once. It’s a large download, so check that you have
+                    free disk space and use Wi-Fi.
+                  </p>
+                  <p class="mode-note__text">
+                    You can start right away as a checklist. A later investigation can use the agent
+                    when the model is ready.
+                  </p>
+                </div>
+              </div>
+              <div class="readiness__actions">
+                <button
+                  class="btn btn--primary btn--lg"
+                  type="button"
+                  [disabled]="!downloadReady()"
+                  (click)="download.start()"
+                >
+                  Download the on-device model
+                </button>
+                <button class="btn btn--ghost" type="button" (click)="continueAs('checklist')">
+                  Start with the checklist
+                </button>
+              </div>
+            }
+            @case ('downloading') {
+              <div class="readiness__body">
+                <div>
+                  <p class="mode-note__title" role="status">{{ progressText() }}</p>
+                  <progress
+                    aria-label="Model download"
+                    max="100"
+                    [attr.value]="download.status() === 'downloading' ? download.progress() : null"
+                  ></progress>
+                  <p class="mode-note__text">
+                    The download can continue while you use checklist mode.
+                  </p>
+                </div>
+              </div>
+              <div class="readiness__actions">
+                @if (download.status() === 'idle') {
+                  <button
+                    class="btn btn--lg"
+                    type="button"
+                    [disabled]="!downloadReady()"
+                    (click)="download.start()"
+                  >
+                    Show download progress
+                  </button>
+                }
+                <button
+                  class="btn btn--primary btn--lg"
+                  type="button"
+                  (click)="continueAs('checklist')"
+                >
+                  Start with the checklist
+                </button>
+              </div>
+            }
+            @case ('failed') {
+              <div class="alert alert--danger readiness__body" role="alert">
+                <div class="alert__body">
+                  <p class="alert__title">Download failed at {{ download.progress() }}%</p>
+                  <p>Check your connection and free disk space, then try again.</p>
+                </div>
+              </div>
+              <div class="readiness__actions">
+                <button class="btn btn--primary btn--lg" type="button" (click)="download.start()">
+                  Retry the download
+                </button>
+                <button class="btn btn--ghost" type="button" (click)="continueAs('checklist')">
+                  Start with the checklist
+                </button>
+              </div>
+            }
+            @default {
+              <div class="readiness__body">
+                <div>
+                  <p class="mode-note__title">Checklist mode</p>
+                  <p class="mode-note__text">
+                    The same playbook guides you through the investigation one step at a time.
+                  </p>
+                </div>
+              </div>
+              <div class="readiness__actions">
+                <button
+                  class="btn btn--primary btn--lg"
+                  type="button"
+                  (click)="continueAs('checklist')"
+                >
+                  Start in checklist mode
+                </button>
+              </div>
+            }
+          }
         }
       }
     </main>
@@ -144,9 +243,21 @@ export class ReadinessPage implements OnInit {
       : 'https://gray-pond-0fab1480f.6.azurestaticapps.net/';
   protected readonly copyStatus = signal('');
   protected readonly capabilities = signal<Capabilities | null>(null);
-  protected readonly items = computed(() => toCapabilityItems(this.capabilities()));
-  protected readonly modelReady = computed(
-    () => this.capabilities()?.model.availability === 'available',
+  protected readonly download = inject(ModelDownloadController);
+  protected readonly downloadReady = signal(false);
+  protected readonly modelState = computed(() =>
+    this.download.status() === 'idle'
+      ? (this.capabilities()?.model.availability ?? 'unavailable')
+      : this.download.status(),
+  );
+  protected readonly modelReady = computed(() => this.modelState() === 'available');
+  protected readonly progressText = computed(() =>
+    this.download.status() === 'downloading'
+      ? `Downloading Gemini Nano · ${this.download.progress()}% · ${this.download.elapsed()} s`
+      : 'Chrome is downloading Gemini Nano.',
+  );
+  protected readonly items = computed(() =>
+    toCapabilityItems(this.capabilities(), this.modelState(), this.download.progress()),
   );
   protected readonly canContinue = computed(() => {
     const c = this.capabilities();
@@ -175,7 +286,18 @@ export class ReadinessPage implements OnInit {
       case 'bluetooth-off':
         return 'Bluetooth is off.';
       default:
-        return this.modelReady() ? 'Ready to investigate.' : 'Ready, in checklist mode.';
+        switch (this.modelState()) {
+          case 'available':
+            return 'Ready to investigate.';
+          case 'downloadable':
+            return 'Download the on-device model?';
+          case 'downloading':
+            return 'Getting the on-device model ready.';
+          case 'failed':
+            return 'The model download stopped.';
+          default:
+            return 'Ready, in checklist mode.';
+        }
     }
   });
 
@@ -185,7 +307,16 @@ export class ReadinessPage implements OnInit {
 
   protected async check(): Promise<void> {
     this.capabilities.set(null);
-    this.capabilities.set(await this.detector.detect());
+    const capabilities = await this.detector.detect();
+    this.capabilities.set(capabilities);
+    if (['downloadable', 'downloading'].includes(capabilities.model.availability)) {
+      this.downloadReady.set(
+        await this.download.prepare().then(
+          () => true,
+          () => false,
+        ),
+      );
+    }
   }
 
   protected async continueAs(preference: 'agent' | 'checklist'): Promise<void> {
