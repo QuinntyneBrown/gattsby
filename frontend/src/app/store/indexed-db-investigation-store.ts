@@ -270,6 +270,18 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return (await request(store.getAll(investigationRange(id)))) as Recording[];
   }
 
+  async rawLogSizeEstimate(id: string): Promise<number> {
+    const db = await this.open();
+    const store = db.transaction('rawLog').objectStore('rawLog');
+    const range = investigationRange(id);
+    const [count, sample] = await Promise.all([
+      request(store.count(range)),
+      request(store.getAll(range, 32)) as Promise<RawLogEntry[]>,
+    ]);
+    if (!sample.length) return 0;
+    return Math.round((new Blob([JSON.stringify(sample)]).size / sample.length) * count);
+  }
+
   async photos(id: string): Promise<InvestigationPhoto[]> {
     const db = await this.open();
     const store = db.transaction('photos').objectStore('photos');

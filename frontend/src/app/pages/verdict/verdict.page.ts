@@ -1,10 +1,19 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
 import { ExportDialog } from '../../dialogs/export/export.dialog';
 import { KnowledgeBase } from '../../knowledge-base/knowledge-base';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { InvestigationRecord } from '../../store/model/investigation-record';
+import { PendingVerdict } from '../../store/pending-verdict';
 import { ConfidenceBadgeComponent } from '../../ui/confidence-badge/confidence-badge.component';
 import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.component';
 import { verdictView, type VerdictView } from './verdict-view';
@@ -29,6 +38,14 @@ import { verdictView, type VerdictView } from './verdict-view';
           </svg>
         </a>
         <span class="appbar__titles"></span>
+        @if (record()?.investigation?.profileId; as profileId) {
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/profiles', profileId]"
+            aria-label="Open device profile"
+            >Device profile</a
+          >
+        }
       </header>
       <main
         id="main"
@@ -37,6 +54,25 @@ import { verdictView, type VerdictView } from './verdict-view';
         [attr.aria-busy]="!record() && !failed() ? 'true' : null"
       >
         <div class="page page--reading">
+          @if (pending()) {
+            <div class="alert alert--danger" role="alert">
+              <div class="alert__body">
+                <p class="alert__title">This verdict couldn’t be saved.</p>
+                <p>
+                  This device’s storage for Gattsby is full. Export the full record now so nothing
+                  is lost, then delete old investigations to make room.
+                </p>
+                <button
+                  class="btn btn--lg"
+                  type="button"
+                  [disabled]="retrying()"
+                  (click)="retrySave()"
+                >
+                  Try saving again
+                </button>
+              </div>
+            </div>
+          }
           @if (failed()) {
             <div class="alert alert--danger" role="alert">
               <div class="alert__body">
@@ -48,7 +84,7 @@ import { verdictView, type VerdictView } from './verdict-view';
               </div>
             </div>
           } @else if (record(); as r) {
-            @if (r.investigation.verdict; as verdict) {
+            @if (r.investigation.verdict ?? pending()?.verdict; as verdict) {
               <p class="verdict__meta">
                 <bdi>{{ view()?.meta }}</bdi>
               </p>
@@ -125,9 +161,23 @@ import { verdictView, type VerdictView } from './verdict-view';
       </main>
       <div class="action-bar">
         <div class="action-bar__inner">
-          @if (record()?.investigation?.profileId; as profileId) {
-            <a class="btn btn--lg" [routerLink]="['/profiles', profileId]">Open device profile</a>
-            <button class="btn btn--lg" type="button" (click)="exporting.set(profileId)">
+          @if (pending(); as unsaved) {
+            <button
+              class="btn btn--primary btn--lg"
+              type="button"
+              (click)="exporting.set(unsaved.profile.id)"
+            >
+              Export full record
+            </button>
+          } @else if (record()?.investigation?.profileId; as profileId) {
+            <button
+              class="btn btn--primary btn--lg"
+              type="button"
+              (click)="exporting.set(profileId)"
+            >
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 16v4h14v-4M12 3v13m-5-5 5 5 5-5" />
+              </svg>
               Export profile
             </button>
             <button class="btn btn--lg" type="button" (click)="exporting.set(profileId)">
@@ -135,7 +185,8 @@ import { verdictView, type VerdictView } from './verdict-view';
             </button>
           }
           <button
-            class="btn btn--primary btn--lg"
+            class="btn btn--lg"
+            [class.btn--primary]="!pending() && !record()?.investigation?.profileId"
             type="button"
             [disabled]="starting()"
             (click)="newInvestigation()"
@@ -149,7 +200,11 @@ import { verdictView, type VerdictView } from './verdict-view';
       </div>
     </div>
     @if (exporting(); as profileId) {
-      <g-export-dialog [profileId]="profileId" (closed)="exporting.set(null)" />
+      <g-export-dialog
+        [profileId]="profileId"
+        [pendingVerdict]="pending()"
+        (closed)="exporting.set(null)"
+      />
     }
   `,
 })
@@ -159,11 +214,17 @@ export class VerdictPage implements OnInit {
   private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly starter = inject(InvestigationStarter);
   private readonly router = inject(Router);
+  private readonly pendingVerdict = inject(PendingVerdict);
+  protected readonly pending = computed(() => {
+    const commit = this.pendingVerdict.commit();
+    return commit?.investigationId === this.id() ? commit : null;
+  });
   protected readonly record = signal<InvestigationRecord | null>(null);
   protected readonly view = signal<VerdictView | null>(null);
   protected readonly failed = signal(false);
   protected readonly starting = signal(false);
   protected readonly exporting = signal<string | null>(null);
+  protected readonly retrying = signal(false);
 
   async ngOnInit(): Promise<void> {
     try {
@@ -171,10 +232,36 @@ export class VerdictPage implements OnInit {
         this.store.get(this.id()),
         this.knowledgeBase.load(),
       ]);
-      this.view.set(verdictView(record, (uuid) => kb.nameOf(uuid)));
+      const pending = this.pending();
+      const display = pending
+        ? {
+            ...record,
+            investigation: {
+              ...record.investigation,
+              ...pending.investigationPatch,
+              verdict: pending.verdict,
+            },
+          }
+        : record;
+      this.view.set(verdictView(display, (uuid) => kb.nameOf(uuid)));
       this.record.set(record);
     } catch {
       this.failed.set(true);
+    }
+  }
+
+  protected async retrySave(): Promise<void> {
+    const commit = this.pending();
+    if (!commit || this.retrying()) return;
+    this.retrying.set(true);
+    try {
+      await this.store.commitVerdict(commit);
+      this.pendingVerdict.commit.set(null);
+      await this.ngOnInit();
+    } catch {
+      // Keep the preview and export available while the person frees space.
+    } finally {
+      this.retrying.set(false);
     }
   }
 

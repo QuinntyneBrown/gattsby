@@ -13,6 +13,7 @@ import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { seedStoredPhoto, tinyPng } from './fixtures/stored-photo';
 import { StoredRecords } from './fixtures/stored-records';
+import { refuseNextVerdictCommit } from './fixtures/verdict-quota';
 import { AddNoteDialogPage } from './pages/add-note.dialog.page';
 import { DeviceProfilePage } from './pages/device-profile.page';
 import { ExportDialogPage } from './pages/export.dialog.page';
@@ -95,6 +96,7 @@ test('downloads a versioned profile from the verdict and device profile @critica
     const before = downloads.length;
     await trigger.click({ timeout: 3_000 });
     await expect(dialog.includeNotesAndPhotos).not.toBeChecked();
+    await expect(dialog.deviceProfile).toContainText(/\d+(?:\.\d+)? KB/);
     expect(downloads).toHaveLength(before);
     const download = page.waitForEvent('download');
     await dialog.deviceProfile.click();
@@ -206,6 +208,7 @@ test('exports the whole record with attachments excluded by default', async ({
 
   await verdict.exportRecord.click({ timeout: 3_000 });
   await expect(dialog.includeNotesAndPhotos).not.toBeChecked();
+  await expect(dialog.fullRecord).toContainText(/\d+(?:\.\d+)? KB/);
   const download = page.waitForEvent('download');
   await dialog.fullRecord.click();
   const file = await download;
@@ -243,4 +246,33 @@ test('exports the whole record with attachments excluded by default', async ({
     photos: [{ id: 'ph-fixture', mediaType: 'image/png', dataBase64: tinyPng }],
   });
   expect(withPhotos).not.toHaveProperty('omitted');
+});
+
+// Given a quota refusal during the verdict commit, when the person exports
+// the full record, then the file includes the pending verdict and finish step.
+test('exports the pending verdict after a quota refusal and can retry saving', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const id = await finishTreadmill(page, fakeBluetooth, () => refuseNextVerdictCommit(page));
+  const verdict = new VerdictPage(page);
+  const dialog = new ExportDialogPage(page);
+  await expect(verdict.saveError).toContainText('This verdict couldn’t be saved');
+  expect(await new StoredRecords(page).investigation(id)).toMatchObject({ verdict: null });
+  await verdict.exportRecord.click();
+  const download = page.waitForEvent('download');
+  await dialog.fullRecord.click();
+  const exported: unknown = JSON.parse(await readFile((await (await download).path())!, 'utf8'));
+  const validate = new Ajv({ strictRequired: false }).addSchema(schema).compile(recordSchema);
+  expect(validate(exported), JSON.stringify(validate.errors)).toBe(true);
+  expect(exported).toMatchObject({
+    investigation: { id, status: 'concluded', verdict: { kind: 'connected' } },
+    steps: expect.arrayContaining([expect.objectContaining({ tool: 'finish' })]),
+  });
+  await dialog.done.click();
+  await verdict.retrySave.click();
+  await expect(verdict.deviceProfile).toBeVisible();
+  expect(await new StoredRecords(page).investigation(id)).toMatchObject({
+    verdict: { kind: 'connected' },
+  });
 });

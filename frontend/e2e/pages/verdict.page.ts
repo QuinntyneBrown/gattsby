@@ -39,4 +39,12 @@ export class VerdictPage {
   get exportRecord(): Locator {
     return this.page.getByRole('button', { name: 'Export full record' });
   }
+
+  get saveError(): Locator {
+    return this.page.getByRole('alert');
+  }
+
+  get retrySave(): Locator {
+    return this.page.getByRole('button', { name: 'Try saving again' });
+  }
 }

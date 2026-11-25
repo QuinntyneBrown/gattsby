@@ -40,17 +40,16 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   `summaryText(profileId)`. It reads through `InvestigationStore`, validates every file with
   `SchemaValidator` before saving it, and saves through one private `save(blob, fileName)`.
 - **`FileNamer`** (`store/file-namer.ts`) — pure helper: `fileName(displayName, startedAt, kind)`.
-- **`SchemaValidator`** (`tools/schema-validator.ts`) — precompiled validators for profile format 1
+- **Schema validators** (`schemas/generated/`) — precompiled validators for profile format 1
   and record format 1 (`frontend/src/schemas/device-profile-1.schema.json`,
   `frontend/src/schemas/investigation-record-1.schema.json`); no run-time code generation
   (NFR-013).
-- **`ExportDialog`** (`dialogs/export/export.dialog.ts`) — presentation component. Inputs: the
-  estimated sizes, whether a record exists, whether the investigation has notes or photos, and the
-  state (`default`, `busy`, `success`) with the saved file name. Outputs: `exportProfile`,
-  `exportRecord` and `copySummary`, each with `{ includeNotesAndPhotos }`.
-- **`DeviceProfilePage`** and **`VerdictPage`** — open the dialog, call `ExportService`, and pass
-  the state back to the dialog.
-- **`ToastService`** — shows "Summary copied. Paste it into a chat or an issue."
+- **`ExportDialog`** (`dialogs/export/export.dialog.ts`) — shared dialog. It takes a profile ID
+  and an optional pending verdict, asks the export service for sizes and handles the person's
+  selection. It announces clipboard success in the dialog.
+- **`DeviceProfilePage`** and **`VerdictPage`** — open the shared dialog with the relevant profile.
+- **`PendingVerdict`** — holds the refused verdict transaction in memory until a retry succeeds
+  or the tab is reloaded.
 
 ### File names
 
@@ -122,9 +121,9 @@ and `omitted` is absent.
    opening (FR-063 AC1).
 2. Every file is validated against its own schema before it is saved; a file that fails is a defect,
    recorded with its code (NFR-025), and nothing is saved.
-3. The record is built section by section: the store reads `rawLog` by cursor in pages of 2,000
-   entries, each page is validated and serialised to a string, and the strings become the parts of
-   one `Blob`. Peak memory stays near one page, not the whole log (NFR-005).
+3. The record is built section by section. The store reads `rawLog` in key order in pages of 2,000
+   entries. Each page is validated and serialized into a Blob part. Only one page of packet
+   objects is retained at a time (NFR-005).
 4. The dialog shows each file's size from `estimateSizes`. A record above 20 MB cannot be imported
    again (NFR-015). The dialog explains that the file is too large to import into Gattsby and
    still offers the download.
@@ -132,7 +131,7 @@ and `omitted` is absent.
 6. On the Verdict page's error state (the verdict could not be saved), `exportRecord` adds the
    pending step and verdict held in memory, so nothing is lost (NFR-008).
 7. "Copy summary" writes a plain-text summary of the profile (verdict, identity, readable metrics,
-   controllable features) with `navigator.clipboard.writeText` and raises the info toast.
+   controllable features) with `navigator.clipboard.writeText` and announces the result.
 
 ### Tests that prove it
 

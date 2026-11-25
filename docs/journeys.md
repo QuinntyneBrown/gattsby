@@ -8,7 +8,7 @@ the shared core (BLE layer, knowledge base, store).
 | 1 | Scaffold the app | Angular workspace, app shell, CI, lint and Playwright with device fakes. | 5 | 100 |
 | 2 | Identify a standard machine | Scan, connect and name an FTMS or heart-rate device's protocol. | 10 | 85 |
 | 3 | Confirm live metrics | Decode live data and confirm it with a walk or pedal. | 6 | 100 |
-| 4 | Export the device profile | Save the verdict and profile as versioned JSON. | 3 | 0 |
+| 4 | Export the device profile | Save the verdict and profile as versioned JSON. | 3 | 100 |
 | 5 | Check readiness | Show missing browser capabilities, what they limit and how to fix. | 3 | 0 |
 | 6 | Investigate with the agent | Gemini Nano chooses each validated step of the playbook. | 12 | 0 |
 | 7 | Investigate by checklist | Follow the same playbook step by step without a model. | 4 | 0 |
@@ -25,4 +25,4 @@ the shared core (BLE layer, knowledge base, store).
 | 18 | Unlock vendor data safely | Send a known vendor unlock, never bypassing encryption or pairing. | 4 | 0 |
 | 19 | Read a model plate photo | Photograph the model plate to identify maker and model. | 5 | 0 |
 | 20 | Use the agent on a phone | Run full agent mode once phones offer an on-device model. | 5 | 0 |
-| | **Total** | | **102** | **19** |
+| | **Total** | | **101** | **22** |

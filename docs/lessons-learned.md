@@ -230,3 +230,18 @@ None; this is the first entry.
   when an investigation outlasts the live packet window.
 - Compile schema validators before bundling so the production Content Security Policy can
   remain in force while profiles are checked.
+
+## Journey 4, slices 2–6 — Open, export and label the result
+
+- The Device profile route and both export triggers were absent in the first acceptance runs.
+  The same Export dialog now handles both entry points and waits for a person's choice.
+- Building the record exposed a missing evidence field in the schema. Validate the serialized
+  JSON in the browser and check the downloaded file independently in Playwright.
+- Export uses the bounded batches established in journey 3. It checks each page of up to 2,000
+  raw packets and stores serialized pages as Blob parts.
+- Location goes through the same IndexedDB transaction boundary as the verdict link. This
+  preserves the person's edit if the investigation concludes while the Add note dialog is open.
+- Simulating a quota refusal showed that the finish step must stay available after the
+  investigation route closes. The Verdict page can export that commit from memory or retry it.
+- The phone comparison exposed a crowded action bar and checkbox. Moving the profile link to
+  the app bar and reusing the design system's choice control resolved both.

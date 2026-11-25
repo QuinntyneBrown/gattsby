@@ -24,6 +24,7 @@ export abstract class InvestigationStore {
   abstract list(): Promise<Investigation[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
   abstract rawLogPages(id: string): AsyncIterable<RawLogEntry[]>;
+  abstract rawLogSizeEstimate(id: string): Promise<number>;
   abstract recordings(id: string): Promise<import('./model/recording').Recording[]>;
   abstract photos(id: string): Promise<import('./model/investigation-photo').InvestigationPhoto[]>;
   abstract photoCount(id: string): Promise<number>;

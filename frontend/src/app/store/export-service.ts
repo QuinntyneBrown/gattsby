@@ -6,6 +6,7 @@ import { exportFileName } from './file-namer';
 import { buildRecordExport } from './export-record';
 import { InvestigationStore } from './investigation-store';
 import type { DeviceProfile } from './model/device-profile';
+import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
 
 @Injectable({ providedIn: 'root' })
@@ -41,12 +42,14 @@ export class ExportService {
     profile: DeviceProfile,
     includeNotesAndPhotos: boolean,
     signal: AbortSignal,
+    pending?: VerdictCommit,
   ): Promise<string> {
     const { blob, startedAt } = await buildRecordExport(
       this.store,
       profile,
       includeNotesAndPhotos,
       signal,
+      pending,
     );
     const name = exportFileName(profile.identity.displayName, startedAt, 'record');
     signal.throwIfAborted();
@@ -54,8 +57,32 @@ export class ExportService {
     return name;
   }
 
-  async hasRecord(profile: DeviceProfile): Promise<boolean> {
-    return (await this.header(profile)) !== null;
+  async estimateSizes(
+    profile: DeviceProfile,
+  ): Promise<{ profile: number; record: number | null; startedAt: number }> {
+    const header = await this.header(profile);
+    const profileBytes = new Blob([
+      JSON.stringify(
+        {
+          ...profile,
+          exportedAt: new Date().toISOString(),
+          appVersion: this.appVersion,
+        },
+        null,
+        2,
+      ),
+    ]).size;
+    if (!header)
+      return { profile: profileBytes, record: null, startedAt: Date.parse(profile.createdAt) };
+
+    const [record, recordings, rawBytes] = await Promise.all([
+      this.store.get(header.id),
+      this.store.recordings(header.id),
+      this.store.rawLogSizeEstimate(header.id),
+    ]);
+    const recordBytes =
+      new Blob([JSON.stringify({ ...record, recordings, profile })]).size + rawBytes;
+    return { profile: profileBytes, record: recordBytes, startedAt: header.startedAt };
   }
 
   async copySummary(profile: DeviceProfile): Promise<void> {
