@@ -30,6 +30,16 @@ export interface StoredObservation {
   readonly evidence: readonly string[];
 }
 
+export interface StoredRecording {
+  readonly investigationId: string;
+  readonly id: string;
+  readonly label: string;
+  readonly characteristics: readonly string[];
+  readonly seconds: number;
+  readonly valueCount: number;
+  readonly interrupted: boolean;
+}
+
 export class StoredRecords {
   constructor(private readonly page: Page) {}
 
@@ -51,6 +61,11 @@ export class StoredRecords {
     return rows.filter((row) => row.investigationId === id);
   }
 
+  async recordings(id: string): Promise<StoredRecording[]> {
+    const rows = await this.readAll<StoredRecording>('recordings');
+    return rows.filter((row) => row.investigationId === id);
+  }
+
   async rawLog(id: string) {
     const rows = await this.readAll<{
       investigationId: string;
@@ -60,6 +75,7 @@ export class StoredRecords {
       hex: string;
       decoded?: readonly DecodedMetric[];
       decodeError?: string;
+      recordingId?: string;
     }>('rawLog');
     return rows.filter((row) => row.investigationId === id);
   }

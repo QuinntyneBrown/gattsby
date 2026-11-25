@@ -27,4 +27,5 @@ export interface RawLogEntry {
   readonly detail?: string;
   readonly decoded?: readonly DecodedMetric[];
   readonly decodeError?: string;
+  readonly recordingId?: string;
 }

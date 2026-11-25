@@ -187,7 +187,7 @@ keeps the last value of each field.
 | Type | Fields |
 |---|---|
 | `Recording` | `id`, `investigationId`, `label`, `level?`, `characteristics`, `startedAt`, `seconds`, `interrupted`, `valueCount` |
-| `RecordedValue` | `recordingId`, `uuid`, `t`, `hex`, `rawLogId`, `decoded?`, `decodeError?` |
+| Recorded raw log row | `recordingId`, `uuid`, `t`, `hex`, `id`, `decoded?`, `decodeError?` |
 | `DecodedValue` | `fields: DecodedField[]`, `flags?`, `trailingBytes?`, `reservedBits?` |
 | `DecodedField` | `name`, `value`, `unit`, `offset`, `type`, `scale`, `flagBit?` |
 | `DecodeError` | `reason`, `announcedLength?`, `actualLength` |

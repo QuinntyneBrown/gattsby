@@ -6,6 +6,7 @@ import type { ConfirmationCheck } from '../agent/confirmation-check';
 import type { PromptChannel } from '../agent/prompt-channel';
 import type { NewObservation } from '../store/model/observation';
 import type { Stage } from '../store/model/stage';
+import type { Recording } from '../store/model/recording';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
 import type { VerdictFacts } from '../outcome/verdict-builder';
 import type { HypothesisProposer } from './meta/update-hypothesis.tool';
@@ -35,6 +36,8 @@ export interface ToolContext {
   verdictFacts(): VerdictFacts;
   /** Records an observation and returns its `o-` evidence ID. */
   observe(observation: NewObservation): string;
+  /** Commits a recording with its tool step. Returns the recording's evidence ID. */
+  saveRecording(recording: Omit<Recording, 'investigationId' | 'stepN'>): string;
   /** Records a missing-tool request and returns its `m-` evidence ID. */
   raiseMissingTool(request: NewMissingToolRequest): string;
 }

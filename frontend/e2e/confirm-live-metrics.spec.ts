@@ -138,11 +138,23 @@ test('Given a timed recording, when the baseline finishes, then each Treadmill D
   const investigation = await startRecording(page, fakeBluetooth);
   await page.clock.runFor(10_500);
   await investigation.waitForPrompt('Now speed up to about 6 km/h. Change only the speed.');
-  const rows = await new StoredRecords(page).rawLog(investigation.id());
+  const records = new StoredRecords(page);
+  const [recording] = await records.recordings(investigation.id());
+  expect(recording).toMatchObject({
+    label: 'Baseline',
+    characteristics: [uuids.treadmillData],
+    seconds: 10,
+    interrupted: false,
+  });
+  const rows = await records.rawLog(investigation.id());
   const packets = rows.filter(
     (row) => row.kind === 'notification' && row.uuid === uuids.treadmillData,
   );
   expect(packets.length).toBeGreaterThanOrEqual(10);
+  expect(packets.filter((packet) => packet.recordingId === recording.id)).toHaveLength(
+    recording.valueCount,
+  );
+  expect(recording.valueCount).toBeGreaterThanOrEqual(10);
   for (const packet of packets) {
     expect(packet.hex).toMatch(/^0C 04 2C 01 /);
     expect(packet.decoded).toEqual(

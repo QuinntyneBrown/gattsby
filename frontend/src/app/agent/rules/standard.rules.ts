@@ -62,11 +62,11 @@ export const STANDARD_RULES: readonly StageRule[] = [
     stage: 'standard',
     when: (ctx) => ctx.state.standardRecording === 'ready' && !!standardPath(ctx),
     then: (ctx) => {
-      const { service, characteristic } = standardPath(ctx)!;
+      const { characteristic } = standardPath(ctx)!;
       return decided('standard.record', 'standard', 'subscribe_and_record', {
-        service,
-        characteristic,
+        characteristics: [characteristic],
         seconds: 10,
+        label: 'Baseline',
       });
     },
   },

@@ -13,6 +13,7 @@ import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
 import type { Observation } from '../store/model/observation';
+import type { Recording } from '../store/model/recording';
 import { STAGES, type Stage } from '../store/model/stage';
 import type { Step, StepPersonExchange } from '../store/model/step';
 import type { StopReason } from '../store/model/stop-reason';
@@ -290,6 +291,7 @@ export class PlaybookOrchestrator {
     this.log.setStep(n);
     const startedAt = this.clock.now();
     const observations: Observation[] = [];
+    const recordings: Recording[] = [];
     const requests: MissingToolRequest[] = [];
     const handedOut: string[] = [];
     const signal = this.abort.signal;
@@ -325,6 +327,11 @@ export class PlaybookOrchestrator {
         observations.push(observation);
         handedOut.push(observation.id);
         return observation.id;
+      },
+      saveRecording: (recording) => {
+        recordings.push({ ...recording, investigationId: id, stepN: n });
+        handedOut.push(recording.id);
+        return recording.id;
       },
       raiseMissingTool: (r: NewMissingToolRequest) => {
         const existing = [...this.requests(), ...requests].find(
@@ -431,6 +438,7 @@ export class PlaybookOrchestrator {
       investigationId: id,
       step,
       rawLog,
+      recordings,
       observations,
       hypothesis,
       missingToolRequests: requests,

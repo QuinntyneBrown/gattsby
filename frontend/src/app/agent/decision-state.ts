@@ -167,7 +167,9 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return {
         ...next,
         standardRecording:
-          data?.['silent'] === false && data['count'] !== data['decodeErrors']
+          data?.['silent'] === false &&
+          data['interrupted'] !== true &&
+          data['count'] !== data['decodeErrors']
             ? 'recorded'
             : 'attempted',
       };

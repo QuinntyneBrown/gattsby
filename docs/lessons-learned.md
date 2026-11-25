@@ -162,3 +162,11 @@ None; this is the first entry.
   the new spec cover both reopening the original prompt and stopping without starting a recording.
 - Keep the original prompt pending while the modal is open. Closing it can return focus to the
   original control, and continuing can restart the timer without duplicating a prompt or an answer.
+
+## Journey 3, slice 9: Save timed recordings
+
+- Decoded rows alone did not tell a later tool which packets belonged to the baseline. The
+  acceptance test now reads the persisted recording and checks that the linked raw rows match its
+  value count.
+- Save the recording with the same transaction as the tool step. Keep packet counts and distinct
+  lengths in memory while listening, and batch the packet writes through the existing raw log.

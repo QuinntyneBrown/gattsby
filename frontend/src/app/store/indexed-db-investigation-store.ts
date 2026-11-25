@@ -51,6 +51,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       'investigations',
       'steps',
       'rawLog',
+      'recordings',
       'observations',
       'hypotheses',
       'missingToolRequests',
@@ -58,6 +59,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     await this.write(stores, 'strict', (tx) => {
       tx.objectStore('steps').put(commit.step);
       commit.rawLog.forEach((entry) => tx.objectStore('rawLog').put(entry));
+      commit.recordings.forEach((recording) => tx.objectStore('recordings').put(recording));
       commit.observations.forEach((o) => tx.objectStore('observations').put(o));
       if (commit.hypothesis) tx.objectStore('hypotheses').put(commit.hypothesis);
       commit.missingToolRequests.forEach((r) => tx.objectStore('missingToolRequests').put(r));
