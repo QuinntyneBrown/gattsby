@@ -7,7 +7,8 @@ the Prompt API with Gemini Nano, advertisement scanning, the camera and persiste
 feature finds out, without prompting the person, which of them this browser offers, and shows the
 answer before anything else happens. It belongs to the environment subsystem and runs at two points:
 when the app opens, on the Readiness page (`/start`), and again at the Prepare stage of every
-investigation, as the `check_capabilities` tool.
+investigation, as the `check_capabilities` tool. The initial Home navigation opens Readiness until
+the person continues in that tab. Home also offers a link back to Readiness.
 
 **capability** — browser or platform feature that one or more tools need, reported as *Available*,
 *Needs action* (with the action) or *Not available* (with what that limits)
@@ -91,10 +92,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 | `camera` false | Camera *Not available* | Unaffected; the photo option is hidden |
 | `model.availability` not `available` | See the choose-operating-mode design | Checklist offered |
 
-How the check tells that Chrome blocks Bluetooth for the site is `<TO SUPPLY>`: a `denied` answer
-from `navigator.permissions.query({ name: 'bluetooth' })` where Chrome supports it, or a
-`requestDevice` refusal earlier in the session. The wording for Chrome older than version 148 is
-`<TO SUPPLY>` (OQ-06).
+A supported Bluetooth permissions query or an enforced Permissions Policy can report a site
+block. Chrome may omit the query or reject the descriptor, in which case the capability check
+uses adapter availability and leaves the chooser to explain a later refusal. When Chrome reports
+a version below 148, the Readiness page asks the person to update Chrome.
 
 ### Supported browsers
 

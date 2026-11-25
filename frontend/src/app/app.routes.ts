@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { investigationExists } from './pages/investigation/investigation-exists.guard';
+import { readinessOnLaunch } from './pages/readiness/readiness.guard';
 
 // One lazy route per page (NFR-004; serve-offline-and-private design). The last route catches
 // every address no other route matches.
@@ -7,8 +8,14 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
+    canActivate: [readinessOnLaunch],
     title: 'Gattsby',
     loadComponent: () => import('./pages/home/home.page').then((m) => m.HomePage),
+  },
+  {
+    path: 'start',
+    title: 'Readiness check · Gattsby',
+    loadComponent: () => import('./pages/readiness/readiness.page').then((m) => m.ReadinessPage),
   },
   {
     path: 'investigations/:id',

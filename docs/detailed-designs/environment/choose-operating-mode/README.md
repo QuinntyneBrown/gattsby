@@ -89,7 +89,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 In checklist mode no call reaches `LanguageModel` at all, which the fake model in the acceptance
 specs records (FR-005). An investigation keeps the mode it started with when a download finishes
 during it; the next investigation starts in full agent mode. Whether a running checklist
-investigation should offer to switch to the agent is `<TO SUPPLY>` (OQ-06).
+investigation should offer to switch to the agent is resolved for MVP by keeping its initial
+mode for the duration. A later investigation can use a newly available model.
 
 ### Fallback triggers
 
@@ -110,10 +111,11 @@ mode.
 
 ### Download size
 
-The mocks show "about 2.2 GB" from the original designs. The Prompt API does not report the size
-before the download starts, so the source of the figure shown is `<TO SUPPLY>` (A-13). The same
-download flow serves a phone model if OQ-01 and OQ-02 allow one (see the run-a-model-on-phones
-design).
+The Prompt API does not report the size before download. Readiness says that it is a large
+download and that Chrome needs free disk space. Chrome documents that the model size can
+change and currently asks for at least 22 GB free before downloading. The app does not
+estimate the person's available disk space from its origin quota.
+[Chrome Prompt API](https://developer.chrome.com/docs/ai/prompt-api#review_the_hardware_requirements)
 
 ### Errors
 

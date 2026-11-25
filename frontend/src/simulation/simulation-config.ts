@@ -5,6 +5,7 @@
 export type ChooserStep = { readonly pick: string } | { readonly cancel: true };
 
 export interface BluetoothScript {
+  readonly advertisementScanning?: boolean;
   /** What `getAvailability()` reports; true when omitted. */
   readonly available?: boolean;
   /** Ids of the scripted devices nearby. */

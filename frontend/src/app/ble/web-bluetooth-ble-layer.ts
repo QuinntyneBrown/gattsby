@@ -78,7 +78,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       adapterAvailable,
       blocked: false,
       watchAdvertisements: watchAdvertisementsAvailable(),
-      requestLEScan: 'requestLEScan' in bluetooth,
+      requestLEScan: 'requestLEScan' in bluetooth && typeof bluetooth.requestLEScan === 'function',
       getDevices: 'getDevices' in bluetooth,
     };
   }

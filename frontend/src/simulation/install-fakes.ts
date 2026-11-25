@@ -40,6 +40,9 @@ function install(config: SimulationConfig): void {
     };
   });
   const bluetooth = new FakeBluetoothApi(devices, config.bluetooth, report);
+  if (!config.bluetooth.advertisementScanning) {
+    Object.defineProperty(bluetooth, 'requestLEScan', { value: undefined });
+  }
   Object.defineProperty(Navigator.prototype, 'bluetooth', {
     configurable: true,
     get: () => bluetooth,

@@ -1,4 +1,5 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { ReadinessPage } from './readiness.page';
 
 // The Home page at `/` (docs/mocks/pages/home/empty.html and default.html).
 export class HomePage {
@@ -20,6 +21,12 @@ export class HomePage {
 
   async goto(): Promise<void> {
     await this.page.goto('/');
+    const readiness = new ReadinessPage(this.page);
+    await this.identifyADevice.or(readiness.continueButton).first().waitFor();
+    if (await readiness.continueButton.isVisible()) {
+      await readiness.continueButton.click();
+      await expect(this.identifyADevice).toBeVisible();
+    }
   }
 
   title(): Promise<string> {

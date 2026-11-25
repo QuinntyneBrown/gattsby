@@ -31,6 +31,7 @@ test.describe('App shell', () => {
   }) => {
     const home = new HomePage(page);
     await home.goto();
+    await page.reload();
 
     await page.keyboard.press('Tab');
     await expect(home.skipLink).toBeFocused();
