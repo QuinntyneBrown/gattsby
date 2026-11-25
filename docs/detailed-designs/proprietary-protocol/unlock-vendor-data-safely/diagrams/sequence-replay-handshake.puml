@@ -1,0 +1,69 @@
+@startuml
+title UML sequence behaviour — Propose and replay a known handshake
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ActionValidator" as validator
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "replayKnownHandshakeTool" as tool
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+rules -> validator : replay_known_handshake {vendor, handshakeId} (all characteristics silent)
+validator -> kb : handshake(vendor, handshakeId)
+alt handshakeId not in the knowledge base
+  kb --> validator : null
+  validator --> rules : INVALID_INPUT; nothing written (TOOL-023)
+else Known handshake
+  kb --> validator : purpose, 2 steps, source
+  validator -> gate : Valid call
+  gate -> dialog : Purpose and each step's characteristic and bytes (FR-032)
+  alt Person taps Don't send
+    person -> dialog : Don't send
+    dialog --> gate : dontSend
+    gate --> rules : APPROVAL_DENIED; nothing written (FR-034)
+  else Person taps Send
+    person -> dialog : Send
+    dialog --> gate : send
+    gate -> gate : Issue one token per step from this approval
+    gate -> tool : run with tokens
+    loop each step in order
+      tool -> ble : write(characteristic, bytes, token)
+      ble -> ble : Consume token (NFR-018)
+      ble -> device : writeValue(bytes)
+      device --> ble : ok
+      ble -> log : Write entry with approvalId and source handshake#step (FR-033)
+    end
+    tool -> tool : Listen 10 s on silent characteristics (A-09)
+    device -> ble : First notification
+    tool --> rules : ok: sent [hex...], dataStarted true
+    rules -> rules : Record handshake as required for the profile (FR-032)
+  end
+end
+@enduml

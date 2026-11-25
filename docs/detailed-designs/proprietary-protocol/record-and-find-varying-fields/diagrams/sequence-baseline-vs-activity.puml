@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Baseline against one activity
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "baselineVsActivityTool" as tool
+  participant "NotificationRecorder" as recorder
+  participant "VaryingBytesFinder" as finder
+end box
+
+executor -> tool : run({characteristics: [0xFFF1], seconds: 10, action: "Pedal faster"})
+tool -> tool : Validate seconds 5-60 (TOOL-014)
+tool -> recorder : open("baseline", 10 s)
+recorder --> tool : baseline recording
+tool -> page : request_action("Pedal faster", needsReady)
+alt Person taps Ready
+  person -> page : Ready
+  page --> tool : readyAt
+  tool -> recorder : open("Pedal faster", 10 s)
+  recorder --> tool : activity recording
+  tool -> finder : find([baseline, activity])
+  finder --> tool : 0xFFF1 betweenLabels [3]
+  tool --> executor : ok: changed [{0xFFF1, [3]}], unchanged []
+else Person taps Skip
+  page --> tool : skipped
+  tool --> executor : USER_CANCELLED; baseline kept
+end
+@enduml

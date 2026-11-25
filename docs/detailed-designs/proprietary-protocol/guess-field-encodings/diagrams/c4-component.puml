@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Guess field encodings
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(rules, "PlaybookRules", "Pure code", "Decides correlate, then guess for the top field")
+  Component(executor, "ToolExecutor", "Service", "Validates, runs and commits each call")
+  Component(corrTool, "correlateWithActionTool", "Tool, read", "Loads ordered recordings")
+  Component(corr, "EffortCorrelator", "Pure helper", "Spearman rho per candidate window; top 10")
+  Component(guessTool, "guessFieldEncodingTool", "Tool, read", "Loads one recording")
+  Component(guesser, "EncodingGuesser", "Pure helper", "56 encodings; coverage >= 0.9; ranked")
+  Component(reader, "FieldReader", "Pure helper", "u/s 8-32 bit, LE or BE")
+  Component(finder, "VaryingBytesFinder", "Pure helper", "Constant offsets and counters to skip")
+  Component(recorder, "NotificationRecorder", "Service", "Decodes the accepted field live")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "recordings, steps, observations")
+
+Rel(rules, executor, "Decided actions")
+Rel(executor, corrTool, "run")
+Rel(corrTool, idb, "Reads recordings")
+Rel(corrTool, corr, "rank(recordings, order)")
+Rel(corr, finder, "Constants and counters")
+Rel(corr, reader, "Reads windows")
+Rel(executor, guessTool, "run")
+Rel(guessTool, idb, "Reads one recording")
+Rel(guessTool, guesser, "fit(values, expected)")
+Rel(guesser, reader, "Reads field")
+Rel(executor, recorder, "Registers the accepted rule")
+@enduml

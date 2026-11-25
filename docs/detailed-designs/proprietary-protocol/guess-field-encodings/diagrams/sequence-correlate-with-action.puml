@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Rank fields by correlation with effort
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "correlateWithActionTool" as tool
+  participant "EffortCorrelator" as corr
+  participant "FieldReader" as reader
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+rules -> executor : correlate_with_action(recordings, order [idle, slow, fast])
+executor -> tool : run
+tool -> store : Load recordings and the varying-bytes report
+store --> tool : idle, slow, fast; constants and counter at 15
+alt Fewer than 3 recordings with labels in order
+  tool --> executor : INSUFFICIENT_DATA (TOOL-017)
+else Three or more
+  tool -> corr : rank(recordings, order, skip)
+  loop each characteristic, length, offset and window (1; 2 and 4 bytes LE and BE)
+    corr -> corr : Skip all-constant windows and windows with a counter
+    corr -> reader : read(bytes, offset, width, unsigned and signed, order)
+    reader --> corr : values per packet
+    corr -> corr : Spearman rho of value vs level rank; keep larger abs(rho)
+    corr -> corr : Mark accumulating if it rises within every recording
+  end
+  corr -> corr : Sort by abs(rho); narrower, lower offset, LE win ties; accumulating last
+  corr --> tool : top 10: 0xFE01 offset 5 width 2 LE rho 0.94 (FR-030)
+  tool --> executor : ok: ranked
+  executor -> store : Commit step
+end
+@enduml

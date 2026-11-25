@@ -1,0 +1,44 @@
+@startuml
+title UML sequence behaviour — Detect the frame
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "detectFramingTool" as tool
+  participant "FramingDetector" as detector
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+executor -> tool : run({recordingId: rec-7, uuid: 0xFFF1})
+tool -> store : Load packets of 0xFFF1 in arrival order
+store --> tool : packets
+alt Fewer than 20 packets
+  tool --> executor : INSUFFICIENT_DATA (TOOL-019)
+else 20 or more
+  tool -> detector : detect(packets)
+  detector -> detector : Header: extend while modal byte share >= 0.9 -> F0 (share 1.0)
+  detector -> detector : Length: offsets after header, relations total / afterHeader / afterLength -> offset 2, total (1.0)
+  detector -> detector : Checksum search (see next diagram) -> sum8 over [0, -2] at -1 (1.0)
+  detector -> detector : Counter: same step mod 256 in >= 90 % of pairs, frame bytes excluded
+  detector -> detector : fit = share agreeing with header, length and checksum = 1
+  detector --> tool : FramingReport with a share per element (FR-031)
+  tool --> executor : ok
+  executor -> store : Commit step; frame becomes part of the decoding rule
+end
+@enduml

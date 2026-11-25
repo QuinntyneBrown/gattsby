@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Determine readable metrics
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs the read and commits the step")
+  Component(tool, "readSupportedRangesTool", "Tool, read", "Reads 0x2ACC and 0x2AD4-0x2AD8")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "read(service, characteristic)")
+  Component(dec, "FitnessMachineFeatureDecoder / SupportedRangeDecoder", "Pure code", "Bits to names; min, max, increment")
+  Component(kbc, "KnowledgeBase", "Service", "Feature names and bit-to-field maps")
+  Component(resolver, "ReadableMetricResolver", "Pure helper", "Claims + recordings + confirmations to ReadableMetrics")
+  Component(builder, "ProfileBuilder", "Service", "Puts readable metrics and ranges in the profile")
+  Component(page, "DeviceProfilePage", "Angular page", "Readable data table")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "steps, recordings, observations, profiles")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, tool, "run({}, ctx)")
+Rel(tool, ble, "read(0x1826, 0x2ACC) and ranges")
+Rel(ble, device, "readValue", "Web Bluetooth")
+Rel(tool, dec, "decode(bytes)")
+Rel(dec, kbc, "Bit names")
+Rel(builder, resolver, "resolve(claims, fields, confirmations)")
+Rel(resolver, kbc, "Layouts and maps")
+Rel(builder, idb, "Reads evidence; stores the profile")
+Rel(page, idb, "Reads the profile (through InvestigationStore)")
+@enduml

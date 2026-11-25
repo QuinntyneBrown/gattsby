@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Decode standard data
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Recording tool, notification recorder, decoders, decode tool")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Recordings, raw log, steps")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Standard UUIDs and decoder layouts")
+}
+System_Ext(device, "Device", "Machine or sensor (Bluetooth LE)")
+
+Rel(person, spa, "Follows the prompt; reads the step summary", "Touch or keyboard")
+Rel(spa, kb, "Reads flag layouts and field scales")
+Rel(device, spa, "Notifies data values", "Web Bluetooth")
+Rel(spa, idb, "Stores recordings with raw and decoded values")
+@enduml

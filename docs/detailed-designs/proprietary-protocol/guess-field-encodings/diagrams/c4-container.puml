@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Guess field encodings
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Correlation and encoding tools, analysis helpers")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Labelled recordings, steps, observations")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Plausible ranges per metric")
+}
+
+Rel(person, spa, "Follows the feed", "Touch or keyboard")
+Rel(spa, idb, "Reads recordings; commits ranked fields and fits")
+Rel(spa, kb, "Reads the plausible range")
+@enduml

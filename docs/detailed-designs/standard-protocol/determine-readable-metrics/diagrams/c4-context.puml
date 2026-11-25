@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Determine readable metrics
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Reads the readable metrics and decoding rules")
+Rel(gattsby, chrome, "Reads 0x2ACC and supported ranges", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

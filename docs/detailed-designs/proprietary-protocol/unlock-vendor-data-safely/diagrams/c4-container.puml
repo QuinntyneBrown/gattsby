@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Unlock vendor data safely
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Rules, validator, approval gate, handshake tool, auth guard, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Approvals, raw log with provenance, observations, missing-tool requests, profiles")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Vendor signatures and sourced handshakes")
+}
+System_Ext(device, "Device", "Vendor machine (Bluetooth LE)")
+
+Rel(person, spa, "Approves one handshake call", "Touch or keyboard")
+Rel(spa, kb, "Reads handshake steps, purpose and source")
+Rel(spa, device, "Writes approved steps only", "Web Bluetooth")
+Rel(spa, idb, "Commits approvals, writes, requests")
+@enduml

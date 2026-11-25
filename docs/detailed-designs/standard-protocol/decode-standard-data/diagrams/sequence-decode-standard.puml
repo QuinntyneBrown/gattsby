@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Decode a recording or one value
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "decodeStandardTool" as tool
+  participant "KnowledgeBase" as kb
+  participant "FlagLayoutDecoder" as decoder
+  participant "FieldStatistics" as stats
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+alt A recording
+  executor -> tool : run({recordingId: rec-4, characteristic: 0x2ACD})
+  tool -> kb : decoderFor(0x2ACD)
+  kb --> tool : Treadmill Data layout
+  tool -> store : Read values of 0x2ACD in rec-4
+  store --> tool : 10 values
+  loop each value
+    tool -> decoder : decode(bytes)
+    alt Payload holds what its flags announce
+      decoder --> tool : fields with unit, offset, type, scale
+    else Flags announce 13 bytes, payload has 6
+      decoder --> tool : DecodeError; listed in errors with its index (TOOL-015)
+    end
+  end
+  tool -> stats : summarise(decoded values)
+  stats --> tool : speed 3.00-6.00 km/h rising; incline flat
+  tool --> executor : ok: fields, errors, per-field min, max, trend
+else One value
+  executor -> tool : run({characteristic: 0x2A37, hex: "00 48"})
+  tool -> decoder : decode(00 48)
+  alt Fits the layout
+    decoder --> tool : heart rate 72 bpm
+    tool --> executor : ok
+  else Truncated
+    decoder --> tool : DecodeError
+    tool --> executor : DECODE_ERROR (FR-024)
+  end
+end
+@enduml

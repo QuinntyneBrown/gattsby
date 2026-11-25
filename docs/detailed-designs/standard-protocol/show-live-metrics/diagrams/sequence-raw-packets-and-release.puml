@@ -1,0 +1,40 @@
+@startuml
+title UML sequence behaviour — Show raw packets, then release on leave
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "NotificationRecorder" as recorder
+  participant "LiveMetrics" as live
+  participant "MetricFormatter" as fmt
+end box
+
+recorder -> live : update(0xFE01, null, A5 5A 10 3C 9F ..., t, r-12)
+live -> live : No decoder: update RawStream (2 Hz, 16 bytes)
+live --> page : raw signal changes
+page -> fmt : hex(bytes, 5)
+fmt --> page : "A5 5A 10 3C 9F..."
+page -> person : "Nothing decoded yet - raw packets only."; Packets 2 Hz, Length 16 bytes
+person -> page : Leaves the Investigation page
+page -> orch : Leave (see the release-the-connection design)
+orch -> live : reset()
+live -> live : Drop metrics, raw streams and ring buffers (NFR-005)
+@enduml

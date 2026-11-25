@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Confirm speed, or record that it did not move
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ConfirmationCheck" as check
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "NotificationRecorder" as recorder
+  participant "MetricConfirmer" as confirmer
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+rules -> check : Confirm speed (rule: rise >= 0.5 km/h, 15 s)
+check -> recorder : open("speed up")
+check -> executor : request_action("Now speed up to about 6 km/h. Change only the speed.")
+executor -> page : Show action prompt with Done
+person -> page : Speeds up on the console, taps "Done, at 6"
+page --> executor : doneAt
+executor --> check : ok
+check -> check : Wait for rule or 15 s after Done (FR-025)
+check -> recorder : close()
+check -> executor : decode_standard(action recording)
+executor --> check : speed 3.00 -> 6.00 km/h; incline flat
+check -> confirmer : confirm(rule, baseline 3.00, window values)
+alt Speed rose by at least 0.5 km/h in the window
+  confirmer --> check : confirmed, first at +2 s, evidence r-245
+  check -> store : Commit observation "Speed confirmed" (A-12)
+  check -> page : Tile shows Speed (confirmed)
+else Speed did not change
+  confirmer --> check : notConfirmed
+  check -> store : Commit observation "Speed not confirmed"
+  check -> executor : ask_user("Did the belt speed up?", Yes / No / Don't know)
+  executor -> page : Show question
+  person -> page : Taps an answer
+  page --> executor : answer
+  executor --> check : answer
+  check -> store : Commit the answer as an observation (FR-025)
+end
+@enduml

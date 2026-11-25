@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Record the baseline and the activity levels
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "subscribeAndRecordTool" as record
+  participant "NotificationRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+rules -> executor : subscribe_and_record([0xFE01], 10 s, "idle")
+executor -> record : run
+record -> recorder : open("idle", rank 0)
+recorder -> store : 20 packets, 16 bytes each (FR-028)
+record --> executor : ok
+loop each level: slow (rank 1), fast (rank 2)
+  rules -> executor : request_action("Walk slowly, then tap Ready", needsReady)
+  executor -> page : Show instruction, Ready and Skip
+  alt Person taps Ready
+    person -> page : Ready
+    page --> executor : readyAt (FR-051)
+    rules -> executor : subscribe_and_record([0xFE01], 10 s, "slow")
+    executor -> record : run
+    record -> recorder : open("slow", rank 1)
+    recorder -> store : Labelled recording
+    record --> executor : ok
+    executor -> page : Recordings panel: Slow 10 s
+  else Person taps Skip
+    page --> executor : skipped (FR-052)
+    executor -> page : Recordings panel: Slow skipped
+  end
+end
+rules -> rules : Characteristics with no value in any recording
+opt Some characteristic sent nothing
+  rules -> store : Commit observation "silent" (FR-028)
+end
+rules -> executor : find_varying_bytes([idle, slow, fast])
+@enduml

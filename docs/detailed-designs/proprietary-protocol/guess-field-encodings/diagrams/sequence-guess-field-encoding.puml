@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Test encodings against the expected range
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "guessFieldEncodingTool" as tool
+  participant "EncodingGuesser" as guesser
+  participant "FieldReader" as reader
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+executor -> tool : run({recordingId, uuid 0xFE01, offset 5, expected speed km/h 0-20})
+tool -> tool : Check min < max, width in 1-4, window inside packets (TOOL-018)
+tool -> store : Load values of 0xFE01
+store --> tool : packets
+alt Fewer than 5 usable values
+  tool --> executor : INSUFFICIENT_DATA
+else Enough values
+  tool -> guesser : fit(values, 5, any width, expected)
+  loop each of 56 encodings: u/s 8, 16, 24, 32 bit; LE, BE; x1, x0.1, x0.01, x0.001
+    guesser -> reader : read(bytes, 5, width, signed, order)
+    reader --> guesser : raw integers
+    guesser -> guesser : coverage = share of raw x scale in [0, 20]
+  end
+  guesser -> guesser : Keep coverage >= 0.9 (FR-030)
+  alt At least one fits
+    guesser -> guesser : Rank: coverage, span, median near centre, narrower, unsigned, LE
+    guesser --> tool : uint16 LE x0.01 km/h (1.0), sint16 LE x0.01, uint8 x0.01, uint16 LE x0.001
+    tool --> executor : ok: fits, best first
+  else None reaches 90 %
+    guesser --> tool : []
+    tool --> executor : ok: fits [] - no closest wrong fit (TOOL-018)
+  end
+end
+@enduml

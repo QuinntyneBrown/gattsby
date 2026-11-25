@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Compare with the console
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "compareWithConsoleTool" as tool
+  participant "LiveMetrics" as live
+end box
+
+executor -> tool : run({metric: speed, unit: km/h, tolerance: 0.2})
+tool -> live : latest(speed)
+alt No live value
+  live --> tool : null
+  tool --> executor : PRECONDITION_FAILED
+else Live value present
+  live --> tool : 5.02 km/h
+  tool -> channel : post(question: "What speed does the console show, in km/h?")
+  channel -> page : Show decimal field and Skip
+  alt Person types the reading
+    person -> page : Types 5.0, taps Submit
+    page --> channel : "5.0"
+    channel --> tool : response
+    tool -> live : latest(speed) at submit
+    live --> tool : 5.02 km/h
+    tool -> tool : abs(5.0 - 5.02) <= 0.2 (TOOL-033)
+    tool --> executor : ok: consoleValue 5.0, decodedValue 5.02, withinTolerance true
+  else Person taps Skip
+    page --> channel : skipped
+    channel --> tool : skipped
+    tool --> executor : USER_CANCELLED
+  end
+end
+@enduml

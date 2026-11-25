@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Decode standard data
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs the validated tool call and commits the step")
+  Component(record, "subscribeAndRecordTool", "Tool, listen", "Enables notifications and opens a Recording for N seconds")
+  Component(recorder, "NotificationRecorder", "Service", "Decodes each value, feeds live metrics, appends to the open recording")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only code touching navigator.bluetooth")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs every notification before it is decoded")
+  Component(kbc, "KnowledgeBase", "Service", "decoderFor(uuid)")
+  Component(decoder, "Decoder / FlagLayoutDecoder", "Pure code", "Bytes to fields with units, or a DecodeError")
+  Component(decodeTool, "decodeStandardTool", "Tool, read", "Decodes a value or a recording; min, max, trend")
+  Component(live, "LiveMetrics", "Service", "Latest decoded value per field (show-live-metrics)")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "recordings, rawLog, steps")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, record, "run(input, ctx)")
+Rel(executor, decodeTool, "run(input, ctx)")
+Rel(record, ble, "subscribe(characteristic, onValue)")
+Rel(device, ble, "Notifications", "Web Bluetooth")
+Rel(ble, log, "Appends raw entry")
+Rel(ble, recorder, "onValue(uuid, t, bytes, rawLogId)")
+Rel(recorder, kbc, "decoderFor(uuid)")
+Rel(recorder, decoder, "decode(bytes, previous)")
+Rel(recorder, live, "Pushes decoded fields")
+Rel(recorder, idb, "Writes recorded values in batches")
+Rel(decodeTool, idb, "Reads the recording")
+Rel(decodeTool, decoder, "decode(bytes)")
+@enduml

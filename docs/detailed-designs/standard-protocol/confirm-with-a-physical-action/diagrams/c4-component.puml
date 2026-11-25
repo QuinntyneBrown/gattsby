@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Confirm with a physical action
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Prompt card, answers, live tiles")
+  Component(rules, "PlaybookRules", "Pure code", "Picks the next unconfirmed metric with a rule")
+  Component(check, "ConfirmationCheck", "Service", "Runs prompt, window, decode and verdict for one metric")
+  Component(executor, "ToolExecutor", "Service", "Runs request_action, decode_standard, ask_user")
+  Component(recorder, "NotificationRecorder", "Service", "Holds the action recording")
+  Component(confirmer, "MetricConfirmer", "Pure helper", "Baseline vs window against the rule")
+  Component(console, "compareWithConsoleTool", "Tool, n/a", "Console reading vs decoded value")
+  Component(live, "LiveMetrics", "Service", "Latest decoded value per field")
+  Component(scorer, "ConfidenceScorer", "Pure helper", "Raises confidence from confirmed metrics")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Observations and steps")
+
+Rel(rules, check, "Decides: confirm speed")
+Rel(check, recorder, "Opens and closes the action recording")
+Rel(check, executor, "request_action, decode_standard, ask_user")
+Rel(executor, page, "Posts prompts through PromptChannel")
+Rel(person, page, "Taps Done or answers")
+Rel(check, confirmer, "confirm(rule, baseline, window)")
+Rel(check, scorer, "Confirmed metric")
+Rel(console, live, "Latest decoded value")
+Rel(check, idb, "Commits the observation")
+@enduml

@@ -1,0 +1,49 @@
+@startuml
+title UML sequence behaviour — Update a tile from a notification
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "LiveMetricTile" as tile
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "NotificationRecorder" as recorder
+  participant "HeartRateMeasurementDecoder" as decoder
+  participant "LiveMetrics" as live
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+device -> ble : Notify 0x2A37: 00 48
+ble -> recorder : onValue(0x2A37, t, bytes, r-88)
+recorder -> decoder : decode(00 48)
+alt Decodes
+  decoder --> recorder : heart rate 72 bpm
+  recorder -> live : update(0x2A37, decoded, t, r-88)
+  live -> live : Hold value; schedule one signal write per frame (NFR-003)
+  live --> page : metrics signal changes on next frame
+  page -> tile : value "72", unit "bpm", status likely
+  tile -> person : Shows 72 bpm within 1 s (FR-026)
+else Fails to decode
+  decoder --> recorder : DecodeError
+  recorder -> live : update(0x2A37, null, bytes, t, r-88)
+  live -> live : Update rate and raw only; tile keeps 71 bpm
+end
+@enduml

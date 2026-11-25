@@ -1,0 +1,96 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Unlock vendor data safely
+
+class VendorHandshake {
+  +id: string
+  +vendor: string
+  +purpose: string
+  +steps: HandshakeStep[]
+  +isMotion: boolean
+  +source: string
+}
+
+class HandshakeStep {
+  +service: string
+  +characteristic: string
+  +bytes: string
+  +withResponse: boolean
+  +delayMs?: number
+}
+
+class HandshakeResult {
+  +sent: string[]
+  +dataStarted: boolean
+}
+
+class replayKnownHandshakeTool <<tool>> {
+  +name: "replay_known_handshake"
+  +safetyClass: "write"
+  +inputSchema: { vendor, handshakeId } (no other property)
+  +run(input: HandshakeInput, ctx: ToolContext): Promise<ToolResult<HandshakeResult>>
+}
+
+class ApprovalGate {
+  +request(call: PendingCall, ctx: ToolContext): Promise<ApprovalToken[] | ToolError>
+}
+
+class ApprovalLedger {
+  +issue(request: ApprovalRequest): ApprovalToken
+  +consume(id: string, characteristic: string, bytes: Uint8Array): ApprovalToken | ToolError
+  +revokeAll(): void
+}
+
+class WriteProvenance {
+  +approvalId: string
+  +source: string
+}
+
+class ProtectedCharacteristic {
+  +uuid: string
+  +code: "AUTH_REQUIRED"
+  +attError?: number
+  +stepId: string
+  +rawLogId: string
+}
+
+class AuthRefusalGuard {
+  -protected: Map<string, ProtectedCharacteristic>
+  +observe(result: ToolResult<unknown>, step: Step): void
+  +isProtected(uuid: string): boolean
+}
+
+class ActionValidator {
+  +validate(action: AgentAction, state: DecisionState): ValidatedAction | ToolError
+}
+
+class MissingToolRecorder {
+  +record(capability: string, reason: string, evidence: string[], stage: Stage): Promise<MissingToolRequest>
+}
+
+class KnowledgeBase {
+  +handshakes: VendorHandshake[]
+  +handshake(vendor: string, id: string): VendorHandshake | null
+}
+
+VendorHandshake "1" *-- "1..*" HandshakeStep
+replayKnownHandshakeTool ..> KnowledgeBase : looks up steps
+replayKnownHandshakeTool ..> HandshakeResult : returns
+ApprovalGate --> ApprovalLedger : one token per step
+ActionValidator ..> KnowledgeBase : known handshakeId
+ActionValidator ..> AuthRefusalGuard : isProtected
+AuthRefusalGuard "1" *-- "*" ProtectedCharacteristic
+AuthRefusalGuard ..> MissingToolRecorder : raises request
+replayKnownHandshakeTool ..> WriteProvenance : each write carries
+@enduml

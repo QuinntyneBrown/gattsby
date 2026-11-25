@@ -1,0 +1,87 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Confirm with a physical action
+
+enum ConfirmationStatus {
+  confirmed
+  notConfirmed
+}
+
+class ConfirmationRule {
+  +metric: string
+  +deviceTypes: string[]
+  +action: string
+  +direction: "rise" | "fall" | "increase"
+  +minChange: number
+  +unit: string
+  +windowSeconds: number
+}
+
+class MetricSample {
+  +value: number
+  +t: number
+  +rawLogId: string
+}
+
+class ConfirmationResult {
+  +metric: string
+  +status: ConfirmationStatus
+  +baseline: number
+  +qualifying?: MetricSample
+  +delayMs?: number
+  +otherFieldsMoved: string[]
+  +evidence: string[]
+}
+
+class MetricConfirmer {
+  +{static} confirm(rule: ConfirmationRule, baseline: MetricSample[], window: MetricSample[]): ConfirmationResult
+}
+
+class ConfirmationCheck {
+  +run(metric: string, ctx: ToolContext): Promise<ConfirmationResult>
+}
+
+class ConsoleComparison {
+  +metric: string
+  +unit: string
+  +consoleValue: number
+  +decodedValue: number
+  +tolerance: number
+  +withinTolerance: boolean
+}
+
+class compareWithConsoleTool <<tool>> {
+  +name: "compare_with_console"
+  +safetyClass: "n/a"
+  +run(input: CompareInput, ctx: ToolContext): Promise<ToolResult<ConsoleComparison>>
+}
+
+class LiveMetrics {
+  +latest(metric: string): MetricSample | null
+}
+
+class PlaybookRules {
+  +next(state: DecisionState): RuleOutcome
+}
+
+PlaybookRules ..> ConfirmationRule : reads
+PlaybookRules ..> ConfirmationCheck : decides confirm
+ConfirmationCheck ..> MetricConfirmer : applies
+MetricConfirmer ..> ConfirmationRule : uses
+MetricConfirmer ..> ConfirmationResult : returns
+ConfirmationResult --> ConfirmationStatus
+ConfirmationResult --> MetricSample
+compareWithConsoleTool ..> LiveMetrics : reads
+compareWithConsoleTool ..> ConsoleComparison : returns
+@enduml

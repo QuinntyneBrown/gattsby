@@ -1,0 +1,78 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Show live metrics
+
+enum LiveStatus {
+  confirmed
+  likely
+  guess
+  notLabelled
+}
+
+class LiveMetric {
+  +metric: string
+  +label: string
+  +value: number | Uint8Array
+  +unit: string
+  +status: LiveStatus
+  +uuid: string
+  +t: number
+  +rawLogId: string
+}
+
+class RawStream {
+  +uuid: string
+  +rateHz: number
+  +length: number
+  +lastHex: string
+  -arrivals: RingBuffer<number>
+}
+
+class LiveMetrics {
+  +metrics: Signal<LiveMetric[]>
+  +raw: Signal<RawStream[]>
+  +emphasised: Signal<string | null>
+  +update(uuid: string, decoded: DecodedValue | null, bytes: Uint8Array, t: number, rawLogId: string): void
+  +setStatus(metric: string, status: LiveStatus): void
+  +latest(metric: string): MetricSample | null
+  +reset(): void
+}
+
+class MetricFormatter {
+  +{static} value(metric: LiveMetric, precision: number): string
+  +{static} duration(seconds: number): string
+  +{static} hex(bytes: Uint8Array, maxBytes: number): string
+}
+
+class LiveMetricTile <<component>> {
+  +label: input<string>
+  +value: input<string>
+  +unit: input<string>
+  +status: input<LiveStatus>
+  +emphasised: input<boolean>
+}
+
+class InvestigationPage <<component>> {
+  +tiles: Signal<LiveMetricTileInputs[]>
+  +rawOnly: Signal<boolean>
+}
+
+LiveMetrics "1" *-- "*" LiveMetric
+LiveMetrics "1" *-- "*" RawStream
+LiveMetric --> LiveStatus
+InvestigationPage ..> LiveMetrics : reads signals
+InvestigationPage ..> MetricFormatter : formats
+InvestigationPage ..> LiveMetricTile : renders
+LiveMetricTile --> LiveStatus
+@enduml

@@ -1,0 +1,49 @@
+@startuml
+title UML sequence behaviour — Resolve the readable metrics
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "DeviceProfilePage" as page
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ProfileBuilder" as builder
+  participant "ReadableMetricResolver" as resolver
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+builder -> store : Read feature step, recordings, confirmations
+store --> builder : claims, seen fields, confirmation results
+builder -> resolver : resolve(claims, seen, confirmations, kb)
+resolver -> kb : Layout and bit-to-field map for 0x2ACD
+kb --> resolver : Treadmill Data layout
+loop each claimed or seen metric
+  alt Seen and confirmed
+    resolver -> resolver : status confirmed
+  else Seen or claimed, never confirmed
+    resolver -> resolver : status claimed only
+  else Feature bit set, never in any packet
+    resolver -> resolver : status claimed, not seen (FR-027)
+  end
+  resolver -> resolver : Rule: fixed bytes, or flag bit when an optional field precedes it
+  resolver -> resolver : Attach type, scale, unit, rate and evidence IDs (FR-056)
+end
+resolver --> builder : ReadableMetric[]
+builder -> store : Store DeviceProfile with readable metrics and ranges
+page -> store : get(profile)
+store --> page : Speed 0x2ACD bytes 2-3 uint16 x0.01 confirmed; Incline flag bit 3 claimed, not seen
+@enduml

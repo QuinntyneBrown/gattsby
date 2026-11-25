@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Show live metrics
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Live metrics service, live tiles on the Investigation page")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Metric labels, units and display precision")
+}
+System_Ext(device, "Device", "Machine or sensor (Bluetooth LE)")
+
+Rel(device, spa, "Notifies data values", "Web Bluetooth")
+Rel(spa, kb, "Reads labels and display precision")
+Rel(spa, person, "Shows each metric with unit and status", "Screen")
+@enduml
