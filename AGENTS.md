@@ -74,6 +74,75 @@ Use the words the specs use in code, docs and UI; no synonyms.
 - Where a rule below names something that does not exist yet (a project, a command, a fixture, a
   helper, a folder), the first change that needs it adds it.
 
+### Folder structure
+
+The expected layout once the code is implemented. Folder names follow `docs/detailed-designs/`; a
+change that departs from them updates this tree and the design in the same change. Unit tests sit
+beside the code they test as `*.spec.ts`.
+
+```text
+gattsby/
+├── AGENTS.md                       # This file; CLAUDE.md points here
+├── .github/
+│   ├── workflows/                  # CI: lint, build, one critical acceptance path per feature
+│   └── ISSUE_TEMPLATE/, PULL_REQUEST_TEMPLATE.md
+├── .claude/skills/, .agents/skills/  # Agent skills (requirements, designs, mocks, ATDD)
+├── docs/
+│   ├── application-brief.md        # Technical scope
+│   ├── behavior.md                 # Gattsby: Behavior Description (when added)
+│   ├── lessons-learned.md          # One entry per slice
+│   ├── specs/                      # L0.md (mission, when written), L1.md, L2.md
+│   ├── adr/                        # Architecture decision records, from 0001 (frontend stack)
+│   ├── detailed-designs/           # {subsystem}/{feature}/README.md + diagrams/
+│   ├── mocks/                      # pages/, dialogs/, notifications/; source of truth for the UI
+│   ├── design-system/              # Tokens and components extracted from the mocks
+│   └── assets/                     # Logos
+└── frontend/                       # Angular workspace (ADR 0001)
+    ├── public/                     # manifest.webmanifest, _headers, self-hosted fonts and icons
+    ├── scripts/                    # Build checks: schemas, knowledge base, headers, initial bundle
+    ├── e2e/                        # Playwright, Chromium only
+    │   ├── fixtures/               # fake-bluetooth.ts, fake-language-model.ts, gattsby-test.ts
+    │   ├── pages/                  # One page object per screen or dialog (*.page.ts)
+    │   └── *.spec.ts               # Behaviour specs, each headed with its requirement IDs
+    └── src/
+        ├── knowledge-base/         # Data, not code; versioned JSON
+        │   ├── standard/           # Standard UUIDs and profiles (FTMS, ...), confirmation rules
+        │   ├── vendors/            # Vendor signatures, name patterns, manufacturer IDs
+        │   ├── commands/           # Command definitions
+        │   ├── limits/             # Safe speed, incline and resistance limits
+        │   └── generated/          # Compiled knowledge-base.json (build output)
+        ├── schemas/                # Export schemas: investigation record, device profile, missing-tool requests
+        ├── simulation/             # Simulated devices and model for demos (devices/*.device.ts)
+        └── app/
+            ├── app.routes.ts, app-shell.ts
+            ├── agent/              # Orchestrator: loop, playbook, rules/, validation, approvals, stop conditions
+            ├── model/              # Model adapter: the only code that touches LanguageModel
+            ├── tools/              # Tool registry and tools, one folder per tool group:
+            │   ├── discovery/      #   scan, watch advertisements, permitted devices
+            │   ├── connection/     #   connect, reconnect, disconnect
+            │   ├── inspection/     #   enumerate GATT, read device info and characteristics
+            │   ├── listening/      #   subscribe and record
+            │   ├── analysis/       #   decode, detect framing, guess encodings, vendor lookup
+            │   ├── control/        #   request control, send command, emergency stop
+            │   ├── person/         #   ask, request an action, capture a photo
+            │   ├── environment/    #   check capabilities
+            │   └── meta/           #   update hypothesis, request missing tool, finish
+            ├── ble/                # BLE layer: the only code that touches navigator.bluetooth; raw traffic log
+            ├── knowledge-base/     # Loader, decoders/, profile and vendor matchers, safe limits
+            ├── store/              # Investigation store: the only code that touches IndexedDB; import, export; model/
+            ├── analysis/           # Pure byte-level helpers: framing, encodings, varying bytes, checksums
+            ├── outcome/            # Hypothesis tracker, confidence scorer, verdict, device profile, missing tools
+            ├── environment/        # Capability detection and operating mode
+            ├── live/               # Live metrics and formatting
+            ├── photo/              # Camera adapter and photo sanitizer (imported dynamically)
+            ├── security/           # Trusted Types policy, display-text rendering
+            ├── shared/             # Cross-cutting helpers such as the clock
+            ├── pages/              # Routed, lazy-loaded pages; one folder per mock in docs/mocks/pages/
+            ├── dialogs/            # One folder per mock in docs/mocks/dialogs/
+            ├── notifications/      # Connection banner, mode banner, toast
+            └── ui/                 # Presentation components: inputs and outputs, no app services
+```
+
 ## Architecture
 
 Six parts. **The model chooses; code executes and decodes.**
