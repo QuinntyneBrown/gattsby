@@ -1,5 +1,6 @@
 import { inject, Injectable, Injector } from '@angular/core';
 import { BleLayer } from '../ble/ble-layer';
+import { LANGUAGE_MODEL } from '../model/language-model.token';
 import { Clock } from '../shared/clock';
 import { InvestigationStore } from '../store/investigation-store';
 import type { CapabilityDiagnostic } from './capability-diagnostic';
@@ -41,7 +42,7 @@ export class BrowserCapabilityDetector extends CapabilityDetector {
         },
         (code) => diagnose('bluetooth', code),
       ),
-      options.model === false
+      options.model === false || !this.injector.get(LANGUAGE_MODEL)
         ? { api: false, availability: 'unavailable' as const, imageInput: false }
         : this.probe(
             async () => {

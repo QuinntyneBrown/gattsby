@@ -16,7 +16,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
-import { ModelDecider } from '../../agent/model-decider';
+import { ChecklistDecider } from '../../agent/checklist-decider';
 import { PromptChannel } from '../../agent/prompt-channel';
 import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
 import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
@@ -61,7 +61,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     LiveMetrics,
     NotificationRecorder,
     ConfirmationCheck,
-    ModelDecider,
+    ChecklistDecider,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `

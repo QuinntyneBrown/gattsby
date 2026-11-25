@@ -1,5 +1,6 @@
 import { STAGES, type Stage } from '../store/model/stage';
-import type { RuleOutcome } from './rule-outcome';
+import { CHECKLIST_LABELS } from './playbook';
+import type { RuleAction, RuleOption, RuleOutcome } from './rule-outcome';
 import { CONCLUDE_RULES } from './rules/conclude.rules';
 import { FIND_RULES } from './rules/find.rules';
 import { IDENTIFY_RULES } from './rules/identify.rules';
@@ -33,4 +34,27 @@ export function nextOutcome(ctx: RuleContext, concludeNow = false): RuleOutcome 
     }
   }
   return null;
+}
+
+/** Includes only steps whose playbook rule applies right now. */
+export function checklistOptions(outcome: RuleOutcome, ctx: RuleContext): readonly RuleOption[] {
+  if (outcome.kind === 'ambiguous') return outcome.options;
+  const recommended = checklistOption(outcome.action, true);
+  if (!recommended) return [];
+  const options = [recommended];
+  for (const rule of RULES[outcome.action.stage] ?? []) {
+    if (rule.id === outcome.action.ruleId || !rule.when(ctx)) continue;
+    const alternative = rule.then(ctx);
+    if (alternative.kind !== 'decided') continue;
+    const option = checklistOption(alternative.action, false);
+    if (option && !options.some((existing) => existing.label === option.label))
+      options.push(option);
+    if (options.length === 4) break;
+  }
+  return options;
+}
+
+function checklistOption(action: RuleAction, recommended: boolean): RuleOption | null {
+  const copy = CHECKLIST_LABELS[action.tool];
+  return copy ? { ...copy, action, recommended } : null;
 }

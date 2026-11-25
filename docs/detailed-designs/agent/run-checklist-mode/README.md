@@ -23,10 +23,9 @@ The Readiness page on a phone ends in "Ready, in checklist mode." with "Start in
 the mode banner "Running as a checklist." ("The on-device model is off for this investigation. You pick
 each step; Gattsby runs it and explains the result.", `docs/mocks/notifications/mode-banner/info.html`),
 prefixes feed entries with "Checklist:" and "Purpose:" instead of "Agent:" and "Why:", and offers
-"Pick the next step" with "Recommended: read device information. It's read-only and takes a
-second." and the options "Read device information", "Match known profiles", "Record data for 10 s"
-and "Scan again". The composer offers "Add a note…" in place of "Ask, or tell Gattsby what to try…",
-since no model reads free text.
+"Pick the next step" with "Recommended: Read device information. It’s read-only and takes a
+second." and the options "Read device information" and "Match known profiles". Recording and
+scanning require their own prompts. The Investigation options menu offers Add a note.
 
 ## Description
 
@@ -35,9 +34,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 - **`ChecklistDecider`** (`agent/checklist-decider.ts`) — the `Decider` for checklist mode.
   `decide(state, signal)` calls `PlaybookRules.next(state)`. A decided person-facing action
-  (`ask_user`, `request_action`) is returned as it is: the question is itself the step. A decided
-  tool call becomes a checklist step whose first option is that call, marked recommended, followed by
-  up to 3 alternatives from `PlaybookRules.alternatives(state)`. An ambiguous outcome becomes a
+  (`ask_user`, `request_action`) is returned as it is: the question is itself the step. A tool that
+  starts immediately after a person's answer, such as a timed recording after Ready, also runs
+  directly. A checklist tool call offers the recommendation and up to three eligible alternatives
+  in the same stage. An ambiguous outcome becomes a
   checklist step from its options. The person's choice is returned as the candidate action.
 - **`PlaybookRules`** (`agent/playbook-rules.ts`) — the same rules as in full agent mode (see the
   apply-heuristics-first design). `alternatives(state)` lists the stage's other tools whose
@@ -45,7 +45,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - **`Playbook`** (`agent/playbook.ts`) — the plain-language option labels and purpose lines per tool
   ("Record data for 10 s"), as data, so a new tool's checklist label is a data entry (NFR-022).
 - **`PromptChannel`** (`agent/prompt-channel.ts`) — posts the checklist step as a `question`
-  `PersonPrompt` and awaits the choice. Its 2-minute inactivity timer leads to "Still there?"
+  `PersonPrompt` with kind `checklist` and awaits the choice. Its 2-minute inactivity timer leads to "Still there?"
   (FR-051).
 - **`PromptCard`** and **`AnswerButtons`** (`ui/prompt-card/prompt-card.component.ts`,
   `ui/answer-buttons/answer-buttons.component.ts`) — render the step and its options as 48 px buttons,
@@ -92,7 +92,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 |---|---|
 | `ChecklistStep` | `stage`, `title` ("Pick the next step"), `recommendation` (purpose line), `options` (`RuleOption[]`, at most 4) |
 | `RuleOption` | `action`, `label`, `purpose`, `recommended` |
-| `PersonPrompt` (kind `question`) | `id`, `title`, `detail`, `answers` (option labels), `allowFreeText: false` |
+| `PersonPrompt` (kind `checklist`) | `id`, `title`, `detail`, `answers` (option labels), `allowFreeText: false` |
 
 ### Tests that prove it
 

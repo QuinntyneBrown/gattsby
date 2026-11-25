@@ -171,7 +171,11 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
           }
         : next;
     case 'read_device_info':
-      return { ...next, deviceInfo: step.result.ok ? (data as DeviceInformation) : 'absent' };
+      return {
+        ...next,
+        deviceInfo: step.result.ok ? (data as DeviceInformation) : 'absent',
+        candidates: step.result.ok ? null : state.candidates,
+      };
     case 'match_known_profiles':
       return step.result.ok
         ? { ...next, candidates: data?.['candidates'] as ProfileCandidate[] }

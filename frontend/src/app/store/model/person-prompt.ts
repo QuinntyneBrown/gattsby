@@ -1,4 +1,4 @@
-export type PromptKind = 'question' | 'action' | 'approval' | 'tap' | 'photo';
+export type PromptKind = 'question' | 'checklist' | 'action' | 'approval' | 'tap' | 'photo';
 
 // One prompt in the dock (ask-the-person design).
 export interface PersonPrompt {
