@@ -57,7 +57,6 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps --only-shell chromium
 
-      # One critical path per journey: the app shell (journey 1) and identifying an FTMS treadmill
-      # (journey 2).
+      # The tagged critical paths cover the app shell, standard identification and live FTMS confirmation.
       - name: Run the critical behaviour specs
         run: npm run e2e:critical

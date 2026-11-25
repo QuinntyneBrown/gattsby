@@ -1,5 +1,5 @@
 // Acceptance Test
-// Traces to: FR-024, FR-025, FR-026, FR-027, FR-051, FR-054, FR-057, FR-060, TOOL-013, TOOL-015, TOOL-026, TOOL-031
+// Traces to: FR-024, FR-025, FR-026, FR-027, FR-051, FR-054, FR-057, FR-060, NFR-001, TOOL-013, TOOL-015, TOOL-026, TOOL-031
 // Description: Show live standard data and confirm it only when it follows a physical action.
 
 import type { Page } from '@playwright/test';
@@ -76,6 +76,7 @@ test.describe('FTMS indoor bike', () => {
 
     const verdict = new VerdictPage(page);
     await expect(verdict.title).toHaveText('Connected — FTMS');
+    expect(await page.evaluate(() => performance.now())).toBeLessThan(180_000);
     await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
     expect(fakeBluetooth.writes()).toEqual([]);
   });
@@ -126,6 +127,8 @@ test('Given an identified FTMS treadmill, when the person starts walking, then n
   await fakeBluetooth.setEffort(2);
   await page.clock.runFor(1100);
   await expect(investigation.liveMetric('Speed')).toContainText(/6\.0\s*km\/h/);
+  await expect(investigation.liveMetric('Speed')).toContainText('likely');
+  await expect(investigation.liveRate).toHaveText('1 Hz');
   expect(fakeBluetooth.writes()).toEqual([]);
   expect(fakeModel.prompts()).toEqual([]);
   expect(fakeModel.calls()).not.toContain('create');
@@ -233,6 +236,7 @@ test(
     await expect(verdict.title).toHaveText('Connected — FTMS');
     await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
     await expect(verdict.item('Can read', 'Distance')).toContainText('confirmed');
+    expect(await page.evaluate(() => performance.now())).toBeLessThan(180_000);
     const records = new StoredRecords(page);
     expect((await records.investigation(id))?.verdict?.kind).toBe('connected');
     const [baseline] = await records.recordings(id);
@@ -297,6 +301,10 @@ test('Given speed stays at the baseline, when 15 seconds pass after Done, then t
   await investigation.choose('Done');
   await page.clock.runFor(15_100);
   await investigation.waitForPrompt('Did the belt speed up?');
+  await expect(investigation.promptEyebrow).toHaveText('Speed not confirmed');
+  await expect(investigation.promptDetail).toContainText(
+    'The data didn’t show the expected change',
+  );
   await investigation.choose('Yes');
 
   await expect(new VerdictPage(page).title).toHaveText('Partially decoded');

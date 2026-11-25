@@ -139,10 +139,19 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
             @default {
               @if (metrics().length > 0) {
                 <div class="dock__inner" aria-live="off">
-                  <div class="live-strip" aria-label="Live readings">
+                  <div class="live-strip" role="group" aria-label="Live readings">
+                    @if (connected()) {
+                      <span class="live-badge">Live</span>
+                    }
                     @for (field of metrics(); track field.metric) {
                       <div class="reading">
                         <span class="reading__label">{{ field.label }}</span>
+                        @if (!orchestrator.confirmedMetrics().has(field.metric)) {
+                          <span aria-hidden="true">~</span>
+                          <span class="visually-hidden">likely</span>
+                        } @else {
+                          <span class="visually-hidden">confirmed</span>
+                        }
                         <span class="reading__value">{{
                           metricValue(field.value, field.scale)
                         }}</span>
@@ -186,7 +195,12 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
             }
           </section>
           <section>
-            <h2 class="section-title">Live readings</h2>
+            <div class="section-head">
+              <h2 class="section-title">Live readings</h2>
+              @if (connected() && liveRate(); as rate) {
+                <span class="live-badge">{{ rate.toFixed(rate < 1 ? 1 : 0) }} Hz</span>
+              }
+            </div>
             @if (metrics().length > 0) {
               <dl class="readings">
                 @for (field of metrics(); track field.metric) {
@@ -194,6 +208,13 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
                     <dt>{{ field.label }}</dt>
                     <dd class="readings__value">
                       {{ metricValue(field.value, field.scale) }} {{ field.unit }}
+                    </dd>
+                    <dd class="readings__tag">
+                      <g-confidence-badge
+                        [word]="
+                          orchestrator.confirmedMetrics().has(field.metric) ? 'confirmed' : 'likely'
+                        "
+                      />
                     </dd>
                   </div>
                 }
@@ -245,7 +266,9 @@ export class InvestigationPage implements OnInit, OnDestroy {
   readonly id = input.required<string>();
   protected readonly orchestrator = inject(PlaybookOrchestrator);
   protected readonly prompts = inject(PromptChannel);
-  protected readonly metrics = inject(LiveMetrics).metrics;
+  private readonly live = inject(LiveMetrics);
+  protected readonly metrics = this.live.metrics;
+  protected readonly liveRate = this.live.rateHz;
   private readonly router = inject(Router);
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
 

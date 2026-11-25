@@ -8,6 +8,7 @@ const STANDARD_PATHS = {
     ready: 'Step on, press Start and walk slowly — around 3 km/h. Tap Ready when you’re walking.',
     action: 'Now speed up to about 6 km/h. Change only the speed.',
     followUp: 'Did the belt speed up?',
+    notConfirmed: 'Speed not confirmed',
     metric: 'speed',
   },
   bike: {
@@ -15,6 +16,7 @@ const STANDARD_PATHS = {
     ready: 'Start pedalling at an easy pace. Tap Ready when you’re pedalling.',
     action: 'Now pedal faster.',
     followUp: 'Did you pedal faster?',
+    notConfirmed: 'Speed not confirmed',
     metric: 'speed',
   },
   'heart-rate-sensor': {
@@ -22,6 +24,7 @@ const STANDARD_PATHS = {
     ready: 'Put on the heart-rate strap. Tap Ready when it is fitted.',
     action: 'Walk briefly at an easy pace.',
     followUp: 'Were you able to walk?',
+    notConfirmed: 'Heart rate not confirmed',
     metric: 'heartRate',
   },
 } as const;
@@ -107,6 +110,9 @@ export const STANDARD_RULES: readonly StageRule[] = [
     then: (ctx) =>
       decided('standard.speed-follow-up', 'standard', 'ask_user', {
         question: standardPath(ctx)!.followUp,
+        sequence: standardPath(ctx)!.notConfirmed,
+        detail:
+          'The data didn’t show the expected change within 15 s. Your answer is saved with the readings.',
         answers: ['Yes', 'No'],
       }),
   },

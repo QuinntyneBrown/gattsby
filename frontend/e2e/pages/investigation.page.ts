@@ -18,6 +18,7 @@ export class InvestigationPage {
   readonly connectionBanner: Locator;
   readonly freeText: Locator;
   readonly leave: Locator;
+  readonly liveRate: Locator;
 
   constructor(private readonly page: Page) {
     this.title = page.locator('.appbar__title');
@@ -37,6 +38,7 @@ export class InvestigationPage {
     this.connectionBanner = page.locator('.conn-banner');
     this.freeText = this.dock.getByRole('textbox');
     this.leave = page.getByRole('link', { name: 'Leave the investigation' });
+    this.liveRate = this.devicePanel.locator('.live-badge');
   }
 
   id(): string {

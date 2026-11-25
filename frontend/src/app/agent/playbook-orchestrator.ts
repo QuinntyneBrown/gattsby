@@ -86,6 +86,14 @@ export class PlaybookOrchestrator {
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
   private readonly observations = signal<readonly Observation[]>([]);
+  readonly confirmedMetrics = computed(
+    () =>
+      new Set(
+        this.observations()
+          .filter((evidence) => evidence.kind === 'metric-confirmed')
+          .map((evidence) => evidence.subject),
+      ),
+  );
   private readonly requests = signal<readonly MissingToolRequest[]>([]);
   private readonly hypotheses = signal<readonly Hypothesis[]>([]);
   private readonly pending = signal<PendingStep | null>(null);

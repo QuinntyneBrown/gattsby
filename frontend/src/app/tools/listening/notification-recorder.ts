@@ -50,7 +50,7 @@ export class NotificationRecorder {
               const fields = decoder.decode(bytes).value;
               if (!Array.isArray(fields)) return capture;
               const metrics = fields as readonly DecodedMetric[];
-              this.live.update(metrics);
+              this.live.update(metrics, uuid, t);
               this.confirmation.sample(metrics, entryId, t, inWindow);
               return { ...capture, decoded: metrics };
             } catch (error) {

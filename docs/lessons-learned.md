@@ -193,3 +193,14 @@ None; this is the first entry.
   with the inclusive cutoff.
 - A later recording of the same characteristic used to leave both listeners attached. Replace
   the prior listener before starting the next one so each packet is logged once.
+
+## Journey 3, slice 13: Compare the live and not-confirmed states
+
+- A follow-up question alone left the missed check implicit. The dock now states what was not
+  confirmed and explains that the person's answer will be saved with the samples.
+- Read the notification rate from the actual packet times. The panel and confirmation badges
+  update with the frame that shows the reading.
+- Chromium loaded the Identify, live readings, not-confirmed and Verdict mocks at 360, 768, 992
+  and 1280 px in both themes. The phone and laptop comparisons are in
+  `docs/assets/journey-03/`. The Verdict mock also illustrates features from later journeys,
+  including Evidence and Export.
