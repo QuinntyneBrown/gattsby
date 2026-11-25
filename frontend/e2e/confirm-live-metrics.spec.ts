@@ -1,6 +1,6 @@
 // Acceptance Test
 // Traces to: FR-024, FR-025, FR-026, FR-027, FR-054, FR-057, FR-060, TOOL-013, TOOL-015, TOOL-026, TOOL-031
-// Description: Show live Treadmill Data and confirm it only when it follows a physical action.
+// Description: Show live standard data and confirm it only when it follows a physical action.
 
 import type { Page } from '@playwright/test';
 import type { FakeBluetooth } from './fixtures/fake-bluetooth';
@@ -15,13 +15,13 @@ test.use({
   bluetooth: { devices: [devices.treadmill.id], chooser: [{ pick: devices.treadmill.id }] },
 });
 
-async function identifyTreadmill(page: Page): Promise<InvestigationPage> {
+async function identifyMachine(page: Page, machine = 'Treadmill'): Promise<InvestigationPage> {
   await page.clock.install();
   const home = new HomePage(page);
   const investigation = new InvestigationPage(page);
   await home.goto();
   await home.identify();
-  await investigation.prepare('Treadmill', 'Don’t know');
+  await investigation.prepare(machine, 'Don’t know');
   await investigation.choose('Find the device');
 
   await expect(investigation.stageState('Standard path')).toHaveText('Standard path: now');
@@ -31,8 +31,9 @@ async function identifyTreadmill(page: Page): Promise<InvestigationPage> {
 async function startRecording(
   page: Page,
   fakeBluetooth: FakeBluetooth,
+  machine = 'Treadmill',
 ): Promise<InvestigationPage> {
-  const investigation = await identifyTreadmill(page);
+  const investigation = await identifyMachine(page, machine);
   await fakeBluetooth.setEffort(1);
   await investigation.choose('Ready');
   await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
@@ -42,7 +43,7 @@ async function startRecording(
 test('Given an FTMS treadmill exposes the feature bits and a speed range, when Identify finishes, then the agent has read each value once and saved the supported range', async ({
   page,
 }) => {
-  const investigation = await identifyTreadmill(page);
+  const investigation = await identifyMachine(page);
   await expect(investigation.feedTool('read_supported_ranges')).toContainText(
     'Speed 0.8–16.0 km/h by 0.1',
   );
@@ -51,6 +52,32 @@ test('Given an FTMS treadmill exposes the feature bits and a speed range, when I
   for (const uuid of [uuids.fitnessMachineFeature, uuids.supportedSpeedRange]) {
     expect(entries.filter((entry) => entry.kind === 'read' && entry.uuid === uuid)).toHaveLength(1);
   }
+});
+
+test.describe('FTMS indoor bike', () => {
+  test.use({ bluetooth: { devices: [devices.bike.id], chooser: [{ pick: devices.bike.id }] } });
+
+  test('Given an FTMS bike, when the person pedals harder and speed rises, then the app shows live cadence and issues Connected — FTMS', async ({
+    page,
+    fakeBluetooth,
+  }) => {
+    const investigation = await startRecording(page, fakeBluetooth, 'Bike');
+    await page.clock.runFor(1100);
+    await expect(investigation.liveMetric('Cadence')).toContainText(/60(?:\.0)?\s*rpm/);
+    await expect(investigation.liveMetric('Power')).toContainText(/75\s*W/);
+    await page.clock.runFor(10_000);
+    await investigation.waitForPrompt('Now pedal faster.');
+
+    await fakeBluetooth.setEffort(2);
+    await page.clock.runFor(1100);
+    await expect(investigation.liveMetric('Cadence')).toContainText(/120(?:\.0)?\s*rpm/);
+    await investigation.choose('Done');
+
+    const verdict = new VerdictPage(page);
+    await expect(verdict.title).toHaveText('Connected — FTMS');
+    await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
+    expect(fakeBluetooth.writes()).toEqual([]);
+  });
 });
 
 test('Given an identified FTMS treadmill, when the person starts walking, then notifications update the live speed without a model or write', async ({

@@ -1,30 +1,49 @@
+import { canonicalUuid } from '../../knowledge-base/uuid';
 import { decided, type RuleContext, type StageRule } from '../stage-rule';
 import { decidedCandidate } from './identify.rules';
 
-const TREADMILL_DATA = '00002acd-0000-1000-8000-00805f9b34fb';
+const STANDARD_PATHS = {
+  treadmill: {
+    characteristic: canonicalUuid(0x2acd),
+    ready: 'Step on, press Start and walk slowly — around 3 km/h. Tap Ready when you’re walking.',
+    action: 'Now speed up to about 6 km/h. Change only the speed.',
+    followUp: 'Did the belt speed up?',
+  },
+  bike: {
+    characteristic: canonicalUuid(0x2ad2),
+    ready: 'Start pedalling at an easy pace. Tap Ready when you’re pedalling.',
+    action: 'Now pedal faster.',
+    followUp: 'Did you pedal faster?',
+  },
+} as const;
 
-function treadmillData(ctx: RuleContext) {
+function standardPath(ctx: RuleContext) {
   if (!ctx.state.connected) return undefined;
   const profile = decidedCandidate(ctx);
-  if (profile?.deviceType !== 'treadmill') return undefined;
-  return ctx.state.layout?.find(
+  if (!profile || (profile.deviceType !== 'treadmill' && profile.deviceType !== 'bike')) {
+    return undefined;
+  }
+  const path = STANDARD_PATHS[profile.deviceType];
+  const service = ctx.state.layout?.find(
     (service) =>
       service.uuid === profile.serviceUuid &&
       service.characteristics.some(
-        (c) => c.uuid === TREADMILL_DATA && c.properties.includes('notify'),
+        (c) =>
+          c.uuid === path.characteristic &&
+          (c.properties.includes('notify') || c.properties.includes('indicate')),
       ),
   );
+  return service ? { ...path, service: service.uuid } : undefined;
 }
 
 export const STANDARD_RULES: readonly StageRule[] = [
   {
     id: 'standard.ready',
     stage: 'standard',
-    when: (ctx) => ctx.state.standardRecording === 'pending' && !!treadmillData(ctx),
-    then: () =>
+    when: (ctx) => ctx.state.standardRecording === 'pending' && !!standardPath(ctx),
+    then: (ctx) =>
       decided('standard.ready', 'standard', 'request_action', {
-        instruction:
-          'Step on, press Start and walk slowly — around 3 km/h. Tap Ready when you’re walking.',
+        instruction: standardPath(ctx)!.ready,
         needsReady: true,
         why: 'I need movement to see which numbers are live.',
       }),
@@ -32,21 +51,26 @@ export const STANDARD_RULES: readonly StageRule[] = [
   {
     id: 'standard.record',
     stage: 'standard',
-    when: (ctx) => ctx.state.standardRecording === 'ready' && !!treadmillData(ctx),
-    then: (ctx) =>
-      decided('standard.record', 'standard', 'subscribe_and_record', {
-        service: treadmillData(ctx)!.uuid,
-        characteristic: TREADMILL_DATA,
+    when: (ctx) => ctx.state.standardRecording === 'ready' && !!standardPath(ctx),
+    then: (ctx) => {
+      const { service, characteristic } = standardPath(ctx)!;
+      return decided('standard.record', 'standard', 'subscribe_and_record', {
+        service,
+        characteristic,
         seconds: 10,
-      }),
+      });
+    },
   },
   {
     id: 'standard.speed-action',
     stage: 'standard',
-    when: ({ state }) => state.standardRecording === 'recorded' && state.speedAction === null,
-    then: () =>
+    when: (ctx) =>
+      ctx.state.standardRecording === 'recorded' &&
+      ctx.state.speedAction === null &&
+      !!standardPath(ctx),
+    then: (ctx) =>
       decided('standard.speed-action', 'standard', 'request_action', {
-        instruction: 'Now speed up to about 6 km/h. Change only the speed.',
+        instruction: standardPath(ctx)!.action,
         needsReady: false,
         confirmSpeed: true,
         why: 'If the speed field rises when you change the speed, the decoding is right.',
@@ -64,10 +88,10 @@ export const STANDARD_RULES: readonly StageRule[] = [
   {
     id: 'standard.speed-follow-up',
     stage: 'standard',
-    when: ({ state }) => state.speedConfirmation === 'notConfirmed',
-    then: () =>
+    when: (ctx) => ctx.state.speedConfirmation === 'notConfirmed' && !!standardPath(ctx),
+    then: (ctx) =>
       decided('standard.speed-follow-up', 'standard', 'ask_user', {
-        question: 'Did the belt speed up?',
+        question: standardPath(ctx)!.followUp,
         answers: ['Yes', 'No'],
       }),
   },

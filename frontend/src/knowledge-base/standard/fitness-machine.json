@@ -25,6 +25,7 @@
     {
       "uuid": "0x2ad2",
       "name": "Indoor Bike Data",
+      "decoder": "indoor-bike-data",
       "properties": ["notify"],
       "deviceType": "bike"
     },

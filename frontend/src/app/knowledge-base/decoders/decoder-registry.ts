@@ -3,6 +3,7 @@ import { bodySensorLocationDecoder } from './body-sensor-location.decoder';
 import type { Decoder } from './decoder';
 import { fitnessMachineFeatureDecoder } from './fitness-machine-feature.decoder';
 import { hexDecoder } from './hex.decoder';
+import { indoorBikeDataDecoder } from './indoor-bike-data.decoder';
 import { supportedSpeedRangeDecoder } from './supported-speed-range.decoder';
 import { treadmillDataDecoder } from './treadmill-data.decoder';
 import { utf8StringDecoder } from './utf8-string.decoder';
@@ -18,5 +19,6 @@ export const DECODERS: ReadonlyMap<string, Decoder> = new Map(
     fitnessMachineFeatureDecoder,
     supportedSpeedRangeDecoder,
     treadmillDataDecoder,
+    indoorBikeDataDecoder,
   ].map((decoder) => [decoder.id, decoder]),
 );

@@ -253,6 +253,7 @@ test.describe('Identify a standard machine', () => {
       const investigation = await startAndPrepare(page, 'Bike');
 
       await investigation.choose('Find the device');
+      await investigation.choose('Skip');
 
       const verdict = new VerdictPage(page);
       await expect(verdict.title).toHaveText('Partially decoded');
@@ -308,6 +309,7 @@ test.describe('Identify a standard machine', () => {
 
       await expect(investigation.title).toHaveText(devices.hostile.name);
       await expect(investigation.panelValue('Advertised name')).toHaveText(devices.hostile.name);
+      await investigation.choose('Skip');
       const verdict = new VerdictPage(page);
       await expect(verdict.title).toHaveText('Partially decoded');
       await expect(verdict.item('Observed', 'Maker')).toContainText('<script>alert(1)</script>');

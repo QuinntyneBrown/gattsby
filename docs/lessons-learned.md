@@ -134,3 +134,10 @@ None; this is the first entry.
   with raw evidence for both Speed and Distance when the readings support it.
 - Check the counter against its last baseline reading while the belt moves. The unchanged-speed
   case still records the person’s answer without treating it as evidence that speed was confirmed.
+
+## Journey 3, slice 5: Confirm the FTMS bike
+
+- The bike acceptance test failed first at Identify’s exit to Conclude. The bike uses the same
+  subscription and speed threshold as the treadmill but has its own data layout and prompts.
+- Cadence has half-RPM precision, while power is an integer in watts. Checking both values with the
+  simulator proves that the optional cadence field does not throw off the power offset.
