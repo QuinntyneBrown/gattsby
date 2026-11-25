@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Load fast and work offline
+
+Person(person, "Person", "Phone or laptop")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(config, "appConfig", "Angular providers", "provideRouter with lazy routes; provideServiceWorker")
+  Component(routes, "appRoutes", "Route table", "loadComponent for every page")
+  Component(lazy, "LazyAdapters", "Service", "Memoized dynamic imports: model adapter, analysis, camera")
+  Component(update, "AppUpdateService", "Service", "New version ready; reload only outside an investigation")
+  Component(kbs, "KnowledgeBase", "Service", "Fetches versioned JSON from its own origin")
+  Component(toast, "ToastService", "Notification", "Update and offline messages")
+}
+Container(sw, "Service worker", "ngsw-worker.js + ngsw.json", "Prefetch asset groups; no data groups")
+System_Ext(host, "Static host", "Files plus security-headers.json values")
+
+Rel(config, routes, "Registers")
+Rel(routes, lazy, "Pages ask for heavy code on demand")
+Rel(config, sw, "Registers when stable")
+Rel(update, sw, "SwUpdate.versionUpdates")
+Rel(update, toast, "Offers reload")
+Rel(kbs, sw, "Same-origin fetch, served from cache")
+Rel(sw, host, "Install and update checks", "HTTPS")
+Rel(toast, person, "Shows")
+@enduml

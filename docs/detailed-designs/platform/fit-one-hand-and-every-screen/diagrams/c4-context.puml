@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Fit one hand and every screen
+
+Person(person, "Person", "Beside the machine, phone in one hand or laptop on the console; touch, keyboard or screen reader")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Layout, focus, media queries: width, reduced motion, colour scheme, contrast, forced colours")
+System_Ext(at, "Assistive technology", "Screen reader reading the accessibility tree and live regions")
+
+Rel(person, gattsby, "Reads prompts at arm's length; answers with the thumb, the keyboard or a screen reader")
+Rel(gattsby, chrome, "Responsive layout from one set of tokens")
+Rel(chrome, at, "Accessibility tree and live-region announcements")
+Rel(at, person, "Speaks prompts; emergency stop and errors at once")
+@enduml

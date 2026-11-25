@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Open and investigate offline
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+  participant "ToastService" as toast
+  participant "AppUpdateService" as update
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Browser and device" #F2F4F7
+  participant "Service worker" as sw
+  participant "Gemini Nano" as nano
+  participant "Device" as device
+end box
+
+note over person, device : No network: store Wi-Fi off, phone in airplane mode with Bluetooth on
+person -> sw : Open Gattsby (installed icon or URL)
+sw --> home : index.html and chunks from Cache Storage (NFR-006)
+home -> orch : Start an investigation
+orch -> nano : availability() → available (model cached by Chrome)
+orch -> device : Scan, connect, read, subscribe (Bluetooth needs no network)
+device --> orch : FTMS treadmill data
+orch --> person : Verdict "Connected — FTMS"
+alt The model was never downloaded
+  orch -> orch : Mode falls back to checklist (FR-005, FR-006)
+end
+== Later, back online ==
+sw -> sw : Check ngsw.json; a new build is found
+sw --> update : VERSION_READY
+alt No device connected
+  update -> toast : Offer reload (wording <TO SUPPLY>)
+else An investigation is connected
+  update -> update : Wait until it ends; never reload mid-investigation
+end
+@enduml

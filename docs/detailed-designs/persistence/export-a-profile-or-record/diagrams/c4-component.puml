@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Export a profile or record
+
+Person(person, "Person", "Phone or laptop")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "VerdictPage / DeviceProfilePage", "Angular pages", "Open the export dialog")
+  Component(dialog, "ExportDialog", "Angular component", "Profile, full record, include notes and photos (off)")
+  Component(service, "ExportService", "Service", "Builds the export file, validates it, names it, saves it")
+  Component(schemas, "FormatSchemas", "Generated validators", "Ahead-of-time compiled JSON Schema checks")
+  Component(namer, "ExportFileNamer", "Pure helper", "<device>-<date>-profile|record.gattsby.json")
+  Component(saver, "FileDownloader", "Browser adapter", "Blob, object URL, a[download], revoke")
+  Component(store, "IndexedDbInvestigationStore", "Store adapter", "readSnapshot in one readonly transaction")
+  Component(session, "InvestigationSession", "Service", "A verdict or profile not yet committed")
+  Component(toast, "ToastService", "Notification", "Saved <file name>")
+}
+System_Ext(chrome, "Chrome", "Downloads")
+
+Rel(person, page, "Taps Export profile or Export full record")
+Rel(page, dialog, "Opens with sizes")
+Rel(dialog, service, "ExportRequest (via the page)")
+Rel(service, store, "Reads profile or record")
+Rel(service, session, "Reads pending parts after STORAGE_FULL")
+Rel(service, schemas, "validate(file)")
+Rel(service, namer, "fileName(kind, device, date)")
+Rel(service, saver, "save(blob, name)")
+Rel(saver, chrome, "Download")
+Rel(page, toast, "Confirms")
+@enduml

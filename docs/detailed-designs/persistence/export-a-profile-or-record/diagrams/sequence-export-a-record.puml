@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Export a full investigation record
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+  participant "ExportDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "InvestigationSession" as session
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ExportService" as service
+  participant "FormatSchemas" as schemas
+  participant "IndexedDbInvestigationStore" as store
+  participant "FileDownloader" as saver
+end box
+
+person -> page : Tap "Export full record"
+page -> dialog : open; "Include notes and photos" unticked
+alt Person leaves the box unticked (default)
+  person -> dialog : Tap "Full investigation record"
+else Person ticks "Include notes and photos"
+  person -> dialog : Tick, then tap "Full investigation record"
+end
+dialog --> page : ExportRequest {record, includeNotesAndPhotos}
+page -> service : export(request)
+service -> store : readRecord(id, {photos: includeNotesAndPhotos})
+store -> store : One readonly transaction over every record store
+store --> service : investigation, steps, raw log with timestamps, answers, hypotheses, missing-tool requests, profile (FR-063)
+opt The last commit failed with STORAGE_FULL
+  service -> session : pendingParts(id)
+  session --> service : verdict and profile not yet stored
+end
+service -> service : Bytes as hex; photos as base64 only when ticked
+service -> schemas : validate(file) against investigation-record v1
+schemas --> service : valid
+service -> service : bytes > 20 MB?
+alt Larger than the import limit (NFR-015)
+  service --> page : ExportResult {importable false}
+  page -> dialog : Say it cannot be imported back (wording <TO SUPPLY>)
+end
+service -> saver : save(blob, "horizon-t202-2026-11-25-record.gattsby.json")
+service --> page : ExportResult
+page -> dialog : success
+@enduml

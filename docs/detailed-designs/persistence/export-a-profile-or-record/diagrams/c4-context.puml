@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Export a profile or record
+
+Person(person, "Person", "Developer or helper holding the phone or laptop")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "IndexedDB and the downloads manager")
+System_Ext(apps, "Fitness app or another Gattsby", "Reads the exported file later; never contacted by Gattsby")
+
+Rel(person, gattsby, "Taps Export profile or Export full record; chooses whether to include photos")
+Rel(gattsby, chrome, "Reads the record; saves one .gattsby.json file", "IndexedDB, download")
+Rel(person, apps, "Hands the file over by their own means")
+@enduml

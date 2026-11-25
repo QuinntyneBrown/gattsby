@@ -1,0 +1,77 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Delete all data
+
+class DataCounts {
+  +investigations: number
+  +profiles: number
+  +photos: number
+  +usedBytes: number
+}
+
+class DeleteAllOutcome {
+  +cleared: string[]
+  +databaseDeleted: boolean
+}
+
+abstract class InvestigationStore <<contract>> {
+  +countAll(): Promise<DataCounts>
+  +deleteAll(): Promise<DeleteAllOutcome>
+}
+
+class IndexedDbInvestigationStore {
+  -db: IDBDatabase
+  +deleteAll(): Promise<DeleteAllOutcome>
+  -onVersionChange(): void
+}
+
+class DataReset {
+  +deleteEverything(): Promise<DeleteAllOutcome>
+}
+
+class InvestigationSession {
+  +reset(): void
+}
+
+class ModeController {
+  +resetPreference(): void
+}
+
+class StorageMonitor {
+  +refresh(): Promise<void>
+}
+
+class DeleteAllDataDialog <<component>> {
+  +counts: input<DataCounts>
+  +busy: input<boolean>
+  +typed: string
+  +canConfirm(): boolean
+  +decided: output<"delete" | "cancel">
+}
+
+class SettingsPage <<page>> {
+  +counts: Signal<DataCounts>
+  +openDeleteAll(): void
+}
+
+InvestigationStore <|-- IndexedDbInvestigationStore
+DataReset ..> InvestigationStore : deleteAll
+DataReset ..> InvestigationSession : reset
+DataReset ..> ModeController : resetPreference
+DataReset ..> StorageMonitor : refresh
+SettingsPage ..> DataReset : deleteEverything
+SettingsPage ..> DeleteAllDataDialog : opens
+DeleteAllDataDialog --> DataCounts
+IndexedDbInvestigationStore ..> DeleteAllOutcome : returns
+@enduml

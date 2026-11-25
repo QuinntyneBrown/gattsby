@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Import profiles and records
+
+Person(person, "Person", "Phone or laptop")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Import dialog, import service, safe parser, migrations, validators")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Profiles and investigation records")
+  Container(schemas, "Format schemas", "JSON Schema files, served statically", "device-profile and investigation-record, per major version")
+}
+System_Ext(file, "Exported file", "Untrusted JSON")
+
+Rel(person, spa, "Chooses a file", "Touch or keyboard")
+Rel(spa, file, "Reads at most 20 MB", "File API")
+Rel(spa, schemas, "Validates against (compiled at build time)")
+Rel(spa, idb, "Stores only after every check passes; one transaction")
+@enduml

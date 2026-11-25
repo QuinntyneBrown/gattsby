@@ -1,0 +1,22 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Load fast and work offline
+
+Person(person, "Person", "Phone or laptop")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Initial bundle and lazy chunks: routes, model adapter, analysis, camera")
+  Container(sw, "Service worker", "Angular service worker", "Prefetches and serves every static file; checks for a new version")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Served and cached like any static file")
+  Container(manifest, "Web app manifest", "manifest.webmanifest", "Name, icons, colours, start URL; makes Gattsby installable")
+}
+System_Ext(host, "Static host", "HTTPS with security headers")
+System_Ext(nano, "Gemini Nano", "Cached by Chrome")
+
+Rel(person, spa, "Opens or installs", "Touch or keyboard")
+Rel(spa, sw, "Loads through")
+Rel(sw, host, "Fetches and caches static files on install and update", "HTTPS, same origin")
+Rel(spa, kb, "Reads (cached)")
+Rel(spa, manifest, "Links")
+Rel(spa, nano, "Uses offline once downloaded", "Prompt API")
+@enduml

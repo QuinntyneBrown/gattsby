@@ -1,0 +1,85 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Fit one hand and every screen
+
+enum Politeness {
+  polite
+  assertive
+}
+
+class Announcer {
+  -politeRegion: HTMLElement
+  -assertiveRegion: HTMLElement
+  +announce(text: string, politeness: Politeness): void
+  +clear(): void
+}
+
+class FocusOnNavigation {
+  +start(): void
+  -focusHeading(): void
+}
+
+class DialogHost {
+  -opener: HTMLElement | null
+  +open(component, inputs, options: DialogOptions): DialogRef
+  -setInert(on: boolean): void
+  -restoreFocus(): void
+}
+
+class DialogOptions {
+  +labelledBy: string
+  +initialFocus: string
+  +dismissOnEscape: boolean
+  +showEmergencyStop: boolean
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+  +answered: output<PromptResponse>
+  -focusTitleIfFocusWasLost(): void
+}
+
+class LiveMetrics <<component>> {
+  +values: input<DecodedValue[]>
+  +layout: input<"strip" | "panel">
+}
+
+class EmergencyStopButton <<component>> {
+  +enabled: input<boolean>
+  +pressed: output<void>
+}
+
+class LayoutBreakpoints <<tokens>> {
+  +sm: "36rem (576 px)"
+  +md: "48rem (768 px)"
+  +lg: "62rem (992 px)"
+  +xl: "75rem (1200 px)"
+}
+
+class TouchTokens <<tokens>> {
+  +targetMin: "3rem (48 px)"
+  +targetGap: "0.5rem (8 px)"
+  +controlHeightLg: "3.5rem (56 px)"
+  +fontSizePrompt: "1.25rem (20 px)"
+  +fontSizeMetric: "2rem (32 px)"
+}
+
+Announcer --> Politeness
+DialogHost ..> DialogOptions
+PromptCard ..> Announcer : via the page
+EmergencyStopButton ..> Announcer : via the page
+PromptCard ..> TouchTokens : styled by
+LiveMetrics ..> TouchTokens : styled by
+PromptCard ..> LayoutBreakpoints : laid out by
+@enduml

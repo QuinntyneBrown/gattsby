@@ -1,0 +1,12 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Delete all data
+
+Person(person, "Person", "Developer or helper holding the phone or laptop")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "IndexedDB")
+
+Rel(person, gattsby, "Chooses Delete all data, types DELETE, confirms")
+Rel(gattsby, chrome, "Clears every object store, then deletes the database", "IndexedDB")
+@enduml

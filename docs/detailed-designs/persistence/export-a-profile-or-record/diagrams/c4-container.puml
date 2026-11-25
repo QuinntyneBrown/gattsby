@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Export a profile or record
+
+Person(person, "Person", "Phone or laptop")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Export dialog, export service, precompiled format validators")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Profiles and investigation records")
+  Container(schemas, "Format schemas", "JSON Schema files, served statically", "device-profile v1, investigation-record v1")
+}
+System_Ext(chrome, "Chrome", "Downloads manager")
+
+Rel(person, spa, "Exports", "Touch or keyboard")
+Rel(spa, idb, "Reads one consistent snapshot")
+Rel(spa, schemas, "Validates the file against (compiled at build time)")
+Rel(spa, chrome, "Saves the Blob as a file", "a[download], object URL")
+@enduml

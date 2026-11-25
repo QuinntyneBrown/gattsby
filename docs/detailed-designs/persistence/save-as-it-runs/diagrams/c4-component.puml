@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Save as it runs
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Ends each step and hands its commit to the store")
+  Component(log, "RawTrafficLog", "BLE layer", "Windowed raw entries tagged with the open step; drained into the commit")
+  Component(store, "IndexedDbInvestigationStore", "Store adapter", "commitStep in one transaction; maps quota errors to STORAGE_FULL")
+  Component(repair, "RecordRepair", "Store helper", "On reopening, discards entries of a step that never committed")
+  Component(monitor, "StorageMonitor", "Service", "Persistence request, usage and quota, the nearly-full warning")
+  Component(cap, "StorageCapability", "Capability adapter", "The only code that touches navigator.storage")
+  Component(toast, "ToastService", "Notification", "Storage warning and storage-full messages")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Committed steps and their records")
+System_Ext(chrome, "Chrome", "StorageManager")
+
+Rel(orch, log, "drainForCommit(stepIndex)")
+Rel(orch, store, "commitStep(StepCommit)")
+Rel(store, idb, "One readwrite transaction")
+Rel(log, store, "appendRawLog when the window fills")
+Rel(store, repair, "Runs on openInvestigation")
+Rel(orch, monitor, "First investigation; STORAGE_FULL")
+Rel(monitor, cap, "persist(), persisted(), estimate()")
+Rel(cap, chrome, "navigator.storage")
+Rel(monitor, toast, "Warns at 90 % (mock); explains storage full")
+Rel(toast, person, "Shows")
+@enduml

@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Export a device profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+  participant "ExportDialog" as dialog
+  participant "ToastService" as toast
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ExportService" as service
+  participant "FormatSchemas" as schemas
+  participant "IndexedDbInvestigationStore" as store
+  participant "FileDownloader" as saver
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome downloads" as chrome
+end box
+
+person -> page : Tap "Export profile"
+page -> service : estimate(id)
+service -> store : readProfile(id), count record
+service --> page : profile 4 KB, record 86 KB
+page -> dialog : open(sizes); notes and photos unticked (FR-063)
+person -> dialog : Tap "Device profile"
+dialog --> page : ExportRequest {profile}
+page -> dialog : busy "Preparing horizon-t202-2026-11-25-profile.gattsby.json…"
+page -> service : export(request)
+service -> store : readProfile(id)
+store --> service : DeviceProfile
+service -> service : Wrap: format gattsby.device-profile, formatVersion 1.0.0, exportedBy app 0.1.0, KB 2026.11 (NFR-024)
+service -> schemas : validate(file) against device-profile v1 (FR-062)
+schemas --> service : valid
+service -> service : JSON.stringify; Blob application/json
+service -> saver : save(blob, "horizon-t202-2026-11-25-profile.gattsby.json")
+saver -> chrome : a[download] click on an object URL
+saver -> saver : revokeObjectURL
+note over saver, chrome : No fetch, no XHR, no beacon: the file never leaves the device (NFR-012)
+service --> page : ExportResult {fileName, 4 KB}
+page -> dialog : success "Saved … It's in your Downloads folder. Nothing was sent anywhere."
+page -> toast : success toast after Done
+@enduml

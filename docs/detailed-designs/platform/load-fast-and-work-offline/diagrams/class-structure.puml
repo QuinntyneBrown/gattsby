@@ -1,0 +1,75 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Load fast and work offline
+
+class LazyAdapters {
+  -model: Promise<ModelAdapter> | null
+  -analysis: Promise<AnalysisTools> | null
+  -camera: Promise<CameraAdapter> | null
+  +loadModelAdapter(): Promise<ModelAdapter>
+  +loadAnalysis(): Promise<AnalysisTools>
+  +loadCamera(): Promise<CameraAdapter>
+}
+
+class AppUpdateService {
+  +updateReady: Signal<boolean>
+  +start(): void
+  +reloadWhenSafe(): Promise<void>
+}
+
+class InvestigationSession {
+  +isConnected: Signal<boolean>
+}
+
+class SecurityHeaders <<config>> {
+  +strictTransportSecurity: string
+  +contentSecurityPolicy: string
+  +referrerPolicy: "no-referrer"
+  +xContentTypeOptions: "nosniff"
+  +permissionsPolicy: string
+}
+
+class InitialLoadCheck <<build script>> {
+  +budgetBytes: number
+  +compression: "gzip"
+  +run(statsJson: string, homeRoute: string): BudgetReport
+}
+
+class BudgetReport {
+  +files: string[]
+  +compressedBytes: number
+  +withinBudget: boolean
+}
+
+class HeaderCheck <<deploy script>> {
+  +run(url: string, expected: SecurityHeaders): HeaderReport
+}
+
+class NgswConfig <<config>> {
+  +assetGroups: AssetGroup[]
+  +navigationRequestStrategy: "performance"
+}
+
+class AssetGroup {
+  +name: string
+  +installMode: "prefetch"
+  +updateMode: "prefetch"
+  +files: string[]
+}
+
+AppUpdateService ..> InvestigationSession : waits while connected
+InitialLoadCheck ..> BudgetReport : produces
+HeaderCheck ..> SecurityHeaders : compares with
+NgswConfig "1" *-- "*" AssetGroup
+@enduml

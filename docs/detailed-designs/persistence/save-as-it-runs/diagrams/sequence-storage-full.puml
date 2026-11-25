@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Storage runs out during a step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ToastService" as toast
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "StorageMonitor" as monitor
+  participant "RawTrafficLog" as log
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+alt Usage passes 90 % of the quota after a commit
+  monitor -> monitor : refresh(): ratio 0.92
+  monitor -> toast : warning "Storage is nearly full." + "Open past investigations"
+  toast -> person : Shown once per investigation
+else A commit fails for lack of quota
+  orch -> store : commitStep(step 9)
+  store -> idb : readwrite transaction
+  idb --> store : onabort, error QuotaExceededError
+  store --> orch : StoreError STORAGE_FULL (NFR-008)
+  orch -> log : stopRecording(); keep the window, flush nothing more
+  orch -> orch : Abort the running step; pause the loop (FR-009)
+  orch -> store : markRecordingStopped(id) (best effort)
+  orch -> monitor : onStorageFull(id)
+  monitor -> toast : danger, role alert: storage is full, export then delete old investigations
+  toast -> person : Export, then delete old investigations
+  page -> person : Paused; steps 1–8 stay readable and exportable
+end
+@enduml

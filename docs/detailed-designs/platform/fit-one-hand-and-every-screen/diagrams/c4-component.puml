@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Fit one hand and every screen
+
+Person(person, "Person", "Touch, keyboard or screen reader")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(shell, "AppShell", "Angular root component", "Skip link, routed page, dialog layer, toast region, live regions")
+  Component(announcer, "Announcer", "Service", "Polite and assertive live regions")
+  Component(focus, "FocusOnNavigation", "Service", "Title and focus to the page heading on each route")
+  Component(dialogs, "DialogHost", "Service", "Makes the page inert; first focus on the safe action; restores focus")
+  Component(page, "InvestigationPage", "Angular page", "Feed, prompt dock, composer; side panel from 992 px")
+  Component(prompt, "PromptCard", "Angular component", "One question or instruction; 20 px; answers 48 px; primary last")
+  Component(metrics, "LiveMetrics", "Angular component", "32 px values under 768 px; word plus shape for status")
+  Component(estop, "EmergencyStopButton", "Angular component", "In the app bar and in every dialog over a connected device; 7.75:1")
+  Component(tokens, "tokens.css", "Stylesheet", "Breakpoints, sizes, targets, focus ring, motion, themes")
+}
+System_Ext(at, "Assistive technology", "Screen reader")
+
+Rel(person, page, "Thumb or keyboard")
+Rel(shell, focus, "Router events")
+Rel(page, prompt, "Current PersonPrompt")
+Rel(page, metrics, "Decoded values")
+Rel(page, estop, "Connected state")
+Rel(page, announcer, "Prompt text: polite")
+Rel(estop, announcer, "Stop result: assertive")
+Rel(page, dialogs, "Opens approval, stop and other dialogs")
+Rel(prompt, tokens, "Styled by")
+Rel(announcer, at, "Live regions")
+@enduml

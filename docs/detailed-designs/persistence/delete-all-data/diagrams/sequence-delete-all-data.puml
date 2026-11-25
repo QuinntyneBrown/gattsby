@@ -1,0 +1,61 @@
+@startuml
+title UML sequence behaviour — Delete all data
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "SettingsPage" as page
+  participant "DeleteAllDataDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "InvestigationSession" as session
+  participant "ModeController" as mode
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "DataReset" as reset
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+person -> page : Tap "Delete all"
+page -> store : countAll()
+store --> page : 8 investigations, 6 profiles, 3 photos
+page -> dialog : open(counts); focus in the text field
+dialog -> person : "Delete all data? … 8 investigations, 6 profiles and 3 photos. It can't be undone."
+alt Person types "delete"
+  person -> dialog : Type "delete"
+  dialog -> person : "Type DELETE in capitals to confirm."; button stays disabled
+else Person types "DELETE" and confirms
+  person -> dialog : Type "DELETE"; tap "Delete all data"
+  dialog --> page : decided delete
+  page -> dialog : busy
+  page -> reset : deleteEverything()
+  reset -> store : deleteAll()
+  store -> idb : transaction(every objectStoreName, "readwrite"): clear() each
+  idb --> store : oncomplete — no Gattsby data remains (FR-065)
+  store -> idb : close(); indexedDB.deleteDatabase("gattsby")
+  idb --> store : onsuccess (or onblocked by another tab: stores already empty)
+  store --> reset : DeleteAllOutcome
+  reset -> session : reset()
+  reset -> mode : resetPreference()
+  reset --> page : done
+  page -> page : navigate "/" (home, empty state)
+else Person cancels or presses Escape
+  person -> dialog : Cancel
+  dialog --> page : decided cancel; focus returns to "Delete all"
+end
+@enduml

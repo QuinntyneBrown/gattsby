@@ -1,0 +1,12 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Keep a history
+
+Person(person, "Person", "Developer or helper holding the phone or laptop")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "IndexedDB and StorageManager")
+
+Rel(person, gattsby, "Lists past investigations, opens one, deletes one after confirming")
+Rel(gattsby, chrome, "Reads and deletes investigation records", "IndexedDB")
+@enduml

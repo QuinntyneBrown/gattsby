@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Import profiles and records
+
+Person(person, "Person", "Developer or helper holding the phone or laptop")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "File chooser and IndexedDB")
+System_Ext(file, "Exported file", "A .gattsby.json file from this or another Gattsby; untrusted until validated")
+
+Rel(person, gattsby, "Chooses Import, then a file")
+Rel(gattsby, chrome, "Opens the file chooser; stores what passes", "input type=file, IndexedDB")
+Rel(chrome, file, "Reads the chosen file locally")
+@enduml

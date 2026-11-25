@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Commit one completed step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "StorageMonitor" as monitor
+  participant "RawTrafficLog" as log
+  participant "IndexedDbInvestigationStore" as store
+  participant "StorageCapability" as cap
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+  participant "StorageManager" as sm
+end box
+
+== First investigation ==
+orch -> store : createInvestigation(draft)
+store -> idb : put investigations {status running, lastCommittedStep 0}
+orch -> monitor : requestPersistenceOnce() (NFR-008)
+monitor -> cap : persisted()
+cap -> sm : navigator.storage.persisted()
+sm --> cap : false
+monitor -> cap : persist()
+cap -> sm : navigator.storage.persist()
+sm --> cap : granted or not (Chrome decides; no prompt)
+monitor -> monitor : Record result in settings; never ask again
+
+== Step 7 completes ==
+orch -> log : drainForCommit(7)
+log --> orch : 46 entries tagged stepIndex 7
+orch -> store : commitStep({step 7, rawEntries, observations, hypothesis 65 % -> 85 %})
+store -> idb : transaction([investigations, steps, rawLog, observations, hypotheses], "readwrite")
+store -> idb : put step 7, add 46 raw entries, put observations, put hypothesis
+store -> idb : put investigation.lastCommittedStep = 7
+idb --> store : oncomplete (durability "strict")
+store --> orch : committed (FR-060)
+orch -> monitor : refresh()
+monitor -> cap : estimate()
+cap --> monitor : usage and quota
+note over orch, idb : A tab close before oncomplete leaves step 7 absent;\nsteps 1–6 stay intact (NFR-007)
+@enduml

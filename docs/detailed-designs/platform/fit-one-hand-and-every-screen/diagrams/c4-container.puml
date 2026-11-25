@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Fit one hand and every screen
+
+Person(person, "Person", "Touch, keyboard or screen reader")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "App shell, announcer, dialog host, pages and presentation components")
+  Container(styles, "Design tokens and styles", "CSS custom properties", "tokens.css and component styles, from docs/mocks/assets")
+  Container(fonts, "Fonts", "Geist and Geist Mono, woff2, self-hosted", "Bundled; no CDN")
+}
+System_Ext(at, "Assistive technology", "Screen reader")
+
+Rel(person, spa, "Touch or keyboard")
+Rel(spa, styles, "Every size, colour, space, breakpoint and duration")
+Rel(styles, fonts, "@font-face, font-display swap")
+Rel(spa, at, "Labelled controls; polite and assertive live regions")
+@enduml

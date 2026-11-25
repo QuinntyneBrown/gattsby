@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Import a device profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ProfilesPage" as page
+  participant "ImportDialog" as dialog
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ImportService" as service
+  participant "SafeJsonParser" as parser
+  participant "FormatMigrations" as migrations
+  participant "FormatSchemas" as schemas
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+person -> page : Tap "Import"
+page -> dialog : open "Checked against the profile format before anything is stored."
+person -> dialog : Choose a file → horizon-t202-2026-11-25-profile.gattsby.json (4 KB)
+dialog --> page : fileChosen(file)
+page -> dialog : busy "Checking it against the profile format…"
+page -> service : import(file)
+service -> service : file.size ≤ 20 MB, checked before reading (NFR-015)
+service -> service : text = await file.text()
+service -> parser : parse(text)
+parser --> service : value (no __proto__, constructor or prototype key)
+service -> service : identify: format gattsby.device-profile, formatVersion 1.0.0
+service -> migrations : migrate(file, toMajor 1)
+migrations --> service : unchanged (already major 1)
+service -> schemas : validate(file) — types, required fields, string lengths
+schemas --> service : valid (FR-064)
+service -> store : importProfile(file)
+store -> idb : one readwrite transaction: put profile with every field as exported, origin imported
+idb --> store : oncomplete
+store --> service : profile id
+service --> page : ImportResult {Horizon T202}
+page -> dialog : success "Imported Horizon T202. It's in Saved devices, identical to the export."
+person -> dialog : "Open the profile" → /profiles/:id
+note over page, dialog : Every imported string is rendered with text interpolation, never as HTML (NFR-013)
+@enduml

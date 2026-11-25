@@ -1,0 +1,40 @@
+@startuml
+title UML sequence behaviour — Reopen an interrupted investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "RecordRepair" as repair
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+note over person, idb : The tab closed during step 8. Step 7 had committed.
+person -> home : Reopens Gattsby
+home -> store : openInvestigation(id)
+store -> idb : transaction(all record stores, "readwrite")
+store -> repair : repair(tx, investigation {status running, lastCommittedStep 7})
+repair -> idb : delete rawLog, recordings, photos with stepIndex > 7 (NFR-007)
+repair -> idb : put investigation.status = "paused"
+repair --> store : RepairReport {discardedStep 8, rawEntries 112, recordings 1}
+idb --> store : oncomplete
+store --> home : Investigation with steps 1–7
+home -> person : "Resume: Horizon T202 · Paused at Standard path"
+@enduml

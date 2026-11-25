@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Save as it runs
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "IndexedDB, StorageManager (persist, estimate), Web Bluetooth")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Runs an investigation; may close the tab or lose the connection at any moment")
+Rel(device, chrome, "Notifications and read values", "Bluetooth LE")
+Rel(gattsby, chrome, "Commits each step in one IndexedDB transaction; asks for persistent storage")
+@enduml

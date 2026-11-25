@@ -1,0 +1,114 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Save as it runs
+
+class StepCommit {
+  +investigationId: string
+  +step: InvestigationStep
+  +rawEntries: RawLogEntry[]
+  +observations: Observation[]
+  +hypothesis: Hypothesis | null
+}
+
+class InvestigationStep {
+  +investigationId: string
+  +index: number
+  +stage: PlaybookStage
+  +action: AgentAction
+  +result: ToolResult
+  +answer: PersonAnswer | null
+  +startedAt: number
+  +endedAt: number
+}
+
+class RawLogEntry {
+  +investigationId: string
+  +seq: number
+  +stepIndex: number
+  +at: number
+  +direction: string
+  +characteristic: string
+  +bytes: Uint8Array
+  +approvalId: string | null
+}
+
+class Investigation {
+  +id: string
+  +status: "running" | "paused" | "concluded"
+  +lastCommittedStep: number
+  +recording: "on" | "stoppedStorageFull"
+  +startedAt: number
+}
+
+enum StoreErrorCode {
+  STORAGE_FULL
+  STORAGE_UNAVAILABLE
+  NOT_FOUND
+}
+
+class StoreError {
+  +code: StoreErrorCode
+  +message: string
+}
+
+abstract class InvestigationStore <<contract>> {
+  +createInvestigation(draft): Promise<Investigation>
+  +commitStep(commit: StepCommit): Promise<void>
+  +appendRawLog(entries: RawLogEntry[]): Promise<void>
+  +saveRecording(recording: Recording): Promise<void>
+  +openInvestigation(id: string): Promise<Investigation>
+}
+
+class IndexedDbInvestigationStore {
+  -db: IDBDatabase
+  +commitStep(commit: StepCommit): Promise<void>
+  -toStoreError(e: DOMException): StoreError
+}
+
+class RecordRepair {
+  +repair(tx: IDBTransaction, inv: Investigation): RepairReport
+}
+
+class StorageMonitor {
+  +usage: Signal<StorageUsage>
+  +requestPersistenceOnce(): Promise<boolean>
+  +refresh(): Promise<void>
+  +onStorageFull(investigationId: string): void
+}
+
+class StorageCapability <<adapter>> {
+  +isAvailable(): boolean
+  +persisted(): Promise<boolean>
+  +persist(): Promise<boolean>
+  +estimate(): Promise<StorageEstimate>
+}
+
+class StorageUsage {
+  +usedBytes: number
+  +quotaBytes: number
+  +persisted: boolean
+  +ratio: number
+}
+
+InvestigationStore <|-- IndexedDbInvestigationStore
+IndexedDbInvestigationStore ..> StepCommit : writes atomically
+IndexedDbInvestigationStore ..> StoreError : rejects with
+IndexedDbInvestigationStore --> RecordRepair : on open
+StepCommit *-- InvestigationStep
+StepCommit *-- "*" RawLogEntry
+StoreError --> StoreErrorCode
+RecordRepair ..> Investigation : repairs
+StorageMonitor --> StorageCapability
+StorageMonitor ..> StorageUsage : publishes
+@enduml

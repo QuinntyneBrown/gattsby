@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Refuse a file
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ImportDialog" as dialog
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ImportService" as service
+  participant "SafeJsonParser" as parser
+  participant "FormatSchemas" as schemas
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+person -> dialog : Choose a file
+dialog -> service : import(file)
+alt 25 MB file
+  service -> service : file.size > 20 MB; the text is never read
+  service --> dialog : FILE_TOO_LARGE (NFR-015)
+else Not JSON
+  service -> parser : parse(text)
+  parser --> service : SyntaxError
+  service --> dialog : NOT_JSON
+else A __proto__ key anywhere
+  service -> parser : parse(text)
+  parser -> parser : reviver meets "__proto__" and throws
+  parser --> service : UNSAFE_KEY; Object.prototype untouched
+  service --> dialog : UNSAFE_KEY
+else No format or format version
+  service --> dialog : NOT_GATTSBY "This isn't a Gattsby file."
+else A newer major (or newer minor) version
+  service --> dialog : UNSUPPORTED_VERSION "Made by a newer Gattsby."
+else Fails the schema
+  service -> schemas : validate(file)
+  schemas --> service : invalid at /profile/metrics/3/unit
+  service --> dialog : SCHEMA_INVALID with the field in plain words
+end
+note over service, store : In every branch the store is never called: nothing is stored (FR-064)
+dialog -> person : The reason, "Nothing was imported." and "Choose another file"
+@enduml

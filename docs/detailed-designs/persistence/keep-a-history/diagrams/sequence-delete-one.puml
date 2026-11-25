@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Delete one investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HistoryPage" as page
+  participant "DeleteInvestigationDialog" as dialog
+  participant "ToastService" as toast
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+person -> page : Tap delete on "Domyos T540C, Wed 28 Oct"
+page -> dialog : open(summary); focus on Cancel
+dialog -> person : "Delete “Domyos T540C”? … raw log, photos and device profile. It can't be undone"
+alt Person confirms
+  person -> dialog : Tap "Delete investigation"
+  dialog --> page : decided delete
+  page -> dialog : busy
+  page -> store : deleteInvestigation(id)
+  store -> idb : transaction(all record stores, "readwrite")
+  store -> idb : delete investigations[id]; steps, rawLog, observations, hypotheses by key range
+  store -> idb : delete recordings, photos, profiles, missingToolRequests via byInvestigation
+  idb --> store : oncomplete
+  store --> page : DeletionReport (FR-061)
+  page -> page : close dialog; reload list; focus moves to the next row
+  page -> toast : "Deleted Domyos T540C"
+else Person cancels or presses Escape
+  person -> dialog : Cancel
+  dialog --> page : decided cancel
+  page -> page : focus returns to the row's delete button
+end
+@enduml

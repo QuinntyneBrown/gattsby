@@ -1,0 +1,45 @@
+@startuml
+title UML sequence behaviour — A new prompt is shown and announced
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "PromptCard" as card
+  participant "Announcer" as announcer
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PromptChannel" as channel
+end box
+box "Browser and device" #F2F4F7
+  participant "Screen reader" as at
+end box
+
+person -> card : Enter on "Done, at 6" (keyboard only)
+card --> channel : PromptResponse
+channel -> page : Next PersonPrompt "Raise the incline to 2%"
+page -> card : prompt = new prompt (one per screen, NFR-009)
+card -> card : Title 20 px, detail, answers 48 px high, 8 px apart; primary in the bottom dock
+card -> card : Focus was on the old answer, now gone → focus the new title (tabindex -1)
+page -> announcer : announce("Raise the incline to 2%. I'll listen for 10 s once you confirm.", polite)
+announcer -> at : polite region text changes (NFR-011)
+at -> person : Reads the prompt after the current utterance
+person -> card : Tab → "Incline is at 2%", Enter
+alt A tool fails or the connection drops
+  page -> announcer : announce("Couldn't connect …", assertive)
+  announcer -> at : assertive region; interrupts
+end
+note over card, announcer : Live readings update at 1 Hz outside any live region, so they are never read out unasked
+@enduml

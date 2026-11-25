@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Delete all data
+
+Person(person, "Person", "Phone or laptop")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Settings page, confirmation dialog, data reset")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Every investigation, profile, photo and setting")
+  Container(sw, "Service worker", "Angular service worker", "Cache of the app's own static files; holds no investigation data; kept")
+}
+
+Rel(person, spa, "Confirms Delete all data", "Touch or keyboard")
+Rel(spa, idb, "Clears all stores in one transaction; deletes the database")
+@enduml

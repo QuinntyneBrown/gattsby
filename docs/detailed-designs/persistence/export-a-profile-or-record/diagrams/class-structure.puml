@@ -1,0 +1,99 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Export a profile or record
+
+enum ExportFormat {
+  gattsby.device-profile
+  gattsby.investigation-record
+}
+
+class ExportFile<T> {
+  +format: ExportFormat
+  +formatVersion: string
+  +exportedAt: string
+  +exportedBy: ExportedBy
+  +data: T
+}
+
+class ExportedBy {
+  +app: string
+  +knowledgeBase: string
+}
+
+class InvestigationRecord {
+  +investigation: Investigation
+  +steps: InvestigationStep[]
+  +rawLog: RawLogEntry[]
+  +observations: Observation[]
+  +hypotheses: Hypothesis[]
+  +recordings: Recording[]
+  +missingToolRequests: MissingToolRequest[]
+  +profile: DeviceProfile | null
+  +notes: Note[] | null
+  +photos: ExportedPhoto[] | null
+}
+
+class ExportRequest {
+  +kind: "profile" | "record"
+  +investigationId: string
+  +includeNotesAndPhotos: boolean
+}
+
+class ExportResult {
+  +fileName: string
+  +bytes: number
+  +importable: boolean
+}
+
+class ExportService {
+  +estimate(id: string): Promise<ExportSizes>
+  +export(request: ExportRequest): Promise<ExportResult>
+  -build(request): Promise<ExportFile>
+}
+
+class FormatSchemas {
+  +validate(file: unknown): ValidationResult
+  +current(format: ExportFormat): string
+}
+
+class ExportFileNamer {
+  +fileName(kind, deviceName: string, date: Date): string
+}
+
+class FileDownloader <<adapter>> {
+  +save(blob: Blob, fileName: string): void
+}
+
+class ExportDialog <<component>> {
+  +sizes: input<ExportSizes>
+  +state: input<"default" | "busy" | "success">
+  +requested: output<ExportRequest>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +readProfile(id: string): Promise<DeviceProfile>
+  +readRecord(id: string, opts): Promise<InvestigationRecord>
+}
+
+ExportService ..> InvestigationStore : reads
+ExportService ..> FormatSchemas : validates
+ExportService ..> ExportFileNamer : names
+ExportService ..> FileDownloader : saves
+ExportService ..> ExportFile : builds
+ExportFile --> ExportFormat
+ExportFile *-- ExportedBy
+ExportFile o-- InvestigationRecord : data (record)
+ExportDialog ..> ExportRequest : emits
+ExportService ..> ExportResult : returns
+@enduml

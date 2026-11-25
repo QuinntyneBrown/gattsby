@@ -1,0 +1,41 @@
+@startuml
+title UML sequence behaviour — Use a dialog by keyboard
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "DialogHost" as host
+  participant "ApprovalDialog" as dialog
+  participant "EmergencyStopButton" as estop
+  participant "Announcer" as announcer
+end box
+
+page -> host : open(ApprovalDialog, request, {initialFocus "#clear", showEmergencyStop true})
+host -> host : Remember the opener; set inert on the page behind
+host -> dialog : Render as a bottom sheet under 640 px, centred above
+dialog -> dialog : Focus the stand-clear box, as the mock marks; heading is the accessible name
+person -> dialog : Tab: stand-clear box, Send, Don't send, Emergency stop, Close
+note over dialog, estop : Focus stays inside the dialog because everything else is inert;\nEmergency stop stays one Tab away (FR-039)
+alt Escape
+  person -> dialog : Escape
+  dialog --> host : cancelled
+  host -> host : Remove inert; focus back on the opener
+else Emergency stop
+  person -> estop : Enter
+  estop --> page : pressed
+  page -> announcer : announce("Emergency stop sent", assertive)
+end
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Delete all data
+
+Person(person, "Person", "Phone or laptop")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "SettingsPage", "Angular page, /settings", "Data on this device; Delete all")
+  Component(dialog, "DeleteAllDataDialog", "Angular component", "Names the counts; enables the button only for DELETE")
+  Component(reset, "DataReset", "Service", "Deletes stored data, then resets in-memory state")
+  Component(store, "IndexedDbInvestigationStore", "Store adapter", "deleteAll: clear every store, then deleteDatabase")
+  Component(session, "InvestigationSession", "Service", "Cleared")
+  Component(mode, "ModeController", "Service", "Mode preference back to its default")
+  Component(monitor, "StorageMonitor", "Service", "Usage refreshed to zero")
+  Component(router, "Router", "Angular", "Home, empty state")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "gattsby")
+
+Rel(person, page, "Taps Delete all")
+Rel(page, dialog, "Opens with counts")
+Rel(person, dialog, "Types DELETE, confirms")
+Rel(page, reset, "deleteEverything()")
+Rel(reset, store, "deleteAll()")
+Rel(store, idb, "clear() each store; deleteDatabase")
+Rel(reset, session, "reset()")
+Rel(reset, mode, "resetPreference()")
+Rel(reset, monitor, "refresh()")
+Rel(page, router, "Navigates home")
+@enduml

@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Keep a history
+
+Person(person, "Person", "Phone or laptop")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "HistoryPage", "Angular page, /investigations", "Loads the list; opens or deletes one")
+  Component(item, "InvestigationListItem", "Angular component", "Device, verdict or status, date, location label, delete button")
+  Component(dialog, "DeleteInvestigationDialog", "Angular component", "Names what goes; Cancel focused first")
+  Component(monitor, "StorageMonitor", "Service", "Storage use for the page header")
+  Component(store, "IndexedDbInvestigationStore", "Store adapter", "listInvestigations, deleteInvestigation")
+  Component(router, "Router", "Angular", "Verdict page or investigation page")
+  Component(toast, "ToastService", "Notification", "Confirms the deletion")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "investigations, steps, rawLog, observations, hypotheses, recordings, photos, profiles, missingToolRequests")
+
+Rel(person, page, "Opens, taps an item or its delete button")
+Rel(page, item, "Renders one per InvestigationSummary")
+Rel(page, store, "listInvestigations(); deleteInvestigation(id)")
+Rel(page, monitor, "Reads usage")
+Rel(page, dialog, "Opens with the summary")
+Rel(page, router, "Navigates on open")
+Rel(page, toast, "Shows result")
+Rel(store, idb, "byStartedAt index; one readwrite transaction per delete")
+@enduml

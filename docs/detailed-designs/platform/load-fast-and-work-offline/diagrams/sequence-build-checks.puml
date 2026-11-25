@@ -1,0 +1,41 @@
+@startuml
+title UML sequence behaviour — Build budget and header checks
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Developer or CI" as ci
+box "Build and deploy tooling" #F2F4F7
+  participant "ng build --stats-json" as build
+  participant "InitialLoadCheck" as budget
+  participant "Static host" as host
+  participant "HeaderCheck" as headers
+end box
+
+ci -> build : npm run build
+build --> budget : dist/ and stats.json (esbuild metafile)
+budget -> budget : Initial files + home route chunk + their static imports + global CSS
+budget -> budget : gzip each (level 9) and sum
+alt Sum ≤ 250 KB (A-08)
+  budget --> ci : ok, with the per-file table
+else Over budget
+  budget --> ci : exit 1 — the build fails (NFR-004)
+end
+== After each deploy ==
+ci -> host : Deploy dist/ with headers from deploy/security-headers.json
+ci -> headers : check https://<host>/
+headers -> host : GET / and GET /ngsw-worker.js
+host --> headers : Response headers
+headers -> headers : Compare each with the expected value (NFR-014)
+headers --> ci : ok, or the missing or different headers
+@enduml

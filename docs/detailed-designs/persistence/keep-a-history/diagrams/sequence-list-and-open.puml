@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — List and open past investigations
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HistoryPage" as page
+  participant "InvestigationListItem" as item
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "StorageMonitor" as monitor
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+person -> page : Open "Past investigations" (/investigations)
+page -> page : state loading (skeleton rows)
+page -> store : listInvestigations()
+store -> idb : investigations.index("byStartedAt").openCursor(null, "prev")
+idb --> store : 8 records, newest first
+store --> page : InvestigationSummary[8] (FR-061)
+page -> monitor : refresh()
+monitor --> page : usage 14.2 MB (NFR-008)
+page -> item : One row each: device, verdict or "In progress", date, location
+item -> person : "Horizon T202 · Connected — FTMS · Today, 14:26 · Decathlon, Lille"
+alt Concluded investigation
+  person -> item : Tap "Horizon T202"
+  item --> page : opened
+  page -> page : navigate /investigations/:id/verdict
+else Paused investigation
+  person -> item : Tap "Spin bike, Basic-Fit Roubaix"
+  page -> page : navigate /investigations/:id (resume with reconnect, FR-009)
+else Storage cannot be read
+  store --> page : StoreError STORAGE_UNAVAILABLE
+  page -> person : "Couldn't read your investigations" + Try again
+end
+@enduml

@@ -1,0 +1,78 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Keep a history
+
+class InvestigationSummary {
+  +id: string
+  +deviceName: string
+  +status: "running" | "paused" | "concluded"
+  +verdict: Verdict | null
+  +pausedAtStage: PlaybookStage | null
+  +startedAt: number
+  +locationLabel: string | null
+  +origin: "local" | "imported"
+}
+
+class DeletionReport {
+  +investigationId: string
+  +steps: number
+  +rawEntries: number
+  +photos: number
+  +profiles: number
+}
+
+abstract class InvestigationStore <<contract>> {
+  +listInvestigations(): Promise<InvestigationSummary[]>
+  +deleteInvestigation(id: string): Promise<DeletionReport>
+}
+
+class IndexedDbInvestigationStore {
+  +listInvestigations(): Promise<InvestigationSummary[]>
+  +deleteInvestigation(id: string): Promise<DeletionReport>
+  -deleteByInvestigation(tx: IDBTransaction, store: string, id: string): number
+}
+
+class HistoryPage <<page>> {
+  +state: Signal<"loading" | "ready" | "empty" | "error">
+  +items: Signal<InvestigationSummary[]>
+  +usage: Signal<StorageUsage>
+  +open(item: InvestigationSummary): void
+  +confirmDelete(item: InvestigationSummary): Promise<void>
+}
+
+class InvestigationListItem <<component>> {
+  +summary: input<InvestigationSummary>
+  +opened: output<void>
+  +deleteRequested: output<void>
+}
+
+class DeleteInvestigationDialog <<component>> {
+  +summary: input<InvestigationSummary>
+  +busy: input<boolean>
+  +decided: output<"delete" | "cancel">
+}
+
+class StorageMonitor {
+  +usage: Signal<StorageUsage>
+  +refresh(): Promise<void>
+}
+
+InvestigationStore <|-- IndexedDbInvestigationStore
+HistoryPage ..> InvestigationStore : lists and deletes
+HistoryPage ..> StorageMonitor : reads usage
+HistoryPage *-- "*" InvestigationListItem
+HistoryPage ..> DeleteInvestigationDialog : opens
+InvestigationListItem --> InvestigationSummary
+IndexedDbInvestigationStore ..> DeletionReport : returns
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+title UML sequence behaviour — First load online, then cache everything
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "LazyAdapters" as lazy
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+  participant "Service worker" as sw
+  participant "Static host" as host
+end box
+
+person -> chrome : Open https://<host>/ (first time)
+chrome -> host : GET / and the initial bundle
+host --> chrome : index.html, main, polyfills, styles + HSTS, CSP, Referrer-Policy, nosniff, Permissions-Policy (NFR-014)
+chrome -> chrome : Load the home route chunk; ≤ 250 KB compressed in all (NFR-004)
+chrome -> home : Render; "Identify a device" interactive
+home -> chrome : App stable → serviceWorker.register("ngsw-worker.js")
+chrome -> sw : install
+sw -> host : GET ngsw.json, then every file in the prefetch asset groups
+host --> sw : lazy chunks, fonts, icons, knowledge base JSON, schemas, manifest
+sw -> sw : Store in Cache Storage under the build's hash (NFR-006)
+note over sw, host : No data groups: nothing but Gattsby's own static files is fetched or cached
+person -> home : Tap "Identify a device" (full agent mode)
+home -> lazy : loadModelAdapter()
+lazy -> chrome : import("./model/prompt-api-model-adapter") — served by the service worker
+chrome --> lazy : chunk
+@enduml

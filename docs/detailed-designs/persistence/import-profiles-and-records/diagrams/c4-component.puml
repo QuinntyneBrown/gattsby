@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Import profiles and records
+
+Person(person, "Person", "Phone or laptop")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(pages, "ProfilesPage / HistoryPage / SettingsPage / NotFoundPage", "Angular pages", "Offer Import")
+  Component(dialog, "ImportDialog", "Angular component", "Choose a file; checking; refused with a reason; imported")
+  Component(service, "ImportService", "Service", "Size, parse, identify, migrate, validate, store")
+  Component(parser, "SafeJsonParser", "Pure helper", "JSON.parse with a reviver that refuses prototype keys")
+  Component(migrations, "FormatMigrations", "Pure helpers", "One migration per major version step")
+  Component(schemas, "FormatSchemas", "Generated validators", "Schema and string-length checks")
+  Component(store, "IndexedDbInvestigationStore", "Store adapter", "importProfile, importRecord in one transaction")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "profiles, investigations and their records")
+
+Rel(person, dialog, "Chooses a .json file")
+Rel(pages, dialog, "Opens")
+Rel(dialog, service, "File (via the page)")
+Rel(service, parser, "parse(text)")
+Rel(service, migrations, "migrate(file, from, to)")
+Rel(service, schemas, "validate(file)")
+Rel(service, store, "importProfile / importRecord")
+Rel(store, idb, "One readwrite transaction")
+@enduml

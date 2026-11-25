@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Save as it runs
+
+Person(person, "Person", "Beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Agent orchestrator, raw traffic log, investigation store, storage monitor")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, hypotheses, observations, recordings, photos, profiles, settings")
+}
+System_Ext(chrome, "Chrome", "StorageManager: persist() and estimate()")
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Answers prompts; sees storage warnings", "Touch or keyboard")
+Rel(device, spa, "Raw traffic", "Web Bluetooth")
+Rel(spa, idb, "One readwrite transaction per completed step")
+Rel(spa, chrome, "Requests persistent storage on the first investigation; reads usage and quota")
+@enduml

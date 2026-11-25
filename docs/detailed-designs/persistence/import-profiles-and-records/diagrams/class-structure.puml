@@ -1,0 +1,90 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Import profiles and records
+
+enum ImportErrorCode {
+  FILE_TOO_LARGE
+  NOT_JSON
+  UNSAFE_KEY
+  NOT_GATTSBY
+  UNSUPPORTED_VERSION
+  SCHEMA_INVALID
+  STORAGE_FULL
+}
+
+class ImportError {
+  +code: ImportErrorCode
+  +message: string
+  +detail: string | null
+}
+
+class ImportResult {
+  +format: ExportFormat
+  +fromVersion: string
+  +storedId: string
+  +displayName: string
+  +migrated: boolean
+}
+
+class ImportService {
+  +maxBytes: 20971520
+  +import(file: File): Promise<ImportResult>
+  -identify(value: unknown): FileHeader
+}
+
+class SafeJsonParser {
+  +forbiddenKeys: ["__proto__", "constructor", "prototype"]
+  +parse(text: string): unknown
+}
+
+class FormatMigrations {
+  +supportedMajors(format: ExportFormat): number[]
+  +migrate(file: ExportFile, toMajor: number): ExportFile
+}
+
+interface Migration {
+  +format: ExportFormat
+  +fromMajor: number
+  +apply(file: ExportFile): ExportFile
+}
+
+class FormatSchemas {
+  +validate(file: unknown): ValidationResult
+  +current(format: ExportFormat): string
+}
+
+abstract class InvestigationStore <<contract>> {
+  +importProfile(file: ExportFile<DeviceProfile>): Promise<string>
+  +importRecord(file: ExportFile<InvestigationRecord>): Promise<string>
+}
+
+class ImportDialog <<component>> {
+  +state: input<"default" | "busy" | "invalid" | "failed" | "success">
+  +fileName: input<string | null>
+  +error: input<ImportError | null>
+  +result: input<ImportResult | null>
+  +fileChosen: output<File>
+  +openRequested: output<void>
+}
+
+ImportService ..> SafeJsonParser : parses with
+ImportService ..> FormatMigrations : migrates with
+ImportService ..> FormatSchemas : validates with
+ImportService ..> InvestigationStore : stores through
+ImportService ..> ImportError : rejects with
+ImportService ..> ImportResult : returns
+FormatMigrations "1" o-- "*" Migration
+ImportError --> ImportErrorCode
+ImportDialog ..> ImportResult : shows
+@enduml
