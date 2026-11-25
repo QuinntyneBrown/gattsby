@@ -1,0 +1,22 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Test without hardware or a model
+
+Person(dev, "Developer", "Runs specs or a demo")
+System_Boundary(gattsby, "Gattsby") {
+  Container(suite, "Behaviour suite", "Playwright, TypeScript", "Specs, page objects, fixtures and guards")
+  Container(sim, "Simulated Bluetooth", "TypeScript (frontend/src/testing)", "Scripted devices behind the Web Bluetooth surface; journal of every call and write")
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Production build served on localhost, unchanged by the tests")
+  Container(server, "Static file server", "localhost", "Serves the build with the production headers")
+  Container(units, "Unit tests", "Angular test runner, TypeScript", "Services and pure helpers with a fake clock")
+}
+System_Ext(chromium, "Chromium", "Playwright browser")
+
+Rel(dev, suite, "npx playwright test (behaviour project)")
+Rel(dev, units, "Runs locally")
+Rel(suite, chromium, "Launches; injects init scripts", "CDP")
+Rel(suite, sim, "Bundles into an init script; controls through a test handle")
+Rel(chromium, server, "Loads the app", "HTTP localhost")
+Rel(spa, sim, "Calls navigator.bluetooth, answered by the simulation")
+@enduml

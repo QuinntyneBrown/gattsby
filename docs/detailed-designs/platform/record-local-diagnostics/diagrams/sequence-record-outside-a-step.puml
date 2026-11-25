@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Record an error outside a step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+  participant "ToastService" as toast
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "GattsbyErrorHandler" as handler
+  participant "DiagnosticsRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ErrorMessages" as messages
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+alt Storage refuses the write
+  page -> store : commitStep(final step, verdict)
+  store --> page : STORAGE_FULL
+  page -> recorder : record(STORAGE_FULL, tool finish, stage conclude)
+  recorder -> recorder : Hold the entry as pending; it cannot be stored now
+  recorder -> messages : messageFor(STORAGE_FULL)
+  messages --> recorder : "This verdict couldn't be saved." + export, try again
+  page -> person : Error state with "Export full record" first
+  person -> page : Tap "Try saving again"
+  page -> store : commitStep(final step, verdict, pending diagnostics)
+else An uncaught error
+  handler -> recorder : record(UNEXPECTED_ERROR, current tool and stage if any)
+  recorder -> store : Commit with the next step, or keep in the bounded window
+  recorder -> messages : messageFor(UNEXPECTED_ERROR)
+  recorder -> toast : danger toast, role=alert, no auto-dismiss
+  toast -> person : Plain message and what to do next
+end
+@enduml

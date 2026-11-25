@@ -1,0 +1,114 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Issue the verdict
+
+enum VerdictKind {
+  connected
+  partiallyDecoded
+  needsMissingTool
+  notConnectable
+  stoppedByPerson
+}
+
+enum StopReason {
+  finish
+  finishThreshold
+  stepBudget
+  noProgress
+  personStopped
+  emergencyStop
+}
+
+class Verdict {
+  +kind: VerdictKind
+  +protocol?: string
+  +title: string
+  +summary: string
+  +stopReason: StopReason
+  +source: "model" | "rules"
+  +evidence: EvidenceId[]
+  +issuedAt: string
+}
+
+class VerdictFacts {
+  +deviceReached: boolean
+  +reachability: "yes" | "no" | "unknown"
+  +knownProtocol?: string
+  +confirmedMetrics: EvidenceId[]
+  +decodedFields: EvidenceId[]
+  +varyingFields: EvidenceId[]
+  +missingToolRequests: string[]
+}
+
+class VerdictCheck {
+  +supported: boolean
+  +missing: string[]
+}
+
+class VerdictRules <<pure helper>> {
+  +check(kind: VerdictKind, facts: VerdictFacts): VerdictCheck
+  +decide(stop: StopReason, facts: VerdictFacts): VerdictKind
+}
+
+class VerdictService {
+  +gatherFacts(investigationId: string): Promise<VerdictFacts>
+  +check(input: FinishInput): Promise<VerdictCheck>
+  +issue(kind: VerdictKind, summary: string, stop: StopReason): Promise<Verdict>
+}
+
+class FinishTool {
+  +definition: ToolDefinition
+  +run(input: FinishInput, ctx: ToolContext): Promise<ToolResult<FinishOutput>>
+}
+
+class FinishInput {
+  +verdict: string
+  +summary: string
+}
+
+class FinishOutput {
+  +verdict: string
+  +profileId: string
+}
+
+class VerdictView {
+  +identityLine: string
+  +verdict: Verdict
+  +protocolLine: string
+  +requests: MissingToolRequest[]
+  +canRead: Finding[]
+  +canControl: Finding[]
+  +observed: Finding[]
+  +undetermined: Finding[]
+  +profileId: string
+}
+
+class VerdictPage <<page>> {
+  +view: Signal<VerdictView | null>
+  +state: "loading" | "ready" | "error"
+}
+
+FinishTool ..> FinishInput
+FinishTool ..> FinishOutput
+FinishTool ..> VerdictService : check, issue
+FinishTool ..> DeviceProfileBuilder : build
+VerdictService ..> VerdictRules
+VerdictService ..> VerdictFacts : gathers
+VerdictRules ..> VerdictCheck : returns
+VerdictService ..> Verdict : issues one
+Verdict --> VerdictKind
+Verdict --> StopReason
+VerdictPage --> VerdictView
+VerdictView --> Verdict
+@enduml

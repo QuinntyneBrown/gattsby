@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Record local diagnostics
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Receives every failed ToolResult")
+  Component(orch, "AgentOrchestrator", "Service", "Validation refusals, model timeouts, aborts")
+  Component(handler, "GattsbyErrorHandler", "Angular ErrorHandler", "Uncaught errors and unhandled rejections")
+  Component(recorder, "DiagnosticsRecorder", "Service", "Stamps code, tool, stage and time; routes to record or window")
+  Component(messages, "ErrorMessages", "Pure helper", "Code, tool and stage to a plain message and next step")
+  Component(notice, "ErrorNotice", "Angular component", "Inline message with actions")
+  Component(toast, "ToastService", "Service", "Danger toast, role=alert, no auto-dismiss")
+  ComponentDb(store, "InvestigationStore", "IndexedDB adapter", "commitStep with diagnostic entries")
+}
+
+Rel(executor, recorder, "record(failed result)")
+Rel(orch, recorder, "record(refusal or timeout)")
+Rel(handler, recorder, "record(UNEXPECTED_ERROR)")
+Rel(recorder, store, "Adds the entry to the step's transaction")
+Rel(recorder, messages, "messageFor(entry)")
+Rel(recorder, notice, "PlainMessage for blocking errors")
+Rel(recorder, toast, "PlainMessage for non-blocking errors")
+Rel(person, notice, "Reads; taps Try again")
+@enduml

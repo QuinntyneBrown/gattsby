@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Record a missing tool
+
+Person(person, "Person", "Developer who decides which tool to build next")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API (full agent mode only)")
+System_Ext(chrome, "Chrome", "Prompt API, IndexedDB and downloads")
+
+Rel(person, gattsby, "Lists missing-tool requests across investigations; exports them")
+Rel(gattsby, chrome, "Stores requests; saves the JSON export", "IndexedDB, download")
+Rel(chrome, nano, "Runs the prompt that may return request_missing_tool")
+@enduml

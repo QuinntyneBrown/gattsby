@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Build the device profile
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(finish, "FinishTool", "Tool (Meta, n/a)", "Asks for the profile once the verdict is issued")
+  Component(builder, "DeviceProfileBuilder", "Service", "Assembles the profile from the record snapshot")
+  Component(validator, "DeviceProfileValidator", "Build-time compiled schema check", "Validates against the published profile schema")
+  Component(index, "EvidenceIndex", "Service", "Resolves evidence IDs in one investigation")
+  Component(trail, "EvidenceTrail", "Pure helper", "Expands an ID to observation, step, raw entries and answers")
+  Component(fmt, "DecodingRuleFormatter", "Pure helper", "0x2ACD · bytes 2–3 · uint16 · ×0.01")
+  Component(profilePage, "DeviceProfilePage", "Angular page", "/profiles/:id")
+  Component(evidencePage, "EvidencePage", "Angular page", "/investigations/:id/evidence?ref=")
+  Component(kbc, "KnowledgeBase", "Service", "Version and definitions")
+  ComponentDb(store, "InvestigationStore", "IndexedDB adapter", "Record and profiles")
+}
+
+Rel(finish, builder, "build(snapshot, verdict)")
+Rel(builder, kbc, "Reads version and definitions")
+Rel(builder, index, "Checks every metric and feature has a resolving reference")
+Rel(builder, validator, "validate(profile)")
+Rel(finish, store, "saveProfile with the final step")
+Rel(profilePage, store, "Loads the profile")
+Rel(profilePage, fmt, "Formats decoding rules")
+Rel(evidencePage, trail, "expand(ref)")
+Rel(trail, index, "resolve(id)")
+Rel(index, store, "Reads entries")
+Rel(person, profilePage, "Reads")
+Rel(person, evidencePage, "Opens evidence for one finding")
+@enduml

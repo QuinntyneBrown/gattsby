@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Raise and merge a request
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "RequestMissingToolTool" as tool
+  participant "MissingToolRequests" as requests
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+
+orch -> model : prompt(DecisionState)
+model --> orch : request_missing_tool "Decode vendor X", reason, [obs-14]
+orch -> validator : validate: capability <= 80, reason <= 280, evidence resolves (TOOL-029)
+validator --> orch : valid
+orch -> tool : run(input, ctx)
+tool -> requests : raise(draft, key "decode vendor x", stage proprietary)
+alt First request with this key in the investigation
+  requests -> requests : Create request mtr-2 (FR-058)
+  requests --> tool : merged false
+else Same key raised earlier
+  requests -> requests : Add obs-14 to mtr-2 evidence; add stage; occurrences + 1
+  requests --> tool : merged true (TOOL-029 AC1)
+end
+tool --> orch : ok, { requestId mtr-2, merged }
+orch -> store : commitStep(step 12, request) (FR-060)
+store --> orch : committed
+orch -> feed : "Missing tool: Decode vendor X"
+@enduml

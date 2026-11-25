@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Track the hypothesis
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API (full agent mode only)")
+System_Ext(chrome, "Chrome", "Prompt API, Web Bluetooth stack and IndexedDB")
+
+Rel(person, gattsby, "Watches the hypothesis and its confidence change")
+Rel(gattsby, chrome, "Prompts the model; stores each hypothesis version", "Prompt API, IndexedDB")
+Rel(chrome, nano, "Runs the prompt that may propose a hypothesis")
+@enduml

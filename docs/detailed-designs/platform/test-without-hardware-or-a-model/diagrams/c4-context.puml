@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Test without hardware or a model
+
+Person(dev, "Developer", "Writes and runs specs; runs a demo with a simulated device")
+System(gattsby, "Gattsby", "Web app plus its test harness: scripted devices, scripted model, page objects")
+System_Ext(ci, "GitHub Actions", "Runs lint, the build and one critical acceptance path per feature")
+System_Ext(chromium, "Chromium", "Playwright's browser; the only browser the specs use")
+
+Rel(dev, gattsby, "Runs behaviour specs and unit tests; opens the app with ?simulate=")
+Rel(ci, gattsby, "Runs the critical acceptance paths on each change")
+Rel(gattsby, chromium, "Drives the app with fakes in place of Bluetooth and the model", "Playwright")
+@enduml

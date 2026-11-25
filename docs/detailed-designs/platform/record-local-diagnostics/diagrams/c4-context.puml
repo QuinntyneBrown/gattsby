@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Record local diagnostics
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome; records errors locally, reports nothing remotely")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, Prompt API, IndexedDB")
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Reads a plain message and what to do next")
+Rel(gattsby, chrome, "Stores each error in the investigation record", "IndexedDB")
+Rel(chrome, device, "GATT operations that may fail")
+@enduml

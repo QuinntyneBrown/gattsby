@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Test without hardware or a model
+
+Container_Boundary(suite, "Behaviour suite") {
+  Component(spec, "Acceptance spec", "Playwright test", "Given-When-Then; header names requirement IDs")
+  Component(pages, "Page objects", "e2e/pages/<id>.page.ts", "Own every selector; one per screen, dialog or notification")
+  Component(fixture, "test", "e2e/fixtures/test.ts", "Merges every fixture and guard")
+  Component(fbt, "fakeBluetooth", "Fixture", "Installs scripted devices; picks in the chooser; reads the journal")
+  Component(fmodel, "fakeModel", "Fixture", "Installs the scripted LanguageModel; records prompts")
+  Component(guards, "Guards", "Fixtures", "Network, page error, unexpected Bluetooth call, unapproved write")
+  Component(approvals, "ApprovalJournal", "Fixture", "Approvals the page objects saw the person give")
+}
+Container_Boundary(spa, "Gattsby web app") {
+  Component(simbt, "SimulatedBluetooth", "Injected script", "navigator.bluetooth with Chrome's rules; journal")
+  Component(fakelm, "FakeLanguageModel", "Injected script", "LanguageModel with scripted availability and actions")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Unchanged production code")
+  Component(adapter, "PromptApiModelAdapter", "Model adapter", "Unchanged production code")
+}
+
+Rel(spec, fixture, "Imports test")
+Rel(spec, pages, "Acts and asserts through")
+Rel(fixture, fbt, "Provides")
+Rel(fixture, fmodel, "Provides")
+Rel(fixture, guards, "Checks at teardown")
+Rel(pages, approvals, "Records Send taps")
+Rel(fbt, simbt, "addInitScript; scripts the device and the person's actions")
+Rel(fmodel, fakelm, "addInitScript; scripts actions")
+Rel(ble, simbt, "requestDevice, connect, read, notify, write")
+Rel(adapter, fakelm, "availability, create, prompt")
+Rel(guards, simbt, "Reads the journal")
+Rel(guards, approvals, "Matches each write to an approval")
+@enduml

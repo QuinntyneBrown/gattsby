@@ -1,0 +1,46 @@
+@startuml
+title UML sequence behaviour — Show the verdict
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+  participant "FindingList" as list
+  participant "ExportDialog" as export
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "VerdictViewBuilder" as vb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+person -> page : Open /investigations/:id/verdict
+page -> person : Loading: "Building the verdict"
+page -> store : Load investigation, verdict, profile, requests
+alt Loaded
+  store --> page : records
+  page -> vb : build(investigation, verdict, profile, requests)
+  vb --> page : VerdictView (identity, verdict, protocol, requests, can read, can control, undetermined)
+  page -> list : canRead, canControl (status word and evidence link per row)
+  page -> person : Verdict, identity, what can be read and controlled, requests, actions (FR-057)
+  person -> page : Tap "Export profile"
+  page -> export : Open with the profile preselected (FR-062)
+else The verdict could not be saved (STORAGE_FULL)
+  store --> page : STORAGE_FULL
+  page -> person : "This verdict couldn't be saved." Try saving again, export the full record (NFR-025)
+end
+note over page, list : Device names, summaries and model text render as text (NFR-013)
+@enduml

@@ -1,0 +1,117 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Build the device profile
+
+enum EvidenceKind {
+  step
+  observation
+  rawLog
+  answer
+  photo
+}
+
+enum FindingStatus {
+  confirmed
+  likely
+  claimedOnly
+  claimedNotSeen
+  refused
+}
+
+class DeviceProfile {
+  +id: string
+  +formatVersion: string
+  +knowledgeBaseVersion: string
+  +investigationId: string
+  +deviceName: string
+  +maker?: string
+  +model?: string
+  +firmware?: string
+  +advertisedUuids: string[]
+  +discoveredUuids: string[]
+  +unreachableServices: UnreachableService[]
+  +protocol: string
+  +confidence: number
+  +readableMetrics: ReadableMetric[]
+  +controllableFeatures: ControllableFeature[]
+  +requiredHandshake?: Handshake
+  +connectionQuirks: string[]
+  +verdict: string
+  +evidence: EvidenceId[]
+  +date: string
+  +locationLabel?: string
+}
+
+class ReadableMetric {
+  +name: string
+  +characteristic: string
+  +offset?: number
+  +flagRule?: string
+  +type: string
+  +scale: number
+  +unit: string
+  +rateHz?: number
+  +status: FindingStatus
+  +evidence: EvidenceId[]
+}
+
+class ControllableFeature {
+  +name: string
+  +opCode?: string
+  +parameterEncoding?: string
+  +vendorBytes?: string
+  +range?: Range
+  +status: FindingStatus
+  +evidence: EvidenceId[]
+}
+
+class EvidenceId <<string>> {
+  kind prefix + number, e.g. obs-11, raw-305
+}
+
+class EvidenceEntry {
+  +id: EvidenceId
+  +kind: EvidenceKind
+  +at: number
+  +step: number
+}
+
+class DeviceProfileBuilder {
+  +build(snapshot: RecordSnapshot, verdict: Verdict): Result<DeviceProfile, ProfileError>
+}
+
+class DeviceProfileValidator {
+  +validate(profile: unknown): ValidationResult
+}
+
+class EvidenceIndex {
+  +resolve(id: EvidenceId): Promise<EvidenceEntry | null>
+  +resolveAll(ids: EvidenceId[]): Promise<EvidenceId[]>
+}
+
+class EvidenceTrail <<pure helper>> {
+  +expand(id: EvidenceId, record: RecordSnapshot): EvidenceEntry[]
+}
+
+DeviceProfile "1" *-- "*" ReadableMetric
+DeviceProfile "1" *-- "*" ControllableFeature
+ReadableMetric --> FindingStatus
+ControllableFeature --> FindingStatus
+DeviceProfileBuilder ..> DeviceProfile : builds
+DeviceProfileBuilder ..> DeviceProfileValidator : validates with
+DeviceProfileBuilder ..> EvidenceIndex : checks references
+EvidenceTrail ..> EvidenceEntry : returns
+EvidenceIndex ..> EvidenceEntry
+EvidenceEntry --> EvidenceKind
+@enduml

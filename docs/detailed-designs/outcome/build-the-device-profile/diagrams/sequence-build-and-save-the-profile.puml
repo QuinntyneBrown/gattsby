@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Build and save the profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "FinishTool" as finish
+  participant "DeviceProfileBuilder" as builder
+  participant "EvidenceIndex" as index
+  participant "DeviceProfileValidator" as validator
+  participant "KnowledgeBase" as kbc
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+orch -> finish : run(finish) — verdict issued
+finish -> store : Read record snapshot (observations, hypothesis, steps, location label)
+store --> finish : snapshot
+finish -> builder : build(snapshot, verdict)
+builder -> kbc : version 2026.11; metric and command definitions
+builder -> builder : Identity, UUIDs, unreachable services (FR-023)
+builder -> builder : Metrics with decoding rule and status (FR-027)
+builder -> builder : Features with op code, encoding, range, status (FR-040)
+builder -> builder : Leave out the raw log (FR-055)
+builder -> index : resolveAll(evidence of every metric and feature) (FR-056)
+alt A metric or feature has no resolving reference
+  index --> builder : nothing resolves for one entry
+  builder -> builder : Leave the entry out; record UNEXPECTED_ERROR (NFR-025)
+end
+builder -> validator : validate(profile) against format 1.0
+alt Schema violation
+  validator --> builder : errors
+  builder --> finish : invalid profile
+  finish -> store : Commit the verdict without a profile; record UNEXPECTED_ERROR (NFR-025)
+else Valid
+  validator --> builder : valid
+  builder --> finish : DeviceProfile
+  finish -> store : commitStep(final step, verdict, profile) (FR-060)
+  store --> finish : profileId p-31
+end
+@enduml

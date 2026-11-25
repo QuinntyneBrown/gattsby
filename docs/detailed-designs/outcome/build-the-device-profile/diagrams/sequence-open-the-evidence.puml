@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Open the evidence behind a metric
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as verdict
+  participant "FindingList" as list
+  participant "EvidencePage" as page
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "EvidenceTrail" as trail
+  participant "EvidenceIndex" as index
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+person -> list : Tap "Evidence" next to Speed
+list --> verdict : evidenceRequested(obs-11)
+verdict -> page : Navigate to /investigations/i-7/evidence?ref=obs-11
+page -> store : Load record window for i-7
+page -> trail : expand(obs-11, record)
+trail -> index : resolve(obs-11)
+index --> trail : observation "speed confirmed", step 9
+trail -> index : resolve(step-9, raw-301..raw-312, ans-6)
+index --> trail : step, notifications, answer "Done, at 6"
+trail --> page : ordered entries with timestamps
+page -> person : Notifications and decoded speed values that confirmed speed (FR-056)
+note over page : Hex and decoded values render as text (NFR-013)
+alt The reference no longer resolves
+  index --> trail : null
+  page -> person : "This evidence isn't in the record any more." Show the full log
+end
+@enduml

@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Issue the verdict
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Ends the loop; runs finish on every stop condition")
+  Component(stop, "StopConditions", "Service", "Gives the StopReason")
+  Component(finish, "FinishTool", "Tool (Meta, n/a)", "finish: checks the verdict, builds the profile")
+  Component(verdicts, "VerdictService", "Service", "Checks a proposed verdict; decides one for other stops; issues it once")
+  Component(rules, "VerdictRules", "Pure helper", "Evidence test per verdict and their precedence")
+  Component(builder, "DeviceProfileBuilder", "Service", "Builds the device profile from the record")
+  Component(mtr, "MissingToolRequests", "Service", "Requests raised in this investigation")
+  Component(page, "VerdictPage", "Angular page", "/investigations/:id/verdict")
+  Component(view, "VerdictHeadline, FindingList, MissingToolCard", "Angular components", "Presentation only")
+  ComponentDb(store, "InvestigationStore", "IndexedDB adapter", "Verdict, profile, requests")
+}
+
+Rel(stop, orch, "StopReason")
+Rel(orch, finish, "Runs finish (model's or its own)")
+Rel(finish, verdicts, "check / decide / issue")
+Rel(verdicts, rules, "Evaluates the facts")
+Rel(verdicts, mtr, "Reads requests")
+Rel(finish, builder, "build(record, verdict)")
+Rel(verdicts, store, "Commits verdict and profile in one transaction")
+Rel(page, store, "Loads verdict, profile, requests")
+Rel(page, view, "Passes view model")
+Rel(person, page, "Reads; taps Evidence, Export or New investigation")
+@enduml

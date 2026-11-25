@@ -1,0 +1,109 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Track the hypothesis
+
+enum HypothesisSource {
+  model
+  heuristic
+  checklist
+  rescore
+}
+
+enum ConfidenceBand {
+  guess
+  likely
+  confirmed
+}
+
+class HypothesisProposal {
+  +protocol: string
+  +deviceType?: string
+  +maker?: string
+  +model?: string
+  +proposedConfidence: number
+  +evidence: EvidenceId[]
+  +source: HypothesisSource
+}
+
+class Hypothesis {
+  +version: number
+  +step: number
+  +protocol: string
+  +deviceType?: string
+  +maker?: string
+  +model?: string
+  +label: string
+  +confidence: number
+  +proposedConfidence?: number
+  +evidence: EvidenceId[]
+  +source: HypothesisSource
+  +createdAt: string
+}
+
+class ScoreResult {
+  +confidence: number
+  +supporting: EvidenceId[]
+  +capped: boolean
+}
+
+class HypothesisTracker {
+  +current: Signal<Hypothesis | null>
+  +versions: Signal<Hypothesis[]>
+  +propose(proposal: HypothesisProposal, step: number): Hypothesis
+  +rescore(step: number, observations: Observation[]): Hypothesis | null
+  +band(confidence: number): ConfidenceBand
+}
+
+class HypothesisScorer <<pure helper>> {
+  +score(candidate: HypothesisProposal, observations: Observation[], rules: HypothesisScoringRules): ScoreResult
+}
+
+class HypothesisScoringRules <<configuration>> {
+  +weights: Record<ObservationKind, number>
+  +capWithoutConfirmedMetric: number
+  +bands: Record<ConfidenceBand, number>
+}
+
+class UpdateHypothesisTool {
+  +definition: ToolDefinition
+  +run(input: UpdateHypothesisInput, ctx: ToolContext): Promise<ToolResult<UpdateHypothesisOutput>>
+}
+
+class UpdateHypothesisOutput {
+  +version: number
+  +confidence: number
+}
+
+class EvidenceIndex {
+  +resolve(id: EvidenceId): EvidenceEntry | null
+  +resolveAll(ids: EvidenceId[]): EvidenceId[]
+}
+
+class HypothesisMeter <<component>> {
+  +label: input<string>
+  +confidence: input<number>
+  +band: input<ConfidenceBand>
+}
+
+UpdateHypothesisTool ..> HypothesisTracker : propose
+UpdateHypothesisTool ..> UpdateHypothesisOutput : returns
+HypothesisTracker ..> HypothesisScorer : scores with
+HypothesisScorer ..> HypothesisScoringRules : reads
+HypothesisScorer ..> ScoreResult : returns
+HypothesisTracker "1" *-- "*" Hypothesis : versions
+HypothesisTracker ..> HypothesisProposal : accepts
+HypothesisTracker ..> EvidenceIndex : checks supporting IDs
+Hypothesis --> HypothesisSource
+HypothesisMeter ..> ConfidenceBand
+@enduml

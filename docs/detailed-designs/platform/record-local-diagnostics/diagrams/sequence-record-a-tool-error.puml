@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Record a tool error
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ErrorNotice" as notice
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "DiagnosticsRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReadCharacteristicTool" as tool
+  participant "ErrorMessages" as messages
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run(read_characteristic 0x2A26)
+tool -> ble : read(0x2A26)
+ble -> device : readValue()
+device --> ble : ATT error
+ble --> tool : GATT_ERROR (ATT code in message)
+tool --> executor : ok false, GATT_ERROR, evidence [raw-140]
+executor -> recorder : record(code, tool read_characteristic, stage identify, now) (NFR-025)
+recorder -> messages : messageFor(GATT_ERROR, read_characteristic, identify)
+messages --> recorder : title, what to try, actions
+recorder --> executor : DiagnosticEntry diag-4
+executor -> store : commitStep(step 5, result, diag-4) in one transaction (FR-060)
+store --> executor : committed
+recorder -> page : lastMessage
+page -> notice : PlainMessage
+notice -> person : What failed and what to try, with actions (wording provisional, A-01)
+note over recorder, store : No request leaves the device; connect-src is 'self' (NFR-012)
+@enduml

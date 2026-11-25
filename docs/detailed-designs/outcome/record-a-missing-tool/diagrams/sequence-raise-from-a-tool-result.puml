@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Raise a request from a tool result
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PlaybookHeuristics" as heur
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReadCharacteristicTool" as read
+  participant "MissingToolTriggers" as triggers
+  participant "MissingToolRequests" as requests
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityService" as caps
+  database "InvestigationStore" as store
+end box
+
+alt A protocol is encrypted
+  executor -> read : run(0xFE01)
+  read --> executor : ok false, AUTH_REQUIRED, evidence [raw-88]
+  executor -> triggers : fromResult(result, call, stage)
+  triggers --> executor : draft "encrypted:0xFE00", raisedBy encryption
+  executor -> requests : raise(draft)
+  executor -> executor : Mark 0xFE01 closed: no further attempt (FR-033)
+else A tool reports UNSUPPORTED
+  executor -> triggers : fromResult(UNSUPPORTED from a tool)
+  triggers --> executor : draft "capability:<id>", raisedBy unsupported
+  executor -> requests : raise(draft)
+else A needed capability is unavailable
+  heur -> caps : Is advertisement scanning available?
+  caps --> heur : not available (PD-ADV)
+  heur -> requests : raise("watch advertisements", reason, stage find) (FR-058 AC1)
+end
+requests --> executor : RaiseResult
+executor -> store : commitStep(step, request)
+note over triggers, requests : Missing safe limits and hidden services are raised by their own features through raise()
+@enduml

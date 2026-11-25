@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Rescore after new evidence
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as feed
+  participant "HypothesisMeter" as meter
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator\nor ChecklistRunner" as orch
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "DecodeStandardTool" as tool
+  participant "HypothesisTracker" as tracker
+  participant "HypothesisScorer" as scorer
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+orch -> tool : run(decode_standard, compare before and after)
+tool --> orch : ok; observation obs-11 speed confirmed (FR-025)
+orch -> tracker : rescore(step 9, [obs-11])
+tracker -> scorer : score(current hypothesis, all observations)
+scorer --> tracker : confidence 0.85
+alt Score changed
+  tracker -> tracker : Append version 4, source rescore, evidence + obs-11
+  tracker --> orch : Hypothesis v4
+  orch -> store : commitStep(step 9, observations, raw log, hypothesis v4) (FR-060)
+  store --> orch : committed
+  tracker -> feed : "Hypothesis FTMS treadmill, Horizon T-series 65% -> 85%"
+  tracker -> meter : 85% likely
+  meter -> person : Word, shape and percent; colour never alone
+else Score unchanged
+  tracker --> orch : null
+  orch -> store : commitStep(step 9, observations, raw log)
+end
+note over orch, tracker : Model, heuristics and checklist share one path; the model never sets the score (FR-053)
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Track the hypothesis
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Runs one step; asks for a rescore before it commits the step")
+  Component(validator, "ActionValidator", "Service", "Checks the action schema and resolves evidence IDs")
+  Component(tool, "UpdateHypothesisTool", "Tool (Meta, n/a)", "update_hypothesis: hands the proposal to the tracker")
+  Component(tracker, "HypothesisTracker", "Service", "Holds the current hypothesis as a signal and every earlier version")
+  Component(scorer, "HypothesisScorer", "Pure helper", "Deterministic confidence from observations and scoring rules")
+  Component(index, "EvidenceIndex", "Service", "Resolves an evidence ID to its step, observation or raw log entry")
+  Component(kbc, "KnowledgeBase", "Service", "Protocol display names and vendor families")
+  Component(meter, "HypothesisMeter", "Angular component", "Label, percent, word and shape")
+  Component(feed, "ActivityFeedList", "Angular component", "Hypothesis entries with before and after confidence")
+  ComponentDb(store, "InvestigationStore", "IndexedDB adapter", "commitStep writes the version in the step's transaction")
+}
+
+Rel(orch, validator, "Validates update_hypothesis")
+Rel(validator, index, "Resolves each evidence ID")
+Rel(orch, tool, "Runs the validated action")
+Rel(tool, tracker, "propose(proposal, step)")
+Rel(orch, tracker, "rescore(step) after new observations")
+Rel(tracker, scorer, "score(candidate, observations)")
+Rel(tracker, kbc, "Reads display names")
+Rel(orch, store, "commitStep(step, hypothesis version)")
+Rel(tracker, meter, "current hypothesis signal")
+Rel(tracker, feed, "version entries")
+Rel(person, meter, "Reads")
+@enduml

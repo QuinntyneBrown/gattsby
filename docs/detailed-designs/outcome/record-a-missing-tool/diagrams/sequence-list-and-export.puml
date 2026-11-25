@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — List and export requests
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "MissingToolsPage" as page
+  participant "MissingToolCard" as card
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "groupMissingTools" as group
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ExportService" as export
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome download" as dl
+end box
+
+person -> page : Open /missing-tools
+page -> store : listMissingToolRequests()
+alt Storage answers
+  store --> page : requests from every investigation
+  page -> group : group(requests)
+  group --> page : "decode vendor X": count 3, links to 3 investigations (FR-059)
+  page -> card : One card per group
+  page -> person : Groups with count, status and investigation links
+  person -> page : Tap "Export JSON"
+  page -> export : exportMissingTools(groups, requests)
+  export -> export : Serialise with formatVersion; Blob; object URL
+  export -> dl : Save missing-tools-2026-11-25.gattsby.json (nothing sent)
+  export -> export : Revoke the object URL
+else Storage does not answer
+  store --> page : error
+  page -> person : "Couldn't read the requests" with Try again
+end
+@enduml

@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Fail a spec on a guard
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Spec" as spec
+box "Test harness — Playwright behaviour suite" #F4F3FF
+  participant "Guards" as guards
+  participant "ApprovalJournal" as approvals
+end box
+box "Frontend — Gattsby web app" #E0F2FE
+  participant "Gattsby web app\n(production build)" as app
+end box
+box "Browser and device (simulated in Chromium)" #F2F4F7
+  participant "SimulatedBluetooth" as sim
+  participant "FakeLanguageModel" as lm
+  participant "Chromium" as browser
+end box
+
+alt Unapproved write
+  app -> sim : writeValueWithResponse(0x2AD9, 02 E8 03)
+  sim -> sim : Journal the write
+  spec -> guards : teardown
+  guards -> approvals : Find an approval for (0x2AD9, 02 E8 03)
+  approvals --> guards : none
+  guards --> spec : FAIL "write without approval" (FR-034, NFR-018)
+else Unexpected Bluetooth call
+  app -> sim : requestLEScan() not scripted as available
+  sim -> sim : Journal as unexpected; reject as Chrome would
+  guards --> spec : FAIL "unexpected Bluetooth call"
+else Request off localhost
+  app -> browser : fetch(https://example.com/...)
+  browser -> guards : route handler: origin is not localhost
+  guards -> browser : abort
+  guards --> spec : FAIL "network request off localhost" (NFR-012)
+else Page error or Trusted Types violation
+  browser -> guards : pageerror or securitypolicyviolation
+  guards --> spec : FAIL with the error (NFR-013)
+else Model script exhausted
+  app -> lm : prompt(...)
+  lm --> app : reject; journal "no scripted turn"
+  guards --> spec : FAIL "model consulted more than scripted"
+end
+@enduml

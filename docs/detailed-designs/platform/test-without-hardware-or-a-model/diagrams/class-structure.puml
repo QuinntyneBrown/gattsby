@@ -1,0 +1,128 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Test without hardware or a model
+
+class ScriptedDevice {
+  +id: string
+  +name: string
+  +advertisedServices: string[]
+  +manufacturerData?: Record<number, string>
+  +services: ScriptedService[]
+  +behaviours: DeviceBehaviour[]
+  +withName(name: string): ScriptedDevice
+}
+
+class ScriptedService {
+  +uuid: string
+  +characteristics: ScriptedCharacteristic[]
+}
+
+class ScriptedCharacteristic {
+  +uuid: string
+  +properties: string[]
+  +value?: string
+  +notifications?: NotificationScript
+  +onWrite?: WriteResponder
+  +readError?: ScriptedError
+}
+
+class NotificationScript {
+  +intervalMs: number
+  +frame(state: DeviceState): Uint8Array
+}
+
+class DeviceState {
+  +beltSpeedKmh?: number
+  +cadenceRpm?: number
+  +heartRateBpm?: number
+  +poweredOn: boolean
+  +heldByOtherCentral: boolean
+}
+
+class SimulatedBluetooth {
+  +devices: ScriptedDevice[]
+  +chooser: ChooserScript
+  +journal: SimulationJournal
+  +requestDevice(options): Promise<BluetoothDevice>
+  +getDevices(): Promise<BluetoothDevice[]>
+  +act(deviceId: string, change: Partial<DeviceState>): void
+}
+
+class ChooserScript {
+  +pick(name: string): void
+  +cancel(): void
+}
+
+class SimulationJournal {
+  +calls: JournalEntry[]
+  +writes: JournalEntry[]
+  +unexpected: JournalEntry[]
+}
+
+class JournalEntry {
+  +at: number
+  +method: string
+  +characteristic?: string
+  +bytes?: string
+}
+
+class FakeLanguageModel {
+  +availability(): Promise<string>
+  +create(options): Promise<FakeModelSession>
+}
+
+class FakeModelSession {
+  +prompt(input: string, options): Promise<string>
+  +destroy(): void
+}
+
+class ModelScript {
+  +availability: "absent" | "unavailable" | "downloadable" | "available"
+  +downloadProgress: number[]
+  +turns: ModelTurn[]
+  +prompts: RecordedPrompt[]
+}
+
+class ModelTurn {
+  +action?: AgentAction
+  +raw?: string
+  +delayMs?: number
+  +hang?: boolean
+}
+
+abstract class Clock <<contract>> {
+  +now(): number
+  +setTimeout(fn, ms): TimerHandle
+  +clearTimeout(handle): void
+}
+
+class SystemClock
+class FakeClock {
+  +advance(ms: number): void
+}
+
+SimulatedBluetooth "1" *-- "*" ScriptedDevice
+ScriptedDevice "1" *-- "*" ScriptedService
+ScriptedService "1" *-- "*" ScriptedCharacteristic
+ScriptedCharacteristic --> NotificationScript
+NotificationScript ..> DeviceState : reads
+SimulatedBluetooth --> ChooserScript
+SimulatedBluetooth *-- SimulationJournal
+SimulationJournal "1" *-- "*" JournalEntry
+FakeLanguageModel --> ModelScript
+FakeLanguageModel ..> FakeModelSession : creates
+ModelScript "1" *-- "*" ModelTurn
+Clock <|-- SystemClock
+Clock <|-- FakeClock
+@enduml

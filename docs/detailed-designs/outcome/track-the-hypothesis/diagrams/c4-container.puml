@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Track the hypothesis
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Agent orchestrator, update_hypothesis tool, hypothesis tracker and scorer, hypothesis meter")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, observations and every hypothesis version")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Protocols, vendor signatures and display names")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Reads the hypothesis meter", "Touch or keyboard")
+Rel(spa, nano, "Asks for one action; may get update_hypothesis", "Prompt API")
+Rel(spa, kb, "Reads protocol names and vendor families")
+Rel(spa, idb, "Commits each hypothesis version with its step")
+@enduml

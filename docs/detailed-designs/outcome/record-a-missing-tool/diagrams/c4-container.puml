@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Record a missing tool
+
+Person(person, "Person", "Developer or helper")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "request_missing_tool tool, triggers, merging, missing-tools page")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Missing-tool requests, indexed by capability key")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Opens Missing tools; taps Export JSON", "Touch or keyboard")
+Rel(spa, nano, "May receive request_missing_tool", "Prompt API")
+Rel(spa, idb, "Commits each request with its step; lists across investigations")
+@enduml

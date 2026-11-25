@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Run an acceptance spec
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Spec" as spec
+box "Test harness — Playwright behaviour suite" #F4F3FF
+  participant "InvestigationPage\npage object" as po
+  participant "ApprovalDialog\npage object" as apo
+  participant "fakeBluetooth\nand fakeModel fixtures" as fixtures
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "PromptApiModelAdapter" as adapter
+end box
+box "Browser and device (simulated in Chromium)" #F2F4F7
+  participant "SimulatedBluetooth\n(FTMS treadmill)" as sim
+  participant "FakeLanguageModel" as lm
+end box
+
+spec -> fixtures : use(devices [ftms-treadmill], model script, chooser pick HZN-T202-4F1A)
+fixtures -> sim : addInitScript(simulation bundle, scripted devices)
+fixtures -> lm : addInitScript(fake LanguageModel, scripted turns)
+spec -> po : start(); answer("Treadmill"); tapFindTheDevice()
+po -> ble : (app) requestDevice on the person's tap
+ble -> sim : requestDevice(filters, optionalServices)
+sim -> sim : Check user activation; hide services not requested (PD-BLE-SERVICES)
+sim --> ble : HZN-T202-4F1A
+ble -> sim : connect, getPrimaryServices, startNotifications(0x2ACD)
+sim --> ble : Treadmill Data at 1 Hz from DeviceState (speed 3.0)
+adapter -> lm : prompt(state, responseConstraint) (FR-042)
+lm --> adapter : next scripted action
+spec -> fixtures : act(ftms-treadmill, beltSpeedKmh 6.0)
+fixtures -> sim : DeviceState changes; frames follow
+spec -> po : answer("Done, at 6")
+spec -> apo : tickStandClear(); send()
+apo -> fixtures : ApprovalJournal += (0x2AD9, 02 4E 02)
+ble -> sim : writeValueWithResponse(0x2AD9, 02 4E 02)
+sim -> sim : Journal the write; indicate 80 02 01
+spec -> po : expectVerdict("Connected — FTMS")
+spec -> fixtures : teardown
+fixtures -> fixtures : Every write matches an approval; no unexpected call; no off-localhost request; no page error
+@enduml

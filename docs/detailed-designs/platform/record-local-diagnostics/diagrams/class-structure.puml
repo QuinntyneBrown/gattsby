@@ -1,0 +1,84 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Record local diagnostics
+
+enum DiagnosticSource {
+  tool
+  orchestrator
+  model
+  store
+  app
+}
+
+enum Audience {
+  person
+  agent
+}
+
+class DiagnosticEntry {
+  +id: string
+  +investigationId?: string
+  +code: DiagnosticCode
+  +tool?: string
+  +stage?: PlaybookStage
+  +at: string
+  +source: DiagnosticSource
+  +detail: string
+  +evidence: EvidenceId[]
+}
+
+class PlainMessage {
+  +title: string
+  +body: string
+  +nextStep: string
+  +actions: PlainAction[]
+  +audience: Audience
+  +blocking: boolean
+}
+
+class PlainAction {
+  +label: string
+  +intent: "retry" | "chooseAnother" | "export" | "openHistory" | "dismiss"
+}
+
+class DiagnosticsRecorder {
+  -window: RingBuffer<DiagnosticEntry>
+  +pending: DiagnosticEntry[]
+  +record(input: DiagnosticInput): DiagnosticEntry
+  +takePending(): DiagnosticEntry[]
+  +lastMessage: Signal<PlainMessage | null>
+}
+
+class ErrorMessages <<pure helper>> {
+  +messageFor(code: DiagnosticCode, tool?: string, stage?: PlaybookStage): PlainMessage
+}
+
+class GattsbyErrorHandler {
+  +handleError(error: unknown): void
+}
+
+class ErrorNotice <<component>> {
+  +message: input<PlainMessage>
+  +action: output<PlainAction>
+}
+
+DiagnosticsRecorder "1" o-- "*" DiagnosticEntry
+DiagnosticsRecorder ..> ErrorMessages
+ErrorMessages ..> PlainMessage
+PlainMessage "1" *-- "*" PlainAction
+GattsbyErrorHandler ..> DiagnosticsRecorder
+ErrorNotice ..> PlainMessage
+DiagnosticEntry --> DiagnosticSource
+PlainMessage --> Audience
+@enduml

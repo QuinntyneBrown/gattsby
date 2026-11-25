@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Record a missing tool
+
+Person(person, "Person", "Developer")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs tools; passes failed envelopes to the triggers")
+  Component(heur, "PlaybookHeuristics / ChecklistRunner", "Service", "Raise a request when a needed capability is unavailable")
+  Component(tool, "RequestMissingToolTool", "Tool (Meta, n/a)", "request_missing_tool")
+  Component(triggers, "MissingToolTriggers", "Pure helper", "Maps UNSUPPORTED and AUTH_REQUIRED to a draft")
+  Component(requests, "MissingToolRequests", "Service", "Raises and merges by capability key within one investigation")
+  Component(group, "groupMissingTools", "Pure helper", "Groups requests across investigations with a count")
+  Component(page, "MissingToolsPage", "Angular page", "/missing-tools")
+  Component(card, "MissingToolCard", "Angular component", "Capability, status, reason, devices")
+  ComponentDb(store, "InvestigationStore", "IndexedDB adapter", "listMissingToolRequests")
+}
+
+Rel(executor, triggers, "Failed ToolResult")
+Rel(triggers, requests, "raise(draft)")
+Rel(heur, requests, "raise(capability unavailable)")
+Rel(tool, requests, "raise(agent draft)")
+Rel(requests, store, "Committed with the step")
+Rel(page, store, "listMissingToolRequests()")
+Rel(page, group, "group(requests)")
+Rel(page, card, "One card per group")
+Rel(person, page, "Reads; exports JSON")
+@enduml

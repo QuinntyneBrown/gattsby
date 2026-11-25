@@ -1,0 +1,43 @@
+@startuml
+title UML sequence behaviour — Open a device profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "DeviceProfilePage" as page
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "DeviceProfileValidator" as validator
+  participant "DecodingRuleFormatter" as fmt
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+person -> page : Open /profiles/p-31
+page -> person : Loading the device profile
+page -> store : getProfile(p-31)
+store --> page : stored profile
+page -> validator : Check formatVersion and schema (NFR-024)
+alt A format this build does not read
+  validator --> page : unknown format 0.9
+  page -> person : "This profile couldn't be opened" with the format and "Open the investigation"
+else Readable
+  validator --> page : valid
+  page -> fmt : format(each metric and feature rule)
+  fmt --> page : "0x2ACD · bytes 2–3 · uint16 · ×0.01"
+  page -> person : Readable metrics, controllable features, identity, unreachable services, evidence counts, location
+end
+@enduml

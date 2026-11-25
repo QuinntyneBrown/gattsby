@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Propose a hypothesis
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HypothesisMeter" as meter
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "UpdateHypothesisTool" as tool
+  participant "HypothesisTracker" as tracker
+  participant "HypothesisScorer" as scorer
+  participant "EvidenceIndex" as index
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+
+orch -> model : prompt(DecisionState)
+model --> orch : update_hypothesis FTMS treadmill, 0.95, [obs-3, obs-4]
+orch -> validator : validate(action)
+validator -> index : resolveAll([obs-3, obs-4]) (TOOL-028)
+alt An evidence ID does not resolve
+  index --> validator : obs-4 unknown
+  validator --> orch : refused INVALID_INPUT; counts as a step (FR-043)
+  orch -> store : commitStep(step 6, refusal)
+else Every ID resolves
+  index --> validator : both resolve
+  validator --> orch : valid
+  orch -> tool : run(input, ctx)
+  tool -> tracker : propose(proposal, step 6)
+  tracker -> scorer : score(FTMS treadmill, observations)
+  scorer --> tracker : confidence 0.35; no confirmed metric
+  tracker -> tracker : Store score, not 0.95; keep 0.95 as proposedConfidence (FR-053)
+  tracker -> tracker : Append version 2; version 1 kept
+  tracker --> tool : Hypothesis v2
+  tool --> orch : ok, { version 2, confidence 0.35 }
+  orch -> store : commitStep(step 6, hypothesis v2) in one transaction (FR-060)
+  store --> orch : committed
+  tracker -> meter : current changed
+  meter -> person : "Standard fitness machine (FTMS) 35% guess"
+end
+@enduml

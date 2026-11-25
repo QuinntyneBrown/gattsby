@@ -1,0 +1,39 @@
+@startuml
+title UML sequence behaviour — Advance a fake clock in a unit test
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Unit test" as test
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator\n(under test)" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelAdapter\n(test double)" as model
+end box
+box "Test harness — unit tests" #F4F3FF
+  participant "FakeClock" as clock
+end box
+
+test -> orch : Provide Clock = FakeClock; ModelAdapter that never answers
+test -> orch : runStep()
+orch -> clock : setTimeout(abort, 10 000 ms) (FR-047, A-05)
+orch -> model : prompt(state, signal)
+test -> clock : advance(9 999)
+clock --> test : nothing fired
+test -> clock : advance(1)
+clock -> orch : timeout fires
+orch -> model : AbortController.abort()
+orch --> test : step recorded as timed out
+note over test, clock : No sleep; time moves only when the test advances it
+@enduml

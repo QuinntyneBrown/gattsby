@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Finish with a checked verdict
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "FinishTool" as finish
+  participant "VerdictService" as verdicts
+  participant "VerdictRules" as rules
+  participant "DeviceProfileBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+
+orch -> model : prompt(DecisionState)
+model --> orch : finish "Connected — FTMS", summary
+orch -> finish : run(input, ctx) after validation
+finish -> verdicts : check(Connected — FTMS)
+verdicts -> store : Read observations and requests
+verdicts -> rules : check(connected, facts)
+alt No metric confirmed by live data
+  rules --> verdicts : unsupported; missing "a metric confirmed by live data"
+  verdicts --> finish : unsupported
+  finish --> orch : PRECONDITION_FAILED with what is missing (TOOL-030)
+  orch -> orch : Refusal counts as a step; the model sees the reason; loop continues
+else Speed and distance confirmed
+  rules --> verdicts : supported
+  finish -> verdicts : issue(connected, summary, finish)
+  verdicts -> verdicts : Refuse a second verdict for this investigation (FR-054)
+  finish -> builder : build(record, verdict) (FR-055)
+  builder --> finish : DeviceProfile, schema-valid
+  finish -> store : commitStep(final step, verdict, profile) in one transaction
+  store --> finish : profileId p-31
+  finish --> orch : ok, { verdict, profileId p-31 }
+  orch -> orch : Stop the loop (FR-045); release the connection (FR-018)
+  orch -> page : Navigate to /investigations/:id/verdict
+  page -> person : "Connected — FTMS" (FR-057)
+end
+@enduml

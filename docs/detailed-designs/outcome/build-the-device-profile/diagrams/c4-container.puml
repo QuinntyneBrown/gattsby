@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Build the device profile
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Profile builder, schema check, evidence index, profile and evidence pages")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Record (steps, observations, raw log) and profiles")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Version, metric and command definitions")
+}
+
+Rel(person, spa, "Opens the profile and its evidence", "Touch or keyboard")
+Rel(spa, kb, "Reads the knowledge-base version and definitions")
+Rel(spa, idb, "Reads the record; writes the profile; resolves evidence IDs")
+@enduml

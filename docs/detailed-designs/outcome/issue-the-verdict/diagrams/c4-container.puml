@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Issue the verdict
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Orchestrator, finish tool, verdict rules, verdict page")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Observations, verdict, profile and missing-tool requests")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Protocol display names used in Connected — protocol")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Opens the verdict screen", "Touch or keyboard")
+Rel(spa, nano, "May receive finish with a proposed verdict", "Prompt API")
+Rel(spa, kb, "Reads protocol display names")
+Rel(spa, idb, "Commits exactly one verdict with the final step; reads it for the screen")
+@enduml

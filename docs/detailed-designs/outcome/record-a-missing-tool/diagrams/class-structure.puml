@@ -1,0 +1,103 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Record a missing tool
+
+enum RaisedBy {
+  agent
+  unsupported
+  capability
+  encryption
+  safeLimit
+  hiddenService
+}
+
+class MissingToolDraft {
+  +capabilityKey: string
+  +capability: string
+  +reason: string
+  +evidence: EvidenceId[]
+  +stage: PlaybookStage
+  +raisedBy: RaisedBy
+}
+
+class MissingToolRequest {
+  +id: string
+  +investigationId: string
+  +capabilityKey: string
+  +capability: string
+  +reason: string
+  +evidence: EvidenceId[]
+  +stages: PlaybookStage[]
+  +raisedBy: RaisedBy[]
+  +occurrences: number
+  +firstRaisedAt: string
+  +lastRaisedAt: string
+}
+
+class MissingToolRequests {
+  +forInvestigation: Signal<MissingToolRequest[]>
+  +raise(draft: MissingToolDraft): RaiseResult
+}
+
+class RaiseResult {
+  +request: MissingToolRequest
+  +merged: boolean
+}
+
+class MissingToolTriggers <<pure helper>> {
+  +fromResult(result: ToolResult, call: ToolCall, stage: PlaybookStage): MissingToolDraft | null
+}
+
+class CapabilityKey <<pure helper>> {
+  +fromText(capability: string): string
+  +forCapability(id: string): string
+  +forEncrypted(serviceUuid: string): string
+}
+
+class RequestMissingToolTool {
+  +definition: ToolDefinition
+  +run(input: RequestMissingToolInput, ctx: ToolContext): Promise<ToolResult<RaiseOutput>>
+}
+
+class MissingToolGroup {
+  +capabilityKey: string
+  +capability: string
+  +reason: string
+  +status: "open" | "built"
+  +investigations: InvestigationLink[]
+  +count: number
+  +firstRaisedAt: string
+}
+
+class MissingToolsPage <<page>> {
+  +groups: Signal<MissingToolGroup[]>
+  +state: "loading" | "ready" | "empty" | "error"
+  +exportJson(): void
+}
+
+class MissingToolCard <<component>> {
+  +group: input<MissingToolGroup>
+}
+
+RequestMissingToolTool ..> MissingToolRequests : raise
+MissingToolTriggers ..> MissingToolDraft : builds
+MissingToolTriggers ..> CapabilityKey
+RequestMissingToolTool ..> CapabilityKey
+MissingToolRequests ..> MissingToolDraft : accepts
+MissingToolRequests "1" *-- "*" MissingToolRequest
+MissingToolRequests ..> RaiseResult : returns
+MissingToolRequest --> RaisedBy
+MissingToolsPage --> MissingToolGroup
+MissingToolsPage ..> MissingToolCard : renders
+@enduml
