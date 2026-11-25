@@ -1,0 +1,65 @@
+@startuml
+title UML sequence behaviour — Cancel, then widen to all devices
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "scanAllDevicesTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ScanOptionsBuilder" as builder
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome chooser" as chrome
+end box
+
+person -> chrome : Close the chooser without choosing
+chrome --> ble : NotFoundError (cancelled)
+ble --> executor : USER_CANCELLED (TOOL-002)
+executor -> rules : next(state)
+rules --> executor : decided: ask_user "Not in the list?" (FR-011)
+executor -> page : Post question through PromptChannel
+page -> person : "Show all nearby devices" or "Scan again"
+alt The person taps "Show all nearby devices"
+  person -> page : Tap "Show all nearby devices"
+  page --> rules : answer recorded
+  rules -> validator : call_tool scan_all_devices
+  validator -> validator : scan_devices tried in this investigation (TOOL-003)
+  validator --> executor : valid
+  executor -> tool : run({})
+  tool -> builder : acceptAll()
+  builder --> tool : acceptAllDevices true, full optionalServices (FR-012)
+  tool -> ble : requestDevice(options) within the tap's activation
+  ble -> chrome : requestDevice({ acceptAllDevices: true, optionalServices })
+  person -> chrome : Pick the device
+  chrome --> ble : BluetoothDevice
+  ble --> tool : ChosenDevice
+  tool --> executor : ok
+else The person taps "Scan again"
+  person -> page : Tap "Scan again"
+  page --> rules : answer recorded
+  rules -> executor : call_tool scan_devices (filtered, same options)
+end
+note over validator : scan_all_devices before any scan_devices\nis refused with PRECONDITION_FAILED (TOOL-003)
+@enduml

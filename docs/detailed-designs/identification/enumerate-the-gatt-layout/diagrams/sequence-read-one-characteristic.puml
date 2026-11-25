@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Read one characteristic
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "readCharacteristicTool" as tool
+  participant "CandidateDecodings" as cand
+  participant "KnowledgeBase" as kb
+  participant "MissingToolRecorder" as missing
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run({ service: 0x180F, characteristic: 0x2A19 })
+tool -> tool : Layout says the characteristic has read
+alt Property read present
+  tool -> ble : read(0x180F, 0x2A19)
+  ble -> device : readValue()
+  alt The device answers
+    device --> ble : 5A
+    ble -> log : Append read entry, direction in, "5A"
+    ble --> tool : bytes
+    tool -> cand : candidates(5A)
+    cand --> tool : uint8 90, sint8 90
+    tool -> kb : decoderFor(0x2A19)
+    kb --> tool : Battery Level decoder
+    tool --> executor : { hex: "5A", length: 1, candidates, knownDecoding: 90 % } (TOOL-011)
+  else Insufficient authentication or encryption
+    device --> ble : error
+    ble --> tool : AUTH_REQUIRED
+    tool -> missing : record request with the error as evidence (FR-033)
+    tool --> executor : AUTH_REQUIRED; no further attempt on this characteristic
+  end
+else No read property
+  tool --> executor : PROPERTY_MISSING
+end
+@enduml

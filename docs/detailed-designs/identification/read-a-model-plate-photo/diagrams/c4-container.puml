@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Read a model plate photo
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Photo dialog, capture tool, camera adapter, photo sanitizer, model adapter")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "photos store (no EXIF), observations")
+}
+System_Ext(chrome, "Chrome", "Camera through getUserMedia")
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(person, spa, "Takes the photo; edits the fields; taps Use this", "Touch or keyboard")
+Rel(spa, chrome, "Opens the camera only on the person's choice", "getUserMedia")
+Rel(spa, nano, "Image and a JSON schema", "Prompt API")
+Rel(spa, idb, "Stores the sanitized photo; commits the confirmed observation")
+@enduml

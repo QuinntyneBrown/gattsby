@@ -1,0 +1,35 @@
+@startuml
+title UML sequence behaviour — Device Information absent
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "Decider" as decider
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+rules -> rules : Layout has no 0x180A
+rules -> executor : Record observation "Device Information absent" (FR-020)
+executor -> idb : commitStep
+rules -> rules : Continue Identify: match_known_profiles
+opt The model asks for read_device_info anyway
+  decider -> validator : call_tool read_device_info
+  validator --> decider : PRECONDITION_FAILED (no 0x180A); counts against the step budget
+end
+@enduml

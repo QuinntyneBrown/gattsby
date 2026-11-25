@@ -1,0 +1,95 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Log raw traffic
+
+enum RawLogKind {
+  scan
+  advertisement
+  connect
+  disconnect
+  read
+  write
+  notification
+  indication
+}
+
+enum Direction {
+  out
+  in
+}
+
+class RawLogEntry {
+  +id: number
+  +investigationId: string
+  +stepId: string
+  +t: number
+  +kind: RawLogKind
+  +service?: string
+  +uuid?: string
+  +direction: Direction
+  +hex: string
+  +approvalId?: string
+  +detail?: string
+}
+
+class RawTrafficLog {
+  +windowSize = 2000
+  -nextId: number
+  -window: RawLogEntry[]
+  -pending: RawLogEntry[]
+  +count: Signal<number>
+  +append(entry: NewRawLogEntry): RawLogEntry
+  +latest(n: number): RawLogEntry[]
+  +flush(): Promise<void>
+  +takeForStep(stepId: string): RawLogEntry[]
+  +clear(): void
+}
+
+class HexCodec {
+  +toHex(bytes: Uint8Array): string
+}
+
+abstract class Clock <<contract>> {
+  +now(): number
+}
+
+abstract class InvestigationStore <<contract>> {
+  +appendRawLog(entries: RawLogEntry[]): Promise<void>
+  +commitStep(commit: StepCommit): Promise<void>
+}
+
+class IndexedDbInvestigationStore
+
+class StepCommit {
+  +step: Step
+  +rawLog: RawLogEntry[]
+  +observations: Observation[]
+  +hypothesis?: Hypothesis
+}
+
+class WebBluetoothBleLayer {
+  -onValue(characteristic: string, event: Event): void
+}
+
+RawTrafficLog "1" *-- "0..2000" RawLogEntry : window
+RawLogEntry --> RawLogKind
+RawLogEntry --> Direction
+RawTrafficLog ..> Clock : timestamps
+RawTrafficLog ..> InvestigationStore : flush batches
+WebBluetoothBleLayer ..> RawTrafficLog : append
+WebBluetoothBleLayer ..> HexCodec
+InvestigationStore <|-- IndexedDbInvestigationStore
+InvestigationStore ..> StepCommit
+StepCommit o-- RawLogEntry
+@enduml

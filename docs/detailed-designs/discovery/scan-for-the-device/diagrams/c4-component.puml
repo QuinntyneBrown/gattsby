@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Scan for the device
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Shows the Find prompt card and its buttons")
+  Component(channel, "PromptChannel", "Service", "Posts the tap prompt; 2-minute inactivity timer")
+  Component(rules, "PlaybookRules", "Pure rules", "Find stage: filtered scan first; offer an open scan after a cancel")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated call_tool and commits the step")
+  Component(scan, "scanDevicesTool", "Tool (read)", "TOOL-002: filtered chooser")
+  Component(scanAll, "scanAllDevicesTool", "Tool (read)", "TOOL-003: chooser accepting all devices")
+  Component(builder, "ScanOptionsBuilder", "BLE layer", "Builds filters and optionalServices minus the blocklist")
+  Component(kb, "KnowledgeBase", "Service", "Known service UUIDs, name prefixes, blocklist")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only caller of navigator.bluetooth.requestDevice")
+}
+System_Ext(chrome, "Chrome", "Device chooser")
+
+Rel(rules, executor, "Decides scan_devices or scan_all_devices")
+Rel(executor, scan, "run(input, ctx)")
+Rel(executor, scanAll, "run(input, ctx)")
+Rel(scan, builder, "filtered(machineType, brand)")
+Rel(scanAll, builder, "acceptAll()")
+Rel(builder, kb, "knownServiceUuids(), blocklist, name prefixes")
+Rel(scan, channel, "Awaits the tap")
+Rel(channel, page, "Renders Find the device")
+Rel(person, page, "Taps")
+Rel(scan, ble, "requestDevice(options)")
+Rel(scanAll, ble, "requestDevice(options)")
+Rel(ble, chrome, "requestDevice", "Web Bluetooth")
+@enduml

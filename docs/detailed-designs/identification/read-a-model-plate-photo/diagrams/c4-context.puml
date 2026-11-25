@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Read a model plate photo
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+
+Rel(person, gattsby, "Photographs the plate; confirms or corrects what was read")
+Rel(gattsby, chrome, "Takes the photo; stores it locally", "getUserMedia, IndexedDB")
+Rel(gattsby, nano, "Reads maker, model and serial from the image", "Prompt API image input")
+@enduml

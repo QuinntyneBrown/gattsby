@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Scan for the device
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Taps Find the device, Show all nearby devices or Scan again")
+Rel(gattsby, chrome, "Opens the device chooser with filters and optional services", "Web Bluetooth requestDevice")
+Rel(person, chrome, "Picks the device in the chooser, or closes it")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

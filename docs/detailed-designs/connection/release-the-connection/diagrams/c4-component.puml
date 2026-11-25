@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Release the connection
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Verdict issued or investigation stopped")
+  Component(guard, "leaveInvestigationGuard", "Route guard", "Confirms leaving while connected")
+  Component(leave, "LeaveInvestigationDialog", "Angular dialog", "Stay or Leave and disconnect")
+  Component(stopDlg, "StopInvestigationDialog", "Angular dialog", "Keep going or Stop and get the verdict")
+  Component(releaser, "ConnectionReleaser", "Service", "Releases on verdict, stop, leave, or 60 s hidden")
+  Component(tool, "disconnectTool", "Tool (read)", "TOOL-008: idempotent disconnect")
+  Component(supervisor, "ConnectionSupervisor", "Service", "Ignores intentional disconnects")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "stopNotifications, gatt.disconnect")
+  Component(session, "GattSession", "BLE layer", "state releasing, then disconnected")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, leave, "Leave and disconnect")
+Rel(person, stopDlg, "Stop and get the verdict")
+Rel(guard, leave, "Opens")
+Rel(leave, releaser, "release('leave')")
+Rel(stopDlg, orch, "stop('person')")
+Rel(orch, releaser, "release('verdict' or 'stop')")
+Rel(releaser, tool, "Runs disconnect")
+Rel(tool, ble, "disconnect(deviceId)")
+Rel(ble, session, "Marks releasing; clears subscriptions")
+Rel(ble, device, "stopNotifications(); gatt.disconnect()", "Web Bluetooth")
+Rel(supervisor, session, "Skips reconnect when releasing")
+@enduml

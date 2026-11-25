@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Read a model plate photo
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(menu, "InvestigationMenuDialog", "Angular dialog", "Photo of the model plate or console")
+  Component(dialog, "PhotoReadDialog", "Angular dialog", "Check what I read; Type the model instead")
+  Component(channel, "PromptChannel", "Service", "Posts the photo prompt")
+  Component(tool, "capturePhotoTool", "Tool (n/a)", "TOOL-027")
+  Component(camera, "MediaDevicesCameraAdapter", "Adapter", "The only code touching the camera")
+  Component(sanitizer, "PhotoSanitizer", "Pure helper", "Re-encodes the image without EXIF")
+  Component(model, "PromptApiModelAdapter", "Adapter", "readImage(blob)")
+  Component(tracker, "HypothesisTracker", "Service", "Maker and model as evidence with a confidence")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "photos")
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(person, menu, "Chooses the photo")
+Rel(menu, tool, "Runs capture_photo through ToolExecutor")
+Rel(tool, camera, "capture()")
+Rel(tool, sanitizer, "sanitize(blob)")
+Rel(tool, idb, "Stores the photo")
+Rel(tool, model, "readImage(blob)")
+Rel(model, nano, "prompt with image", "Prompt API")
+Rel(tool, channel, "Posts the read for confirmation")
+Rel(channel, dialog, "Renders")
+Rel(person, dialog, "Corrects; Use this")
+Rel(tool, tracker, "Confirmed read as an observation")
+@enduml

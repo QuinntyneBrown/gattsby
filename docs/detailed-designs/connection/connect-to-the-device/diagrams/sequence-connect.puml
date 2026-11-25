@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Connect to the chosen device
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ConnectionBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "connectTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run({ deviceId, timeoutMs: 10000 })
+tool -> tool : Precondition: a device chosen in this investigation
+tool -> ble : connect(deviceId, 10000)
+ble -> log : Append connect entry, direction out
+ble -> device : gatt.connect(), raced against 10 s
+alt The device accepts
+  device --> ble : connected
+  ble -> ble : Create GattSession; listen for gattserverdisconnected
+  ble --> tool : { connected: true, at }
+  tool --> executor : ok, "Connected to HZN-T202-4F1A"
+  executor -> executor : Commit step with the connection time (FR-015)
+  executor -> page : Header shows the name as text (NFR-013)
+  page -> banner : "Connected to HZN-T202-4F1A"
+  page -> person : Emergency stop now shown (FR-039)
+else No answer within 10 s
+  ble -> device : gatt.disconnect() to cancel the attempt
+  ble --> tool : TIMEOUT (TOOL-006)
+  tool --> executor : TIMEOUT
+  executor -> page : Failure with its reason, within 10 s (FR-015)
+else The device refuses
+  device --> ble : NetworkError
+  ble --> tool : CONNECTION_FAILED
+  tool --> executor : CONNECTION_FAILED; ConnectionSupervisor suspects another central (FR-017)
+end
+@enduml

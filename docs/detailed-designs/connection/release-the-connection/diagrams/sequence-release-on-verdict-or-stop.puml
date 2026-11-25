@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Release on verdict or stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "StopInvestigationDialog" as dialog
+  participant "VerdictPage" as vpage
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ConnectionReleaser" as releaser
+  participant "ConnectionSupervisor" as supervisor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "disconnectTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+alt The person stops
+  person -> dialog : Tap "Stop and get the verdict"
+  dialog -> dialog : Busy: "Disconnecting… this takes up to 2 seconds."
+  dialog -> orch : stop("person")
+  orch -> orch : Abort the loop; send nothing more (FR-009)
+else The loop issues a verdict
+  orch -> orch : finish: verdict committed
+end
+orch -> releaser : release("stop" or "verdict")
+releaser -> tool : run({ deviceId })
+tool -> ble : disconnect(deviceId)
+ble -> ble : GattSession.markReleasing()
+loop each subscription
+  ble -> device : stopNotifications(); remove listener
+end
+ble -> device : gatt.disconnect()
+device --> ble : gattserverdisconnected
+ble -> log : Append disconnect entry, direction out
+ble --> supervisor : DisconnectEvent, intentional
+supervisor -> supervisor : Ignore: no reconnect
+ble --> tool : done
+tool --> releaser : { disconnected: true } (TOOL-008)
+releaser --> orch : released within 2 s (FR-009)
+orch -> vpage : Navigate to the verdict
+vpage -> person : Verdict shown; no listener remains (FR-018)
+@enduml

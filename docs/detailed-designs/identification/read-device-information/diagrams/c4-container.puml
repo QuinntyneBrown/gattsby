@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Read device information
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "read_device_info tool, hypothesis tracker, device panel")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Device Information characteristic UUIDs, blocklist")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Observations, hypothesis versions, raw reads")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Sees the device panel fill in", "Touch or keyboard")
+Rel(spa, kb, "Reads the characteristic map and blocklist")
+Rel(spa, device, "readValue() on each characteristic", "Web Bluetooth")
+Rel(spa, idb, "Commits one observation per field and the hypothesis change")
+@enduml

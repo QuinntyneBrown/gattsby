@@ -1,0 +1,96 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Enumerate the GATT layout
+
+enum CharacteristicProperty {
+  read
+  write
+  writeWithoutResponse
+  notify
+  indicate
+}
+
+class GattLayout {
+  +services: GattServiceEntry[]
+  +requestedButUnreachable: string[]
+  +invisibilityNote: string
+}
+
+class GattServiceEntry {
+  +uuid: string
+  +name?: string
+  +characteristics: GattCharacteristicEntry[]
+}
+
+class GattCharacteristicEntry {
+  +uuid: string
+  +name?: string
+  +properties: CharacteristicProperty[]
+}
+
+class enumerateGattTool {
+  +name = "enumerate_gatt"
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<GattLayout>>
+}
+
+class readCharacteristicTool {
+  +name = "read_characteristic"
+  +run(input: ReadInput, ctx: ToolContext): Promise<ToolResult<ReadOutput>>
+}
+
+class ReadInput {
+  +service: string
+  +characteristic: string
+}
+
+class ReadOutput {
+  +hex: string
+  +length: number
+  +candidates: { encoding: string, value: string | number }[]
+  +knownDecoding?: DecodedValue
+}
+
+class CandidateDecodings {
+  +candidates(bytes: Uint8Array): { encoding: string, value: string | number }[]
+}
+
+class KnowledgeBase {
+  +blocklist: string[]
+  +nameOf(uuid: string): string | undefined
+  +decoderFor(uuid: string): Decoder | undefined
+}
+
+abstract class BleLayer <<contract>> {
+  +primaryServices(): Promise<ToolResult<GattServiceEntry[]>>
+  +read(service: string, characteristic: string): Promise<ToolResult<Uint8Array>>
+}
+
+class MissingToolRecorder {
+  +record(request: MissingToolRequest): Promise<void>
+}
+
+GattLayout "1" *-- "*" GattServiceEntry
+GattServiceEntry "1" *-- "*" GattCharacteristicEntry
+GattCharacteristicEntry --> CharacteristicProperty
+enumerateGattTool ..> BleLayer
+enumerateGattTool ..> KnowledgeBase : names
+enumerateGattTool ..> GattLayout : returns
+enumerateGattTool ..> MissingToolRecorder : FR-023
+readCharacteristicTool ..> ReadInput
+readCharacteristicTool ..> ReadOutput : returns
+readCharacteristicTool ..> BleLayer
+readCharacteristicTool ..> CandidateDecodings
+readCharacteristicTool ..> KnowledgeBase : decoderFor
+readCharacteristicTool ..> MissingToolRecorder : AUTH_REQUIRED
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+title UML sequence behaviour — Commit with the step, quota errors and release
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ConnectionReleaser" as releaser
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "RawTrafficLog" as log
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+executor -> log : takeForStep(stepId)
+log --> executor : entries not yet flushed
+executor -> store : commitStep({ step, rawLog, observations, hypothesis })
+store -> idb : One transaction: step, remaining entries, changes (FR-060)
+alt The transaction commits
+  idb --> store : ok
+  store --> executor : committed; the step is complete
+else Quota exceeded
+  idb --> store : QuotaExceededError
+  store --> executor : STORAGE_FULL
+  executor -> executor : Stop recording; keep what is stored; tell the person to export and delete (NFR-008)
+end
+note over store, idb : On reopening, entries tagged with a step that was never\ncommitted belong to the interrupted step and are discarded (NFR-007)
+releaser -> log : clear() on leaving the screen
+log -> log : Empty window and queue after a final flush (NFR-005)
+@enduml

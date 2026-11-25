@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Conclude not connectable
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Asks the checks in order")
+  Component(channel, "PromptChannel", "Service", "Posts each question with suggested answers")
+  Component(rules, "PlaybookRules", "Pure rules", "Counts unrecognised scans; orders the checks")
+  Component(executor, "ToolExecutor", "Service", "Runs assess_reachability and commits the step")
+  Component(tool, "assessReachabilityTool", "Tool (read)", "TOOL-034")
+  Component(assessor, "ReachabilityAssessor", "Pure helper", "Elimination rules of FR-014")
+  Component(verdict, "VerdictBuilder", "Service", "Issues Not connectable only with a 'no' assessment")
+  Component(vpage, "VerdictPage", "Angular page", "State not-connectable")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Observations and verdict")
+
+Rel(rules, channel, "Asks: on and awake; other app; within 2 m")
+Rel(channel, page, "Renders")
+Rel(person, page, "Answers")
+Rel(rules, executor, "Decides assess_reachability")
+Rel(executor, tool, "run({}, ctx)")
+Rel(tool, idb, "Reads observations")
+Rel(tool, assessor, "assess(observations)")
+Rel(rules, verdict, "finish: Not connectable")
+Rel(verdict, idb, "Commits verdict and profile")
+Rel(vpage, idb, "Reads the verdict")
+@enduml

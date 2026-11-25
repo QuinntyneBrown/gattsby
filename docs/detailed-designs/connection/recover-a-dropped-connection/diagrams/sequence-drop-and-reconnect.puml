@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Drop, reconnect and resume
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ConnectionBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ConnectionSupervisor" as supervisor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "reconnectTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ReconnectPolicy" as policy
+  participant "WebBluetoothBleLayer" as ble
+  participant "GattSession" as session
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+device --> ble : gattserverdisconnected (6 s into a recording)
+ble -> log : Append disconnect entry with timestamp (FR-016)
+ble -> supervisor : DisconnectEvent, unintentional
+supervisor -> orch : pause("connection dropped")
+orch -> orch : Abort the running step; keep the recording marked interrupted (TOOL-013)
+supervisor -> tool : run({ deviceId, attempts: 3 })
+loop attempt 1..3, until connected
+  tool -> policy : delayFor(attempt): 1 s, 2 s, 4 s
+  tool -> banner : "Reconnecting, attempt n of 3"
+  tool -> ble : connect(deviceId)
+  ble -> device : gatt.connect()
+end
+device --> ble : connected (attempt 2)
+tool -> session : rebind(server)
+session -> ble : Resolve each characteristic again; startNotifications()
+ble --> session : notifications flowing
+session --> tool : restoredSubscriptions [0x2ACD, 0x2AD9]
+tool --> supervisor : { connected: true, attempts: 2, restoredSubscriptions }
+supervisor -> banner : "Reconnected after 2 tries."
+supervisor -> orch : resume: repeat the interrupted step (FR-016)
+note over orch : Committed steps before the drop are untouched (NFR-007)
+@enduml

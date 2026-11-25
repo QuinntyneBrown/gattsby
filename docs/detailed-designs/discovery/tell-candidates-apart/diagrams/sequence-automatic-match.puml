@@ -1,0 +1,62 @@
+@startuml
+title UML sequence behaviour — Automatic power-cycle match, with fallback
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "powerCycleMatchTool" as tool
+  participant "watchAdvertisementsTool" as watch
+  participant "PowerCycleDetector" as detector
+  participant "MissingToolRecorder" as missing
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+
+rules -> executor : call_tool power_cycle_match { candidates: [A, B, C], mode: "automatic" }
+executor -> tool : run(input, ctx)
+tool -> watch : watch each candidate
+alt Advertisement watching is available (PD-ADV)
+  watch -> ble : watchAdvertisements(A, B, C; up to 60 s)
+  ble -> chrome : device.watchAdvertisements() or requestLEScan()
+  tool -> channel : post(action: "Switch it off for about 5 seconds, then on. Tap Done.")
+  person -> channel : Ready ... Done
+  chrome --> ble : advertisement events
+  ble --> watch : AdvertisementSample[] per candidate, logged (FR-073)
+  watch --> tool : samples
+  tool -> detector : find(samples, off/on window)
+  detector --> tool : B stopped and resumed
+  alt Exactly one candidate stopped and resumed
+    tool --> executor : match B, method automatic (FR-013)
+  else None or several
+    tool --> executor : match null
+    executor -> rules : next(state): guided match
+  end
+else Not available
+  watch -> missing : record "watch advertisements" with the reason (FR-058)
+  watch --> tool : UNSUPPORTED (TOOL-004)
+  tool --> executor : UNSUPPORTED (TOOL-005)
+  executor -> rules : next(state)
+  rules -> executor : call_tool power_cycle_match { mode: "guided" }
+end
+@enduml

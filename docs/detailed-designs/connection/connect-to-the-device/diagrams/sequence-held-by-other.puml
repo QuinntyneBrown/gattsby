@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Detect a device held by another central
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ConnectionSupervisor" as supervisor
+  participant "PromptChannel" as channel
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+  database "IndexedDB" as idb
+end box
+
+executor -> ble : connect (attempt 1)
+ble -> device : gatt.connect()
+device --> ble : connected
+device --> ble : gattserverdisconnected after 3 s
+ble --> supervisor : DisconnectEvent, unintentional
+supervisor -> supervisor : Within 5 s of connecting: quick drop 1
+supervisor -> executor : Connect again
+executor -> ble : connect (attempt 2)
+device --> ble : connected, then dropped after 2 s
+ble --> supervisor : DisconnectEvent, unintentional
+supervisor -> supervisor : Quick drop 2: suspect another central (FR-017)
+supervisor -> idb : Commit observation "Another app or watch may be holding the connection" (likely)
+supervisor -> channel : post(action: "Disconnect other apps and watches")
+channel -> page : Three instructions, "Done" and "Stop"
+alt The person taps "Done"
+  person -> page : Done
+  page --> channel : done
+  channel --> supervisor : done
+  supervisor -> supervisor : Reset the quick-drop count
+  supervisor -> executor : Connect again (FR-017)
+else The person taps "Stop"
+  person -> page : Stop
+  page --> supervisor : stop
+  supervisor -> executor : stop("person") (see the stop-pause-and-resume design)
+end
+@enduml

@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Read device information
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "readDeviceInfoTool" as tool
+  participant "KnowledgeBase" as kb
+  participant "HypothesisTracker" as tracker
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+  database "IndexedDB" as idb
+end box
+
+rules -> rules : Layout lists 0x180A
+rules -> executor : call_tool read_device_info
+executor -> page : Step "Reading the maker and model"
+executor -> tool : run({}, ctx)
+tool -> kb : deviceInformationFields(), blocklist
+kb --> tool : 0x2A29, 0x2A24, 0x2A25, 0x2A27, 0x2A26, 0x2A28, 0x2A23, 0x2A50
+loop each field present in the layout
+  alt On the blocklist (serial 0x2A25)
+    tool -> tool : Skip; note "serial: BLOCKLISTED" (TOOL-010)
+  else Readable
+    tool -> ble : read(0x180A, uuid)
+    ble -> device : readValue()
+    device --> ble : bytes
+    ble --> tool : bytes (logged as a read entry)
+    tool -> tool : UTF-8 text without trailing NULs, or hex for IDs
+  end
+end
+tool --> executor : { manufacturer: "Johnson Health Tech", model: "T202", firmware: "2.14.0" }
+executor -> tracker : maker and model, evidence = the read entries (FR-020)
+executor -> idb : commitStep: one observation per field, hypothesis version
+executor -> page : "Johnson Health Tech · model T202 · firmware 2.14.0" as text
+@enduml

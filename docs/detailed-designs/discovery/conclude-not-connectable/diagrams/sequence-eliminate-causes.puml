@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Eliminate the usual causes, then conclude
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "VerdictPage" as vpage
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "assessReachabilityTool" as tool
+  participant "ReachabilityAssessor" as assessor
+  participant "VerdictBuilder" as verdict
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+note over rules : Two scans ended with "not in the list" (FR-014)
+rules -> page : ask "Is the console on and awake?"
+person -> page : Yes
+rules -> page : ask "Is any other app or watch connected to it?"
+person -> page : No
+rules -> page : ask "Please stand within 2 metres of it"
+person -> page : Done
+alt A check fails ("No", or "Yes, an app is connected")
+  rules -> page : Ask the person to fix it, then scan again
+else All three confirmed
+  rules -> executor : call_tool scan_devices (third scan)
+  executor --> rules : USER_CANCELLED, "not in the list"
+  rules -> executor : call_tool assess_reachability
+  executor -> tool : run({}, ctx)
+  tool -> idb : Read scans, answers, observations
+  idb --> tool : 3 unrecognised scans; 3 checks confirmed
+  tool -> assessor : assess(input)
+  assessor --> tool : reachable no; causes Classic, ANT+, Wi-Fi, USB (TOOL-034)
+  tool --> executor : ok
+  executor -> idb : Commit step and observation
+  rules -> verdict : finish: Not connectable
+  verdict -> verdict : Check evidence: assessment reachable no
+  verdict -> idb : Commit verdict, reasons and profile
+  verdict --> vpage : Show "Not connectable" with the reasons (FR-014)
+  vpage -> person : "A browser can't reach it."
+else The third scan finds the device
+  rules -> executor : Continue to connect (connect-to-the-device design)
+end
+@enduml

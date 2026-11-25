@@ -1,0 +1,94 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Read a model plate photo
+
+class CapturePhotoInput {
+  +subject: "modelPlate" | "console"
+}
+
+class PlateRead {
+  +maker?: string
+  +model?: string
+  +serial?: string
+  +confidence: number
+}
+
+class CapturePhotoOutput {
+  +photoId: string
+  +read?: PlateRead
+  +confirmedByPerson: boolean
+}
+
+class capturePhotoTool {
+  +name = "capture_photo"
+  +safetyClass = "n/a"
+  +run(input: CapturePhotoInput, ctx: ToolContext): Promise<ToolResult<CapturePhotoOutput>>
+}
+
+abstract class CameraAdapter <<contract>> {
+  +availability(): Promise<boolean>
+  +capture(signal: AbortSignal): Promise<Blob>
+}
+
+class MediaDevicesCameraAdapter {
+  -stream: MediaStream | null
+  +capture(signal: AbortSignal): Promise<Blob>
+  +release(): void
+}
+
+class PhotoSanitizer {
+  +sanitize(blob: Blob): Promise<Blob>
+}
+
+abstract class ModelAdapter <<contract>> {
+  +availability(): Promise<ModelAvailability>
+  +readImage(blob: Blob, signal: AbortSignal): Promise<PlateRead>
+}
+
+class PromptApiModelAdapter
+
+class Photo {
+  +id: string
+  +investigationId: string
+  +subject: string
+  +blob: Blob
+  +takenAt: number
+}
+
+class PhotoReadDialog <<component>> {
+  +read: input<PlateRead | null>
+  +state: input<"default" | "busy" | "invalid" | "unavailable">
+  +photoUrl: input<string | null>
+  +decided: output<PhotoDecision>
+}
+
+class PhotoDecision {
+  +action: "use" | "retake" | "skip"
+  +maker?: string
+  +model?: string
+  +serial?: string
+}
+
+capturePhotoTool ..> CapturePhotoInput
+capturePhotoTool ..> CapturePhotoOutput : returns
+capturePhotoTool ..> CameraAdapter
+capturePhotoTool ..> PhotoSanitizer
+capturePhotoTool ..> ModelAdapter : readImage
+capturePhotoTool ..> Photo : stores
+CameraAdapter <|-- MediaDevicesCameraAdapter
+ModelAdapter <|-- PromptApiModelAdapter
+CapturePhotoOutput *-- PlateRead
+PhotoReadDialog ..> PlateRead : shows
+PhotoReadDialog ..> PhotoDecision : emits
+@enduml

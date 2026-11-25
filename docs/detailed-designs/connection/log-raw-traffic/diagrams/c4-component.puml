@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Log raw traffic
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Appends one entry per Bluetooth event")
+  Component(hex, "HexCodec", "Pure helper", "Bytes to spaced hex through a lookup table")
+  Component(log, "RawTrafficLog", "BLE layer", "Sequence, timestamp, 2,000-entry window, batched flush")
+  Component(ledger, "ApprovalLedger", "BLE layer", "Supplies the approval ID of each write")
+  Component(store, "IndexedDbInvestigationStore", "Store", "rawLog writes and step commits")
+  Component(releaser, "ConnectionReleaser", "Service", "Clears the window on leaving the screen")
+  Component(evidence, "EvidencePage", "Angular page", "Shows entries as text")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "rawLog")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(device, ble, "characteristicvaluechanged")
+Rel(ble, ledger, "consume(approvalId) before a write")
+Rel(ble, hex, "toHex(bytes)")
+Rel(ble, log, "append(entry)")
+Rel(log, store, "appendRawLog(batch)")
+Rel(store, idb, "Writes", "IndexedDB")
+Rel(releaser, log, "clear()")
+Rel(evidence, store, "Reads entries by investigation")
+Rel(person, evidence, "Filters All, Sent, Received")
+@enduml

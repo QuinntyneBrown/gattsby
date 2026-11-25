@@ -1,0 +1,46 @@
+@startuml
+title UML sequence behaviour — No image input: type the model instead
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PhotoReadDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "capturePhotoTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+end box
+
+executor -> tool : run({ subject: "modelPlate" })
+tool -> model : availability() and image input
+model --> tool : no image input, or checklist mode (PD-PROMPT-IMAGE)
+tool -> dialog : unavailable: "Type the model instead"
+dialog -> person : "Reading photos needs image input in Chrome's on-device model, which isn't available here."
+alt The person types the model
+  person -> dialog : Maker, model, serial; tap "Use this"
+  dialog --> tool : use { maker, model }
+  tool --> executor : { confirmedByPerson: true }, typed by the person (FR-022)
+else The person taps "Skip"
+  person -> dialog : Skip
+  dialog --> tool : skip
+  tool --> executor : USER_CANCELLED; the step is recorded as skipped
+end
+note over tool : The same fallback follows a model error or timeout during readImage
+@enduml

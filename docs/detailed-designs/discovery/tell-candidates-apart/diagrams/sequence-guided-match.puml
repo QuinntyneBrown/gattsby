@@ -1,0 +1,62 @@
+@startuml
+title UML sequence behaviour — Guided power-cycle match
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "powerCycleMatchTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome chooser" as chrome
+  participant "Device" as device
+end box
+
+person -> page : "Several names look alike"
+page --> rules : answer recorded
+rules -> rules : Advertisement watching unavailable: mode guided (FR-013)
+rules -> executor : call_tool power_cycle_match { mode: "guided" }
+executor -> tool : run(input, ctx)
+tool -> channel : post(tap: "Pick the one that comes back")
+channel -> page : Instruction, "Find the device" and "Skip"
+alt The person taps "Find the device"
+  person -> page : Tap "Find the device"
+  page --> tool : tapped (user gesture)
+  tool -> ble : requestDevice(filtered options)
+  ble -> chrome : requestDevice
+  person -> device : Switch off about 5 s, then on
+  note over chrome : The page cannot read the chooser (A-10);\nthe person watches it
+  person -> chrome : Pick HZN-T202-4F1A after it returns
+  chrome --> ble : BluetoothDevice
+  ble --> tool : ChosenDevice
+  tool --> executor : match HZN-T202-4F1A, method guided
+  executor -> executor : Commit observation "Your machine is HZN-T202-4F1A" (FR-013)
+else The person taps "Skip"
+  person -> page : Tap "Skip"
+  page --> tool : skipped
+  tool --> executor : USER_CANCELLED; step recorded as skipped (FR-052)
+  executor -> rules : next(state): back to the Find prompt
+end
+@enduml

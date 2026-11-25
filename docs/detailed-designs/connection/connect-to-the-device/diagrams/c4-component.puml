@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Connect to the device
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Device name as text; held-by-other prompt")
+  Component(banner, "ConnectionBanner", "Notification", "Connected to {name}")
+  Component(channel, "PromptChannel", "Service", "Posts Disconnect other apps and watches")
+  Component(connect, "connectTool", "Tool (read)", "TOOL-006: connect within timeoutMs")
+  Component(permitted, "getPermittedDevicesTool", "Tool (read)", "TOOL-032: reconnect on resume without the chooser (P2)")
+  Component(supervisor, "ConnectionSupervisor", "Service", "Counts quick drops and refusals; suspects another central")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "connect, permittedDevices, disconnected stream")
+  Component(session, "GattSession", "BLE layer", "Connected device and connectedAt")
+  Component(log, "RawTrafficLog", "BLE layer", "connect and disconnect entries")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(connect, ble, "connect(deviceId, timeoutMs)")
+Rel(permitted, ble, "permittedDevices()")
+Rel(ble, device, "gatt.connect()", "Web Bluetooth")
+Rel(ble, session, "Creates")
+Rel(ble, log, "Appends connect entry")
+Rel(ble, supervisor, "disconnected events")
+Rel(supervisor, channel, "Posts held-by-other prompt (FR-017)")
+Rel(channel, page, "Renders")
+Rel(person, page, "Taps Done or Stop")
+Rel(session, banner, "Connection state")
+@enduml

@@ -1,0 +1,79 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Conclude not connectable
+
+enum Reachable {
+  yes
+  no
+  unknown
+}
+
+enum EliminationCheck {
+  poweredAndAwake
+  noOtherConnection
+  withinRange
+}
+
+class ReachabilityInput {
+  +chosenDevice: boolean
+  +unrecognisedScans: number
+  +checks: Map<EliminationCheck, "yes" | "no" | "dontKnow">
+  +heldByOtherSuspected: boolean
+}
+
+class ReachabilityAssessment {
+  +reachable: Reachable
+  +likelyCauses: string[]
+  +ruledOut: string[]
+}
+
+class ReachabilityAssessor {
+  +assess(input: ReachabilityInput): ReachabilityAssessment
+}
+
+class assessReachabilityTool {
+  +name = "assess_reachability"
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<ReachabilityAssessment>>
+}
+
+class PlaybookRules {
+  +next(state: DecisionState): RuleOutcome
+}
+
+class VerdictBuilder {
+  +build(kind: VerdictKind, state: DecisionState): Verdict | ToolError
+}
+
+class Verdict {
+  +kind: VerdictKind
+  +reasons: string[]
+  +evidence: string[]
+}
+
+abstract class InvestigationStore <<contract>> {
+  +get(id: string): Promise<Investigation>
+  +commitStep(commit: StepCommit): Promise<void>
+}
+
+assessReachabilityTool ..> InvestigationStore : reads observations
+assessReachabilityTool ..> ReachabilityAssessor
+ReachabilityAssessor ..> ReachabilityInput
+ReachabilityAssessor ..> ReachabilityAssessment : returns
+ReachabilityInput --> EliminationCheck
+ReachabilityAssessment --> Reachable
+PlaybookRules ..> assessReachabilityTool : decides
+PlaybookRules ..> VerdictBuilder : finish
+VerdictBuilder ..> ReachabilityAssessment : requires reachable no
+VerdictBuilder ..> Verdict : builds
+@enduml
