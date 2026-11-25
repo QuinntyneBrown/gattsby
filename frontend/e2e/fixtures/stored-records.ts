@@ -123,6 +123,7 @@ export class StoredRecords {
       hex: string;
       decoded?: readonly DecodedMetric[];
       decodeError?: string;
+      approvalId?: string;
       recordingId?: string;
     }>('rawLog');
     return rows.filter((row) => row.investigationId === id);

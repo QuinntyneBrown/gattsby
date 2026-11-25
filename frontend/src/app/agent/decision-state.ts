@@ -47,6 +47,7 @@ export interface DecisionState {
   readonly inclineConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly inclineBaseline: number | null;
   readonly controlChoice: 'test' | 'skip' | null;
+  readonly controlRequested: boolean;
   readonly finished: boolean;
 }
 
@@ -83,6 +84,7 @@ export const INITIAL_STATE: DecisionState = {
   inclineConfirmation: null,
   inclineBaseline: null,
   controlChoice: null,
+  controlRequested: false,
   finished: false,
 };
 
@@ -198,6 +200,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       };
     case 'disconnect':
       return { ...next, connected: false };
+    case 'request_control':
+      return { ...next, controlRequested: true };
     case 'update_hypothesis':
       return step.result.ok &&
         step.ruleId === 'identify.ambiguous' &&

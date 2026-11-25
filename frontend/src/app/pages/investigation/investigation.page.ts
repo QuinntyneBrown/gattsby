@@ -15,15 +15,18 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
+import { ApprovalGate } from '../../agent/approval-gate';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { ChecklistDecider } from '../../agent/checklist-decider';
 import { PromptChannel } from '../../agent/prompt-channel';
 import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
+import { ApprovalDialog } from '../../dialogs/approval/approval.dialog';
 import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
 import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
 import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
+import { ControlPointExchange } from '../../tools/control/control-point-exchange';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { InvestigationNote } from '../../store/model/investigation-note';
 import { StoreError } from '../../store/store-error';
@@ -52,6 +55,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     StageTrackComponent,
     StillThereDialog,
     AddNoteDialog,
+    ApprovalDialog,
     InvestigationMenuDialog,
     ModeBannerComponent,
   ],
@@ -61,6 +65,8 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     LiveMetrics,
     NotificationRecorder,
     ConfirmationCheck,
+    ApprovalGate,
+    ControlPointExchange,
     ChecklistDecider,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -306,6 +312,15 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </section>
         </aside>
       </main>
+      @if (orchestrator.approvalGate.request(); as approval) {
+        <g-approval-dialog
+          [request]="approval"
+          [busy]="orchestrator.approvalGate.busy()"
+          [connected]="connected()"
+          (decided)="orchestrator.approvalGate.respond($event.decision, $event.standClear)"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      }
       @if (optionsOpen()) {
         <g-investigation-menu-dialog
           [connected]="connected()"

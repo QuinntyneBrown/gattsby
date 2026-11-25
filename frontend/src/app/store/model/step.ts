@@ -1,4 +1,5 @@
 import type { ToolResult } from '../../tools/tool-result';
+import type { ApprovalDecision } from './approval-decision';
 import type { OperatingMode } from './operating-mode';
 import type { ModelDecision } from './model-decision';
 import type { Stage } from './stage';
@@ -19,6 +20,7 @@ export interface Step {
   readonly id: string;
   readonly mode?: OperatingMode;
   readonly modelDecision?: ModelDecision;
+  readonly approval?: ApprovalDecision;
   readonly stage: Stage;
   readonly tool: string;
   readonly input: unknown;

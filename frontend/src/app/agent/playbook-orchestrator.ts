@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { BleLayer } from '../ble/ble-layer';
+import { ApprovalLedger } from '../ble/approval-ledger';
 import { RawTrafficLog } from '../ble/raw-traffic-log';
 import type { Capabilities } from '../environment/capabilities';
 import { CapabilityDetector } from '../environment/capability-detector';
@@ -15,6 +16,7 @@ import { Clock } from '../shared/clock';
 import { InvestigationStore } from '../store/investigation-store';
 import { PendingVerdict } from '../store/pending-verdict';
 import { StoreError } from '../store/store-error';
+import type { ApprovalDecision } from '../store/model/approval-decision';
 import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
@@ -28,6 +30,7 @@ import type { StopReason } from '../store/model/stop-reason';
 import type { Verdict, VerdictKind } from '../store/model/verdict';
 import type { VerdictCommit } from '../store/model/verdict-commit';
 import { TOOL_CATALOG } from '../tools/tool-catalog';
+import { ControlPointExchange } from '../tools/control/control-point-exchange';
 import { NotificationRecorder } from '../tools/listening/notification-recorder';
 import type { UpdateHypothesisInput } from '../tools/meta/update-hypothesis.tool';
 import type { NewMissingToolRequest, ToolContext } from '../tools/tool-context';
@@ -35,6 +38,7 @@ import { ToolError } from '../tools/tool-error';
 import { ToolRegistry } from '../tools/tool-registry';
 import { fail, type ToolResult } from '../tools/tool-result';
 import { applyStep, stateFrom, type DecisionState } from './decision-state';
+import { ApprovalGate } from './approval-gate';
 import { ConfirmationCheck } from './confirmation-check';
 import { ChecklistDecider } from './checklist-decider';
 import { buildFeed } from './feed-builder';
@@ -76,6 +80,9 @@ export class PlaybookOrchestrator {
   private readonly pendingVerdict = inject(PendingVerdict);
   private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly ble = inject(BleLayer);
+  private readonly approvalLedger = inject(ApprovalLedger);
+  readonly approvalGate = inject(ApprovalGate);
+  private readonly controlPoint = inject(ControlPointExchange);
   private readonly notificationRecorder = inject(NotificationRecorder);
   private readonly confirmationCheck = inject(ConfirmationCheck);
   private readonly log = inject(RawTrafficLog);
@@ -248,6 +255,7 @@ export class PlaybookOrchestrator {
       return;
     }
     this.modelSession = this.modelSessions.take(id);
+    this.approvalLedger.begin();
     this.statusSignal.set('running');
     this.log.begin(id, 0);
     await this.loop();
@@ -262,12 +270,16 @@ export class PlaybookOrchestrator {
     this.prompts.cancel();
     // Journey 2 sends no command, so no stop sequence is known: the emergency stop disconnects
     // at once and tells the person to use the machine's own stop (emergency-stop design, rule 5).
-    if (reason === 'emergencyStop') void this.ble.disconnect();
+    if (reason === 'emergencyStop') {
+      this.approvalLedger.lock();
+      void this.ble.disconnect();
+    }
   }
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
   async leave(): Promise<void> {
     this.leaving = true;
+    this.approvalLedger.lock();
     this.abort.abort();
     this.prompts.cancel();
     this.releaseModel();
@@ -426,6 +438,7 @@ export class PlaybookOrchestrator {
       ble: this.ble,
       notificationRecorder: this.notificationRecorder,
       confirmationCheck: this.confirmationCheck,
+      controlPoint: this.controlPoint,
       kb,
       prompts: this.prompts,
       capabilities: { detect: () => this.capabilities.detect({ model: this.mode() === 'agent' }) },
@@ -475,6 +488,7 @@ export class PlaybookOrchestrator {
       },
     };
     let result: ToolResult<unknown>;
+    let approval: ApprovalDecision | undefined;
     if (refusal) {
       result = fail(refusal.code, refusal.message);
     } else if (!tool) {
@@ -482,7 +496,16 @@ export class PlaybookOrchestrator {
     } else if (!tool.stages.includes(action.stage)) {
       result = fail('NOT_ALLOWED_AT_STAGE', `${action.tool} is not allowed at ${action.stage}.`);
     } else {
-      result = await executeTool(tool, action.input, ctx, () => handedOut);
+      result = await executeTool(
+        tool,
+        action.input,
+        ctx,
+        () => handedOut,
+        this.approvalGate,
+        (decision) => {
+          approval = decision;
+        },
+      );
     }
     if (this.leaving) return true;
     const step: Step = {
@@ -501,6 +524,7 @@ export class PlaybookOrchestrator {
             ? 'checklist'
             : 'rules',
       ...(modelDecision ? { modelDecision } : {}),
+      ...(approval ? { approval } : {}),
       ruleId: action.ruleId,
       startedAt,
       endedAt: this.clock.now(),
@@ -508,7 +532,7 @@ export class PlaybookOrchestrator {
         ? 'completed'
         : result.error.code === 'ABORTED'
           ? 'interrupted'
-          : refusal && refusal.code !== 'TIMEOUT'
+          : (refusal && refusal.code !== 'TIMEOUT') || result.error.code === 'APPROVAL_DENIED'
             ? 'refused'
             : 'failed',
       result,
@@ -556,6 +580,7 @@ export class PlaybookOrchestrator {
         evidence: result.evidence,
       };
       this.statusSignal.set('concluding');
+      this.approvalLedger.lock();
       this.releaseModel();
       await this.ble.disconnect();
       rawLog.push(...this.log.takePending());

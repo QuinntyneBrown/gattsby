@@ -272,6 +272,52 @@
           "mode": {
             "enum": ["agent", "checklist"]
           },
+          "approval": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "request", "decision", "standClearConfirmed", "decidedAt"],
+            "properties": {
+              "id": { "type": "string" },
+              "request": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "tool",
+                  "title",
+                  "detail",
+                  "risk",
+                  "isMotion",
+                  "sequence",
+                  "deviceId",
+                  "connectedAt",
+                  "service",
+                  "characteristic",
+                  "bytes"
+                ],
+                "properties": {
+                  "tool": { "type": "string" },
+                  "title": { "type": "string" },
+                  "detail": { "type": "string" },
+                  "risk": { "type": "string" },
+                  "isMotion": { "type": "boolean" },
+                  "sequence": { "type": "string" },
+                  "deviceId": { "type": "string" },
+                  "connectedAt": { "type": "number" },
+                  "service": { "type": "string" },
+                  "characteristic": { "type": "string" },
+                  "bytes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 64,
+                    "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+                  }
+                }
+              },
+              "decision": { "enum": ["send", "decline", "cancel"] },
+              "standClearConfirmed": { "type": "boolean" },
+              "decidedAt": { "type": "number" }
+            }
+          },
           "modelDecision": {
             "type": "object",
             "additionalProperties": false,
