@@ -42,7 +42,7 @@ person -> button : Tap "Emergency stop"
 button -> ctrl : trigger()
 ctrl -> ctrl : stopped = true (latch) (FR-039)
 ctrl -> ledger : revokeAll()
-ctrl -> orch : abortCurrentStep(emergencyStop)
+ctrl -> orch : abortCurrentStep(emergencyStopped)
 orch -> model : abort() via the step's AbortController (FR-047)
 ctrl -> channel : cancelAll(EMERGENCY_STOPPED); approval closes, nothing sent
 ctrl -> dialog : Busy: "Sending Stop, then Reset"
