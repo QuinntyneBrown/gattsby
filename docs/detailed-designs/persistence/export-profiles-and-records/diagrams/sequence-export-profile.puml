@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Export a profile, or copy its summary
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ExportDialog" as dialog
+  participant "DeviceProfilePage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ExportService" as export
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome downloads" as downloads
+  participant "Clipboard" as clip
+end box
+
+person -> page : Tap "Export"
+page -> export : estimateSizes(i-2c91)
+export --> page : profile 4 KB, record 86 KB
+page -> dialog : Open; "Include notes and photos" unticked
+alt Export profile
+  person -> dialog : Tap "Device profile"
+  dialog --> page : exportProfile({ includeNotesAndPhotos: false })
+  page -> dialog : Busy: "Preparing horizon-t202-2026-11-25-profile.gattsby.json…"
+  page -> export : exportProfile(p-7f3c, options)
+  export -> store : get profile p-7f3c
+  store --> export : DeviceProfile 1.0
+  export -> export : Add exportedAt, appVersion; no notes
+  export -> export : SchemaValidator: device-profile-1 (FR-062)
+  export -> export : FileNamer: horizon-t202-2026-11-25-profile.gattsby.json
+  export -> downloads : createObjectURL; anchor download; click
+  export -> export : revokeObjectURL in the next task
+  export --> page : Saved, 4 KB
+  page -> dialog : Success: "Nothing was sent anywhere."
+else Copy summary
+  person -> dialog : Tap "Copy summary"
+  dialog --> page : copySummary
+  page -> export : summaryText(p-7f3c)
+  export --> page : Plain text
+  page -> clip : navigator.clipboard.writeText(text)
+  page --> person : Toast "Summary copied."
+end
+@enduml

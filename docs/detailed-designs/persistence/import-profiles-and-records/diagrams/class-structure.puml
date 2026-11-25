@@ -1,0 +1,89 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Import profiles and records
+
+enum ImportErrorCode {
+  FILE_TOO_LARGE
+  NOT_JSON
+  FORBIDDEN_KEY
+  NOT_GATTSBY
+  UNSUPPORTED_VERSION
+  SCHEMA_INVALID
+  ALREADY_EXISTS
+  STORAGE_FULL
+  ABORTED
+}
+
+class ImportError {
+  +code: ImportErrorCode
+  +message: string
+  +detail?: string
+}
+
+class ImportOutcome {
+  +kind: "gattsby.device-profile" | "gattsby.investigation-record"
+  +displayName: string
+  +profileId: string
+  +alreadyPresent: boolean
+  +migratedFrom?: string
+}
+
+class MigrationPlan {
+  +action: "asIs" | "migrate" | "unsupported"
+  +fromMajor: number
+  +chain: number[]
+}
+
+class ImportService {
+  +maxBytes: 20971520
+  +import(file: File, signal: AbortSignal): Promise<ImportOutcome>
+  -parse(text: string): unknown
+  -identify(doc: unknown): DeclaredType
+}
+
+class RecordMigrator {
+  +current: Map<string, string>
+  +plan(kind: string, version: string): MigrationPlan
+  +migrate(doc: unknown, plan: MigrationPlan): unknown
+}
+
+class SchemaValidator {
+  +validate(schemaId: string, value: unknown): ValidationResult
+}
+
+abstract class InvestigationStore <<contract>> {
+  +importProfile(profile: DeviceProfile): Promise<ImportWrite>
+  +importRecord(record: InvestigationRecordFile): Promise<ImportWrite>
+}
+
+class ImportDialog <<component>> {
+  +state: input<"default" | "busy" | "invalid" | "failed" | "success">
+  +fileName: input<string | null>
+  +outcome: input<ImportOutcome | null>
+  +error: input<ImportError | null>
+  +fileChosen: output<File>
+  +cancelled: output<void>
+  +openProfile: output<string>
+}
+
+ImportService ..> RecordMigrator
+ImportService ..> SchemaValidator
+ImportService ..> InvestigationStore
+ImportService ..> ImportOutcome : returns
+ImportService ..> ImportError : refuses with
+ImportError --> ImportErrorCode
+RecordMigrator ..> MigrationPlan : returns
+ImportDialog ..> ImportOutcome : shows
+ImportDialog ..> ImportError : shows
+@enduml

@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Return a result envelope
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "try/catch; normalise; validate; record; commit")
+  Component(tool, "Tool implementation", "ToolDefinition", "Returns ToolResult or throws ToolError")
+  Component(ctx, "ToolContext", "Object", "observe(); collects evidence IDs")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Maps DOMException to shared codes")
+  Component(validator, "SchemaValidator", "Service", "Output schema check")
+  Component(messages, "ErrorMessages", "Map", "Code to plain message and next step")
+  Component(feed, "ActivityFeed", "Angular component", "Summary or message, as text")
+  Component(state, "DecisionStateBuilder", "Service", "Summary and code for the model")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "steps with result and StepError")
+
+Rel(executor, tool, "run(input, ctx)")
+Rel(tool, ctx, "observe(), ble calls")
+Rel(ctx, ble, "Read, subscribe, write")
+Rel(executor, validator, "Validate data")
+Rel(executor, idb, "commitStep")
+Rel(executor, messages, "Message for code")
+Rel(executor, feed, "Step row")
+Rel(state, executor, "Last summaries")
+@enduml

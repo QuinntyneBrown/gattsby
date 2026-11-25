@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Record missing-tool requests
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+}
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+
+Rel(person, spa, "Opens Missing tools; taps Export JSON", "Touch or keyboard")
+Rel(spa, nano, "Receives request_missing_tool", "Prompt API")
+Rel(spa, idb, "Commits requests with steps; reads them across investigations")
+@enduml

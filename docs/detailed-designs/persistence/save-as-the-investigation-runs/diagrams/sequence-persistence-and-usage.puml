@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Request persistence and watch usage
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ToastStack" as toast
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "StorageManager" as sm
+  database "IndexedDB" as idb
+end box
+
+orch -> store : create(init)
+store -> idb : put investigation (strict)
+store -> idb : get settings persistenceRequested
+opt First investigation on this browser (NFR-008)
+  store -> sm : navigator.storage.persist()
+  sm --> store : granted true or false
+  store -> idb : put settings persistenceRequested, persistenceGranted
+end
+store --> orch : Investigation
+loop After committed steps, at most once every 30 s
+  orch -> store : usage()
+  store -> sm : navigator.storage.estimate()
+  sm --> store : usage, quota
+  store -> idb : count investigations, profiles, photos
+  store --> orch : StorageUsage ratio 0.92
+  opt ratio above 0.9 and not yet warned in this investigation
+    orch -> toast : Warning: "Storage is nearly full."
+    toast --> person : "Export old investigations, then delete them." Open past investigations
+  end
+end
+@enduml

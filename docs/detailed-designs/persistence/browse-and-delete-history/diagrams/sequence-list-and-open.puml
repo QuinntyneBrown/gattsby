@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — List and open the history
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HistoryPage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+person -> page : Open "Past investigations"
+page -> store : list()
+store -> idb : readonly investigations; cursor on byStartedAt, direction prev
+alt Storage answers
+  idb --> store : 8 records, newest first
+  store --> page : InvestigationSummary[] (FR-061)
+  alt None stored
+    page --> person : "No investigations yet" with Identify a device, Import a record
+  else Some stored
+    page --> person : Rows: device, verdict or "In progress · paused at stage", date, location
+  end
+else Storage fails
+  idb --> store : error
+  store --> page : STORAGE_UNAVAILABLE
+  page --> person : "Couldn't read your investigations" with Try again
+end
+person -> page : Tap "Horizon T202"
+alt Concluded or stopped
+  page -> page : Navigate to /investigations/i-2c91/verdict
+else Paused
+  page -> page : Navigate to /investigations/i-5a10 to resume (FR-009)
+end
+@enduml

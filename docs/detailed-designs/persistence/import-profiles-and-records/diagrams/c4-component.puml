@@ -1,0 +1,24 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Import profiles and records
+
+Person(person, "Person", "Developer")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(pages, "ProfilesPage / SettingsPage / HistoryPage", "Angular pages", "Open Import; own the AbortController")
+  Component(dialog, "ImportDialog", "Angular component", "Choose, busy, invalid, failed, success")
+  Component(service, "ImportService", "Service", "Size, JSON, keys, kind, version, schema, conflict")
+  Component(migrator, "RecordMigrator", "Service", "Plans and applies migrations between majors")
+  Component(validator, "SchemaValidator", "Service", "Precompiled schemas per kind and major")
+  Component(store, "IndexedDbInvestigationStore", "Store", "importProfile, importRecord")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Every object store")
+
+Rel(person, dialog, "Chooses a file; Cancel")
+Rel(pages, dialog, "Opens; passes state")
+Rel(pages, service, "import(file, signal)")
+Rel(service, migrator, "plan(), migrate()")
+Rel(service, validator, "validate()")
+Rel(service, store, "importProfile or importRecord")
+Rel(store, idb, "One readwrite transaction")
+@enduml

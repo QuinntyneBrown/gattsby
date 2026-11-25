@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Issue the verdict
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "UUIDs, decoders' data, vendor signatures, safe limits, commands")
+}
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Reads the Verdict page", "Touch or keyboard")
+Rel(spa, nano, "Receives finish with a requested verdict", "Prompt API")
+Rel(spa, kb, "Reads protocol short names")
+Rel(spa, idb, "Commits verdict, profile and final step in one transaction")
+Rel(spa, device, "Disconnects before the verdict is shown", "Web Bluetooth")
+@enduml

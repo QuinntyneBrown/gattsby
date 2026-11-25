@@ -1,0 +1,25 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Save as the investigation runs
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Pauses and stops recording on STORAGE_FULL")
+  Component(executor, "ToolExecutor", "Service", "Assembles the StepCommit at step end")
+  Component(log, "RawTrafficLog", "BLE layer", "2,000-entry window; flushes provisional entries")
+  Component(store, "IndexedDbInvestigationStore", "Store", "The only code touching IndexedDB")
+  Component(schema, "DatabaseSchema", "Store", "Database gattsby v1: stores, keys, indexes")
+  Component(toast, "ToastService", "Service", "Storage warning and failed-save toasts")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Ten object stores")
+System_Ext(chrome, "Chrome", "StorageManager: persist(), estimate()")
+
+Rel(log, store, "flushRawLog (relaxed)")
+Rel(executor, store, "commitStep (strict)")
+Rel(store, schema, "Applies on upgrade")
+Rel(store, idb, "Transactions")
+Rel(store, chrome, "persist(), estimate()")
+Rel(executor, orch, "STORAGE_FULL")
+Rel(orch, toast, "Warning or danger toast")
+Rel(orch, store, "usage(), requestPersistence(), recoverInterrupted()")
+@enduml

@@ -1,0 +1,25 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Maintain the knowledge base
+
+System_Ext(script, "validate-knowledge-base.ts", "Build script: schema and cross-file rules")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(kbc, "KnowledgeBase", "Service", "Loads generated data; version, UUIDs, limits, commands")
+  Component(registry, "decoder-registry", "Map", "Decoder IDs to Decoder instances")
+  Component(decoder, "Decoder", "Pure helpers", "One per standard characteristic; FieldLayoutDecoder")
+  Component(scan, "ScanOptionsBuilder", "BLE layer", "optionalServices minus the blocklist")
+  Component(matcher, "VendorSignatureMatcher", "Service", "Name patterns, UUIDs, manufacturer IDs")
+  Component(limits, "SafetyLimits", "Service", "Checks commands against limits")
+}
+ContainerDb(files, "Knowledge base data", "JSON files", "manifest, standard, vendors, limits, commands, blocklist, schema")
+
+Rel(script, files, "Validates; writes generated file")
+Rel(script, registry, "Checks decoder references")
+Rel(kbc, files, "import() generated/knowledge-base.json")
+Rel(kbc, registry, "decoderFor(uuid)")
+Rel(registry, decoder, "Holds")
+Rel(scan, kbc, "knownServiceUuids()")
+Rel(matcher, kbc, "vendors")
+Rel(limits, kbc, "safeLimits(deviceType)")
+@enduml

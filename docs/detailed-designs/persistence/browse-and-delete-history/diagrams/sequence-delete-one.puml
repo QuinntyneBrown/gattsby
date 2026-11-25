@@ -1,0 +1,48 @@
+@startuml
+title UML sequence behaviour — Delete one investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HistoryPage" as page
+  participant "DeleteInvestigationDialog" as dialog
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+person -> page : Tap "Delete the investigation of Domyos T540C, Wed 28 Oct"
+page -> dialog : Open; focus on Cancel
+dialog --> person : "Delete “Domyos T540C”?" It can't be undone
+alt Person confirms
+  person -> dialog : Tap "Delete investigation"
+  dialog -> dialog : Busy state
+  dialog --> page : confirmed
+  page -> store : delete(i-0e77)
+  store -> idb : readwrite over 9 stores
+  store -> idb : delete key range [i-0e77] in steps, rawLog, observations, hypotheses, recordings, photos, missingToolRequests
+  store -> idb : delete profile found by byInvestigation; delete investigation
+  idb --> store : complete (FR-061 AC2)
+  store --> page : deleted
+  page -> page : Revoke photo object URLs; reload list
+  page --> person : Row gone
+else Person cancels
+  person -> dialog : Tap Cancel or press Escape
+  dialog --> page : cancelled; nothing deleted
+end
+@enduml

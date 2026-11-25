@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Catch and record an error
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "DecisionStateBuilder" as state
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "readCharacteristicTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Web Bluetooth" as bt
+end box
+
+executor -> tool : run({ characteristic: 0xfff1 }, ctx)
+tool -> ble : read(0xfff0, 0xfff1)
+ble -> bt : readValue()
+alt Device returns an ATT error
+  bt --> ble : DOMException with ATT code
+  ble --> tool : throw ToolError GATT_ERROR "ATT 0x0E"
+  tool --> executor : (throws)
+  executor -> executor : catch: keep GATT_ERROR (FR-072 AC1)
+else Stop or emergency stop aborts the call
+  bt --> ble : AbortError
+  ble --> executor : (throws)
+  executor -> executor : catch: ABORTED
+else Unexpected exception in Gattsby's code
+  tool --> executor : throw TypeError
+  executor -> executor : catch: defect, code <TO SUPPLY> (proposed INTERNAL_ERROR)
+end
+executor -> executor : Envelope ok false, data null, summary one line
+executor -> store : commitStep with StepError { code, message, tool, stage, at } (NFR-025)
+store --> executor : committed
+executor -> feed : ErrorMessages.forCode(code)
+feed --> person : "The machine refused that read." and what to try next
+state -> executor : Last summaries
+executor --> state : Summary and error code only, no data
+note over executor, store : Nothing is reported off the device
+@enduml

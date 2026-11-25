@@ -1,0 +1,77 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Export profiles and records
+
+enum ExportKind {
+  profile
+  record
+  missingTools
+}
+
+class ExportOptions {
+  +includeNotesAndPhotos: boolean
+}
+
+class ExportResult {
+  +fileName: string
+  +bytes: number
+}
+
+class ExportSizes {
+  +profileBytes: number
+  +recordBytes: number
+  +recordWithPhotosBytes: number
+}
+
+class ExportService {
+  +exportProfile(profileId: string, options: ExportOptions): Promise<ExportResult>
+  +exportRecord(investigationId: string, options: ExportOptions, pending?: PendingState): Promise<ExportResult>
+  +exportMissingTools(): Promise<ExportResult>
+  +estimateSizes(investigationId: string): Promise<ExportSizes>
+  +summaryText(profileId: string): Promise<string>
+  -save(blob: Blob, fileName: string): void
+}
+
+class FileNamer {
+  +fileName(displayName: string, startedAt: string, kind: ExportKind): string
+}
+
+class SchemaValidator {
+  +validate(schemaId: string, value: unknown): ValidationResult
+}
+
+abstract class InvestigationStore <<contract>> {
+  +get(id: string): Promise<InvestigationRecord>
+  +rawLogPages(id: string, pageSize: number): AsyncIterable<RawLogEntry[]>
+}
+
+class ExportDialog <<component>> {
+  +sizes: input<ExportSizes>
+  +hasRecord: input<boolean>
+  +state: input<"default" | "busy" | "success">
+  +savedName: input<string | null>
+  +exportProfile: output<ExportOptions>
+  +exportRecord: output<ExportOptions>
+  +copySummary: output<void>
+}
+
+ExportService ..> InvestigationStore : reads
+ExportService ..> FileNamer
+ExportService ..> SchemaValidator
+ExportService ..> ExportOptions
+ExportService ..> ExportResult : returns
+FileNamer ..> ExportKind
+ExportDialog ..> ExportOptions : emits
+ExportDialog ..> ExportSizes : shows
+@enduml

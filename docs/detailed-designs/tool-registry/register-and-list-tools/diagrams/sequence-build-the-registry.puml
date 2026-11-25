@@ -1,0 +1,44 @@
+@startuml
+title UML sequence behaviour — Build and check the registry
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "TOOL_CATALOG" as catalog
+  participant "ToolRegistry" as registry
+  participant "SchemaValidator" as validator
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+end box
+
+orch -> registry : inject (first use)
+registry -> catalog : Read entries in order
+catalog --> registry : 34 ToolDefinitions (TOOL-001 to TOOL-034)
+loop Each entry (FR-070)
+  registry -> registry : Every field present; unique snake_case name
+  registry -> registry : Description one line, at most 120 characters
+  registry -> validator : has(input and output schema IDs)
+  validator --> registry : true
+  registry -> registry : n/a only for Person and Meta
+  registry -> registry : control only at control; write only at proprietary
+  alt Entry breaks an invariant
+    registry --> orch : Error naming the tool and the field
+    note right of registry : Caught by the unit test that loads the real catalog
+  end
+end
+registry -> registry : Keep entries whose phase is enabled (ToolRegistryConfig)
+registry --> orch : Ready
+note over catalog, orch : Adding a tool changes its file and TOOL_CATALOG only (NFR-022)
+@enduml

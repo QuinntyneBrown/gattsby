@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Build the device profile
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(tool, "finishTool", "Tool registry entry", "Concludes; asks for the profile")
+  Component(builder, "ProfileBuilder", "Pure helper", "Observations to metrics, features, quirks")
+  Component(resolver, "EvidenceResolver", "Service", "Resolves evidence IDs to record entries")
+  Component(validator, "SchemaValidator", "Service", "Precompiled profile schema 1.x")
+  Component(kbc, "KnowledgeBase", "Service", "Names, commands, version")
+  Component(profilePage, "DeviceProfilePage", "Angular page", "Readable data, controllable, identity, notes")
+  Component(evidencePage, "EvidencePage", "Angular page", "Entries filtered by ids, with timestamps")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "profiles, observations, rawLog, steps")
+
+Rel(tool, builder, "build(facts, verdict)")
+Rel(builder, kbc, "Reads names and commands")
+Rel(builder, resolver, "exists(investigationId, ids)")
+Rel(tool, validator, "Validates the profile")
+Rel(tool, idb, "commitVerdict with profile")
+Rel(profilePage, idb, "Reads the profile")
+Rel(person, evidencePage, "Taps Evidence next to an entry")
+Rel(evidencePage, resolver, "resolve(ids)")
+Rel(resolver, idb, "Reads by key")
+@enduml

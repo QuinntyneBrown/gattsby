@@ -1,0 +1,22 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Maintain the knowledge base
+
+Person(author, "Knowledge-base author", "Developer")
+Person(person, "Person", "Developer or helper beside the machine")
+System_Ext(build, "Build pipeline", "validate-knowledge-base.ts, then ng build")
+System_Boundary(gattsby, "Gattsby") {
+  Container(kb, "Knowledge base data", "Versioned JSON files", "UUIDs, decoders' data, vendor signatures, safe limits, commands")
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+}
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(author, kb, "Adds or edits data files")
+Rel(build, kb, "Validates; writes generated/knowledge-base.json")
+Rel(spa, kb, "Loads the generated file", "Dynamic import")
+Rel(spa, idb, "Records kbVersion on each investigation and profile")
+Rel(person, spa, "Runs an investigation")
+Rel(spa, device, "Scans with known UUIDs; decodes", "Web Bluetooth")
+@enduml

@@ -1,0 +1,72 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Browse and delete history
+
+class InvestigationSummary {
+  +id: string
+  +deviceName: string
+  +status: InvestigationStatus
+  +verdictLabel?: string
+  +stage: Stage
+  +startedAt: string
+  +location?: string
+}
+
+abstract class InvestigationStore <<contract>> {
+  +list(): Promise<InvestigationSummary[]>
+  +delete(id: string): Promise<void>
+  +deleteAll(): Promise<void>
+  +usage(): Promise<StorageUsage>
+}
+
+class IndexedDbInvestigationStore {
+  -deleteRange(tx: IDBTransaction, store: string, id: string): void
+  -closeAndDeleteDatabase(): Promise<void>
+}
+
+class HistoryPage <<component>> {
+  +summaries: Signal<InvestigationSummary[]>
+  +state: Signal<"loading" | "ready" | "empty" | "error">
+  +open(summary: InvestigationSummary): void
+  +askDelete(summary: InvestigationSummary): void
+}
+
+class SettingsPage <<component>> {
+  +usage: Signal<StorageUsage | null>
+  +askDeleteAll(): void
+}
+
+class DeleteInvestigationDialog <<component>> {
+  +summary: input<InvestigationSummary>
+  +busy: input<boolean>
+  +confirmed: output<void>
+  +cancelled: output<void>
+}
+
+class DeleteAllDataDialog <<component>> {
+  +usage: input<StorageUsage>
+  +busy: input<boolean>
+  +typed: string
+  +canDelete(): boolean
+  +confirmed: output<void>
+  +cancelled: output<void>
+}
+
+InvestigationStore <|-- IndexedDbInvestigationStore
+InvestigationStore ..> InvestigationSummary : returns
+HistoryPage ..> InvestigationStore
+SettingsPage ..> InvestigationStore
+HistoryPage ..> DeleteInvestigationDialog : opens
+SettingsPage ..> DeleteAllDataDialog : opens
+@enduml

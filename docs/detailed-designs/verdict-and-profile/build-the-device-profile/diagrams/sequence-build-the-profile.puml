@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Build and store the profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "finishTool" as tool
+  participant "ProfileBuilder" as builder
+  participant "KnowledgeBase" as kb
+  participant "EvidenceResolver" as resolver
+  participant "SchemaValidator" as validator
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+tool -> builder : build(facts, verdict)
+builder -> kb : version, characteristic names, command entries
+kb --> builder : 2026.11 and entries
+builder -> builder : Map observations to metrics (FR-027) and features (FR-040)
+builder -> builder : Copy location label (FR-010); no raw log (FR-055)
+loop Each metric and feature
+  builder -> resolver : exists(id, entry.evidence)
+  alt Evidence resolves
+    resolver --> builder : true
+  else No resolvable evidence
+    resolver --> builder : false
+    builder -> builder : Move entry to undetermined (FR-055 AC2)
+  end
+end
+builder --> tool : DeviceProfile, format 1.0
+tool -> validator : validate(device-profile-1, profile)
+alt Valid (FR-055 AC1)
+  validator --> tool : ok
+  tool -> store : commitVerdict(verdict, profile, final step)
+  store -> idb : put profiles, investigations, steps in one transaction
+  idb --> store : complete
+  store --> tool : committed
+else Invalid
+  validator --> tool : errors with JSON pointers
+  tool -> tool : Refuse commit; record failure with tool and stage (NFR-025)
+end
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+title UML sequence behaviour — Open the evidence for a profile entry
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+  participant "EvidencePage" as evidence
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "EvidenceResolver" as resolver
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+person -> page : Tap "Evidence" next to Speed
+page -> evidence : Navigate to /investigations/i-2c91/evidence?ids=o-9,r-118,r-152
+evidence -> resolver : resolve each id
+resolver -> resolver : Prefix names the store: o- observations, r- rawLog
+resolver -> store : get observation o-9
+store --> resolver : "Speed field is speed in km/h", evidence r-118, r-152
+resolver -> store : get rawLog r-118, r-152
+store --> resolver : Notifications with t in ms and hex
+resolver --> evidence : Items, one level of cited IDs resolved
+alt Every id resolves
+  evidence --> person : Notifications and decoded speed with timestamps (FR-056)
+else An id is missing (imported profile without its record)
+  evidence --> person : "This evidence isn't on this device." for that id
+end
+person -> evidence : Tap "Show everything"
+evidence --> person : Whole log
+@enduml

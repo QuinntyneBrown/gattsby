@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Issue the verdict
+
+enum VerdictKind {
+  connected
+  partiallyDecoded
+  needsMissingTool
+  notConnectable
+  stoppedByPerson
+}
+
+enum StopReason {
+  finish
+  confidence
+  stepBudget
+  noProgress
+  personStop
+  emergencyStop
+}
+
+class Verdict {
+  +kind: VerdictKind
+  +protocol?: string
+  +label: string
+  +summary: string
+  +stopReason: StopReason
+  +issuedAt: string
+  +stepN: number
+  +evidence: string[]
+}
+
+class VerdictFacts {
+  +hypothesis: Hypothesis | null
+  +observations: Observation[]
+  +missingToolRequests: MissingToolRequest[]
+  +everConnected: boolean
+  +stopReason: StopReason
+}
+
+class VerdictCommit {
+  +investigationId: string
+  +step: Step
+  +verdict: Verdict
+  +profile: DeviceProfile
+  +investigationPatch: Partial<Investigation>
+}
+
+class VerdictBuilder {
+  +check(kind: VerdictKind, facts: VerdictFacts): VerdictCheck
+  +derive(facts: VerdictFacts): Verdict
+}
+
+class finishTool <<ToolDefinition>> {
+  +name: "finish"
+  +safetyClass: "n/a"
+  +stages: ["conclude"]
+  +run(input: FinishInput, ctx: ToolContext): Promise<ToolResult<FinishOutput>>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +commitVerdict(commit: VerdictCommit): Promise<void>
+}
+
+class VerdictPage <<component>> {
+  +id: input<string>
+  +state: Signal<"loading" | "ready" | "error">
+}
+
+class VerdictSummary <<component>> {
+  +verdict: input<Verdict>
+  +profile: input<DeviceProfile>
+  +requests: input<MissingToolRequest[]>
+  +exportProfile: output<void>
+  +exportRecord: output<void>
+  +newInvestigation: output<void>
+}
+
+Verdict --> VerdictKind
+Verdict --> StopReason
+VerdictBuilder ..> VerdictFacts : reads
+VerdictBuilder ..> Verdict : builds
+finishTool ..> VerdictBuilder
+finishTool ..> VerdictCommit : commits
+finishTool ..> InvestigationStore
+VerdictCommit *-- Verdict
+VerdictPage ..> InvestigationStore : loads
+VerdictPage ..> VerdictSummary : renders
+@enduml

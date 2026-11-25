@@ -1,0 +1,101 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Return a result envelope
+
+enum ErrorCode {
+  INVALID_INPUT
+  UNKNOWN_TOOL
+  NOT_ALLOWED_AT_STAGE
+  PRECONDITION_FAILED
+  UNSUPPORTED
+  BLE_UNAVAILABLE
+  USER_CANCELLED
+  NOT_CONNECTED
+  CONNECTION_FAILED
+  TIMEOUT
+  GATT_ERROR
+  SERVICE_NOT_PERMITTED
+  BLOCKLISTED
+  AUTH_REQUIRED
+  PROPERTY_MISSING
+  APPROVAL_REQUIRED
+  APPROVAL_DENIED
+  UNSAFE_VALUE
+  EMERGENCY_STOPPED
+  DEVICE_REJECTED
+  INSUFFICIENT_DATA
+  DECODE_ERROR
+  STORAGE_FULL
+  ABORTED
+}
+
+class "ToolResult<O>" as ToolResult {
+  +ok: boolean
+  +summary: string
+  +data: O | null
+  +error: ToolError | null
+  +evidence: string[]
+  +{static} ok(summary: string, data: O, evidence: string[]): ToolResult<O>
+  +{static} fail(error: ToolError, summary: string, evidence: string[]): ToolResult<never>
+}
+
+class ToolError {
+  +code: ErrorCode
+  +message: string
+}
+
+class StepError {
+  +code: ErrorCode
+  +message: string
+  +tool: string
+  +stage: Stage
+  +at: string
+}
+
+class ToolContext {
+  +ble: BleLayer
+  +kb: KnowledgeBase
+  +store: InvestigationStore
+  +prompts: PromptChannel
+  +investigationId: string
+  +stage: Stage
+  +signal: AbortSignal
+  +observe(observation: ObservationDraft): string
+  +collectedEvidence(): string[]
+}
+
+class ToolExecutor {
+  +execute(action: CallToolAction, tool: ToolDefinition): Promise<ToolResult<unknown>>
+  -fromThrow(e: unknown): ToolError
+  -normalise(result: ToolResult<unknown>, ctx: ToolContext): ToolResult<unknown>
+}
+
+class ErrorMessages {
+  +forCode(code: ErrorCode): PlainMessage
+}
+
+class PlainMessage {
+  +message: string
+  +nextStep: string
+}
+
+ToolResult --> ToolError
+ToolError --> ErrorCode
+StepError --> ErrorCode
+ToolExecutor ..> ToolContext : creates
+ToolExecutor ..> ToolResult : normalises
+ToolExecutor ..> StepError : records
+ToolExecutor ..> ErrorMessages
+ErrorMessages ..> PlainMessage
+@enduml

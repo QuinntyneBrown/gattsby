@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Build the device profile
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(host, "Static host", "HTTPS host that serves Gattsby's static files and headers")
+
+Rel(person, gattsby, "Reads the profile; opens the evidence behind an entry")
+Rel(gattsby, chrome, "Stores the profile; reads the record it cites", "IndexedDB")
+Rel(host, gattsby, "Serves the published profile schema", "HTTPS, same origin")
+@enduml

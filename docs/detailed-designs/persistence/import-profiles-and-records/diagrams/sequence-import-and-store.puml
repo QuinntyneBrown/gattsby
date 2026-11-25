@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Import and store a file
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ImportDialog" as dialog
+  participant "ProfilesPage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ImportService" as service
+  participant "RecordMigrator" as migrator
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+person -> page : Tap "Import"
+page -> dialog : Open (default)
+person -> dialog : Choose horizon-t202-2026-11-25-profile.gattsby.json
+dialog --> page : fileChosen(file)
+page -> dialog : Busy: "Checking it against the profile format…"
+page -> service : import(file, signal)
+service -> service : 4 KB ≤ 20 MB (NFR-015)
+service -> service : file.text(); JSON.parse with reviver: no forbidden key
+service -> service : kind gattsby.device-profile, formatVersion 1.0
+service -> migrator : plan(profile, 1.0)
+migrator --> service : asIs
+service -> service : SchemaValidator: device-profile-1 (FR-064)
+service -> store : importProfile(profile)
+store -> idb : readwrite profiles: get p-7f3c
+alt No profile with this ID
+  store -> idb : put profile unchanged
+  idb --> store : complete
+  store --> service : written
+else Same ID, identical canonical JSON
+  store --> service : already present; nothing written
+end
+service --> page : ImportOutcome Horizon T202
+page -> dialog : Success: "Imported Horizon T202. It's in Saved devices, identical to the export."
+person -> dialog : Tap "Open the profile"
+dialog --> page : openProfile(p-7f3c)
+@enduml

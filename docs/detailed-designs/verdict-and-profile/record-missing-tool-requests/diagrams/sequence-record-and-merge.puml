@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Record and merge a request
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ModelDecider" as decider
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "requestMissingToolTool" as tool
+  participant "MissingToolRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+decider -> validator : request_missing_tool "watch advertisements", reason, [s-4]
+validator -> validator : Lengths 80 and 280; evidence resolves (TOOL-029)
+validator -> executor : Validated action
+executor -> tool : run(input, ctx)
+tool -> recorder : record(draft, source agent, stage find)
+recorder -> recorder : key = "watch advertisements"
+alt No request with this key in the investigation
+  recorder -> recorder : Create m-1
+  recorder --> tool : m-1, merged false
+else Same key already recorded (FR-058)
+  recorder -> recorder : Add evidence, add reason if new, occurrences + 1
+  recorder --> tool : m-1, merged true
+end
+tool --> executor : ok { requestId m-1, merged }
+executor -> store : commitStep(step + request m-1) (FR-060)
+store --> executor : committed
+note over executor, recorder : ToolExecutor, PlaybookRules and SafetyLimits call record() the same way for UNSUPPORTED, AUTH_REQUIRED, an unavailable capability or a missing safe limit
+@enduml

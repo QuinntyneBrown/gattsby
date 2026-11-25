@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — List across investigations and export
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "MissingToolsPage" as page
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "MissingToolRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "ExportService" as export
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+  participant "Chrome downloads" as downloads
+end box
+
+person -> page : Open "Missing tools"
+page -> recorder : groupedAcrossInvestigations()
+recorder -> store : allMissingToolRequests()
+store -> idb : readonly transaction: missingToolRequests, investigations
+alt Storage answers
+  idb --> store : Requests and device names
+  store --> recorder : Requests
+  recorder -> recorder : Group by capability key; count distinct investigations (FR-059)
+  recorder --> page : Groups: open first, oldest first; built last
+  page --> person : "decode vendor X", Open · 3, links to three investigations
+else Storage fails
+  idb --> store : Error
+  store --> page : STORAGE_UNAVAILABLE
+  page --> person : "Couldn't read the requests" with Try again
+end
+person -> page : Tap "Export JSON"
+page -> export : exportMissingTools()
+export -> export : Build list format 1.0; validate against its schema
+export -> downloads : Object URL, download missing-tools-2026-11-25.gattsby.json
+export -> export : Revoke the object URL
+export --> page : Saved
+page --> person : Toast: saved; nothing was sent anywhere
+@enduml

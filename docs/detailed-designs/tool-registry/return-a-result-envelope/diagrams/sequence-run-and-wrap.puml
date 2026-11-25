@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Run a tool and wrap its result
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "readDeviceInfoTool" as tool
+  participant "ToolContext" as ctx
+  participant "SchemaValidator" as validator
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+executor -> ctx : Create for step 5, stage identify, signal
+executor -> tool : run({}, ctx)
+tool -> ble : read(0x180A, 0x2A29)
+ble --> tool : bytes; raw log r-14
+tool -> ble : read(0x180A, 0x2A24)
+ble --> tool : bytes; raw log r-15
+tool -> ctx : observe(maker Johnson Health Tech, evidence [r-14])
+ctx --> tool : o-5
+tool --> executor : ok, "Johnson Health Tech · model T202 · firmware 2.14.0", data, [o-5]
+executor -> executor : One line; at most 200 characters (FR-072)
+executor -> validator : validate(read_device_info.output, data)
+validator --> executor : valid
+executor -> ctx : collectedEvidence()
+ctx --> executor : r-14, r-15, r-16, o-5
+executor -> executor : evidence = union, no duplicates
+executor -> store : commitStep(step 5 with envelope)
+store --> executor : committed
+executor -> feed : Summary row with Evidence
+@enduml

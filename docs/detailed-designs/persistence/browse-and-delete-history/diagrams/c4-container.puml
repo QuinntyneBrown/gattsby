@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Browse and delete history
+
+Person(person, "Person", "Developer or helper")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+}
+
+Rel(person, spa, "Opens Past investigations and Settings", "Touch or keyboard")
+Rel(spa, idb, "list(), delete(id) in one transaction, deleteDatabase on delete all")
+@enduml

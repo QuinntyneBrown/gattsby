@@ -1,0 +1,97 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Track the hypothesis
+
+enum HypothesisSource {
+  model
+  rules
+  checklist
+}
+
+enum ConfidenceWord {
+  guess
+  likely
+  confirmed
+}
+
+class HypothesisProposal {
+  +protocol: string
+  +deviceType?: string
+  +maker?: string
+  +model?: string
+  +proposedConfidence: number
+  +evidence: string[]
+}
+
+class Hypothesis {
+  +investigationId: string
+  +version: number
+  +stepN: number
+  +source: HypothesisSource
+  +previousVersion: number | null
+  +protocol: string
+  +deviceType?: string
+  +maker?: string
+  +model?: string
+  +confidence: number
+  +proposedConfidence?: number
+  +evidence: string[]
+  +contributions: ScoreContribution[]
+  +createdAt: string
+}
+
+class ScoreContribution {
+  +rule: string
+  +weight: number
+  +observationIds: string[]
+}
+
+class HypothesisTracker {
+  +current: Signal<Hypothesis | null>
+  +versions: Signal<Hypothesis[]>
+  +apply(proposal: HypothesisProposal, stepN: number, source: HypothesisSource): Hypothesis
+  +rescore(stepN: number, observations: Observation[]): Hypothesis | null
+  +restore(investigationId: string): Promise<void>
+}
+
+class ConfidenceScorer {
+  +score(protocol: string, observations: Observation[]): ScoreResult
+  +wordFor(confidence: number): ConfidenceWord
+}
+
+class EvidenceResolver {
+  +exists(investigationId: string, ids: string[]): Promise<boolean>
+  +resolve(investigationId: string, id: string): Promise<EvidenceItem | null>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +commitStep(commit: StepCommit): Promise<void>
+  +hypotheses(investigationId: string): Promise<Hypothesis[]>
+}
+
+class ConfidenceBadge <<component>> {
+  +confidence: input<number>
+  +word: input<ConfidenceWord>
+}
+
+HypothesisTracker "1" *-- "*" Hypothesis : versions
+HypothesisTracker ..> HypothesisProposal : applies
+HypothesisTracker ..> ConfidenceScorer : scores with
+HypothesisTracker ..> InvestigationStore : restores from
+Hypothesis "1" *-- "*" ScoreContribution
+Hypothesis --> HypothesisSource
+ConfidenceScorer ..> ConfidenceWord : maps to
+ConfidenceBadge ..> ConfidenceWord : shows
+EvidenceResolver ..> InvestigationStore : reads
+@enduml
