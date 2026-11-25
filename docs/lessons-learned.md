@@ -48,8 +48,8 @@ None; this is the first entry.
 ### What slowed it
 
 - **Journey 1 was not on `main`.** It sat in an open pull request (#11). The prompt said to report
-  that as a blocker. The journey was complete on its branch, so this branch was started from it
-  and its pull request is stacked on #11 instead.
+  that as a blocker. The journey was complete on its branch, so this branch was started from it;
+  #11 merged before journey 2 finished, and the branch was rebased onto `main`.
 - **The shared core came before its slices.** The store, knowledge base, registry, BLE layer and
   orchestrator were written in one pass behind the first slice's spec. The later slices' specs
   (Find, Connect, Identify, Hypothesis, Conclude) therefore mostly passed on their first run, and
