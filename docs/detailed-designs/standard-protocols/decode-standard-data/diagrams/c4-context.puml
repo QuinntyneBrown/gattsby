@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Decode standard data
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike or sensor exposing a standard Bluetooth SIG service")
+
+Rel(person, gattsby, "Follows the prompts; walks, pedals or wears the strap")
+Rel(gattsby, chrome, "Subscribes to the data characteristic", "Web Bluetooth")
+Rel(chrome, device, "GATT notifications over Bluetooth LE")
+@enduml

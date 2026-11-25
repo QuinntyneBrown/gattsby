@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Update the live readings
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "LiveMetrics" as view
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "LiveMetricsService" as live
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "SubscribeAndRecordTool" as sar
+  participant "DecoderRegistry" as registry
+  participant "MetricConfirmations" as confirmations
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+sar -> live : track(0x2A37) on first subscribe
+live -> ble : subscribe(0x2A37, listener) (reference-counted)
+loop while subscribed
+  device -> ble : notification 00 48
+  ble -> live : listener(entry): keep newest; request one animation frame
+  device -> ble : notification 00 49 (same frame)
+  ble -> live : listener(entry): replaces pending value
+  live -> live : onFrame()
+  live -> registry : decode(00 49)
+  registry --> live : heart rate 73 bpm
+  live -> confirmations : statusOf(heart rate)
+  confirmations --> live : null, so likely
+  live -> live : readings.set(...) once per frame (NFR-003)
+  page -> view : readings, layout strip (< 992 px) or panel
+  view --> person : "Heart rate ~ 73 bpm" as text, within 1 s (FR-026)
+end
+alt person leaves the page, device disconnects, stop or emergency stop
+  page -> live : release()
+  live -> ble : unsubscribe()
+  live -> live : Cancel pending frame; clear readings (NFR-005)
+end
+@enduml

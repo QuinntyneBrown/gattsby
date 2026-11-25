@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Determine readable metrics
+
+Person(person, "Person", "Developer")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(rules, "PlaybookHeuristics", "Service", "FTMS present: read the feature bits")
+  Component(executor, "ToolExecutor", "Service", "Runs the read and decode tools")
+  Component(read, "ReadSupportedRangesTool", "Tool (read)", "read_supported_ranges: 0x2ACC and ranges")
+  Component(decoder, "FTMS Feature decoder", "Pure function", "Feature bits to names")
+  Component(kb, "KnowledgeBase", "Knowledge base", "Feature to metric and flag bit map")
+  Component(confirmations, "MetricConfirmations", "Service", "Confirmed or not, per metric")
+  Component(builder, "ReadableMetricsBuilder", "Pure service", "Status, rule and evidence per metric")
+  Component(profile, "DeviceProfileBuilder", "Service", "Builds and saves the profile")
+  Component(page, "DeviceProfilePage", "Angular page", "Loads the profile")
+  Component(table, "ReadableMetricsTable", "Angular component", "Metric and decoding rule, rate, status")
+  ComponentDb(store, "InvestigationStore", "Store contract", "Observations and profiles")
+}
+
+Rel(rules, executor, "read_supported_ranges")
+Rel(executor, read, "run")
+Rel(read, decoder, "Decodes 0x2ACC")
+Rel(executor, store, "Commits the feature observation")
+Rel(profile, builder, "build(...)")
+Rel(builder, kb, "Feature map")
+Rel(builder, confirmations, "Statuses")
+Rel(builder, store, "Decoded observations")
+Rel(profile, store, "saveProfile")
+Rel(page, store, "Loads profile")
+Rel(page, table, "readableMetrics")
+Rel(table, person, "Shows")
+@enduml

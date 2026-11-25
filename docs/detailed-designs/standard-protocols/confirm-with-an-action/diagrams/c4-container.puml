@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Confirm with an action
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Playbook rules, person and listening tools, confirmation check")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Recordings, answers, confirmations and evidence")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Confirmation rules: action, direction, minimum change, window")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Follows the instruction; taps Done", "Touch or keyboard")
+Rel(spa, kb, "Reads the rule for the next metric")
+Rel(device, spa, "Notifies measurements", "Web Bluetooth")
+Rel(spa, idb, "Commits each step and the confirmation")
+@enduml

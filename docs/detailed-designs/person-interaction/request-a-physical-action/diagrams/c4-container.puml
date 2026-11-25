@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Request a physical action
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Agent orchestrator, request_action tool, prompt dock, Still there? dialog")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps with Ready and Done times, recordings")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(spa, person, "Instruction with Ready, Done and Skip")
+Rel(person, spa, "Taps", "Touch or keyboard")
+Rel(device, spa, "Notifications, recorded only after Ready", "Web Bluetooth")
+Rel(spa, idb, "Commits the step and the recording")
+@enduml

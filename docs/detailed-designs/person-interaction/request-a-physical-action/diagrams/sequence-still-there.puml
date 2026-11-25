@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Still there?
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+  participant "StillThereDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orchestrator
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+  participant "Clock" as clock
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "RequestActionTool" as tool
+end box
+
+executor -> tool : run(request_action "Raise the incline to 2%")
+tool -> channel : post(action prompt)
+channel -> clock : setTimeout(2 minutes)
+channel -> card : Instruction; Incline is at 2%, It didn't change
+... 2 minutes, no tap ...
+clock -> channel : inactivity
+channel -> card : Withdraw the prompt; nothing recorded
+channel --> tool : timeout
+tool --> executor : TIMEOUT (TOOL-026)
+executor --> orchestrator : Step result TIMEOUT
+orchestrator -> channel : post(stillThere: picks up at "Standard path - raise the incline to 2%")
+channel -> dialog : "Still there?" Continue focused (FR-051)
+alt person taps Continue (or Close, or Escape)
+  person -> dialog : Continue
+  dialog --> orchestrator : continue
+  orchestrator -> executor : Run the same request_action again
+else person taps Stop
+  person -> dialog : Stop
+  dialog --> orchestrator : stop
+  orchestrator -> orchestrator : Stop the investigation; verdict Stopped by the person (FR-009)
+end
+@enduml

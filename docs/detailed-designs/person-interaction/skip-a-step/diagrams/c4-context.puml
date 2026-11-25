@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Skip a step
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model through Chrome's Prompt API (full agent mode only)")
+System_Ext(chrome, "Chrome", "IndexedDB")
+
+Rel(person, gattsby, "Taps Don't know, Skip, or Skip - finish read-only")
+Rel(gattsby, nano, "Next state carries the one-line skip summary", "Prompt API")
+Rel(gattsby, chrome, "Stores the skip observation", "IndexedDB")
+@enduml

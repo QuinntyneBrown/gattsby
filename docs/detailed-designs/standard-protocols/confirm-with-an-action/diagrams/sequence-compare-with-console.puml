@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Compare with the console (P2)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+  participant "LiveMetricsService" as live
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "CompareWithConsoleTool" as tool
+  participant "MetricConfirmations" as confirmations
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+executor -> tool : run({ metric speed, unit km/h, tolerance 0.2 }) (TOOL-033)
+tool -> live : latest(speed)
+alt no live decoded value
+  live --> tool : null
+  tool --> executor : PRECONDITION_FAILED
+else live value present
+  live --> tool : 5.02 km/h
+  tool -> channel : post(question: "Keep the pace steady. What speed does the console show?", free text)
+  channel -> card : Show question
+  alt person types a value
+    person -> card : Types 5.0, submits
+    card --> channel : freeText "5.0"
+    channel --> tool : PromptResponse
+    tool -> live : latest(speed) at submit
+    live --> tool : 5.02 km/h
+    tool -> tool : Parse 5.0; abs(5.0 - 5.02) <= 0.2
+    tool -> confirmations : addConsoleCheck(speed, within tolerance)
+    tool --> executor : ok { consoleValue 5.0, decodedValue 5.02, withinTolerance true }
+  else person skips
+    person -> card : Taps Skip
+    tool --> executor : USER_CANCELLED
+  end
+end
+executor -> store : commitStep(step, output)
+@enduml

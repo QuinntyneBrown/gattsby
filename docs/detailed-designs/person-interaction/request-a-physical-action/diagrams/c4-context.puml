@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Request a physical action
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(gattsby, person, "Shows the instruction; asks Still there? after 2 minutes")
+Rel(person, gattsby, "Taps Ready, Done, Skip, Continue or Stop")
+Rel(person, device, "Walks, pedals or changes the console")
+Rel(gattsby, chrome, "Records notifications after Ready", "Web Bluetooth")
+Rel(chrome, device, "GATT notifications over Bluetooth LE")
+@enduml

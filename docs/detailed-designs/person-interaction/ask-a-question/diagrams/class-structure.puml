@@ -1,0 +1,103 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Ask a question
+
+enum PromptKind {
+  question
+  action
+  approval
+  deviceChooser
+  photo
+  stillThere
+}
+
+class AskUserInput {
+  +question: string
+  +answers: string[]
+  +allowFreeText?: boolean
+}
+
+class AskUserOutput {
+  +answer: string
+  +freeText?: string
+  +skipped: boolean
+}
+
+class AskUserTool {
+  +run(input: AskUserInput, ctx: ToolContext): Promise<ToolResult<AskUserOutput>>
+  -withDontKnow(answers: string[]): string[]
+}
+
+class PersonPrompt {
+  +id: string
+  +kind: PromptKind
+  +title: string
+  +eyebrow?: string
+  +detail?: string
+  +answers?: string[]
+  +allowFreeText?: boolean
+}
+
+class PromptResponse {
+  +promptId: string
+  +outcome: "answer" | "skip" | "timeout" | "cancelled"
+  +answer?: string
+  +freeText?: string
+  +at: number
+}
+
+class PromptChannel {
+  -open: PersonPrompt | null
+  +current: Signal<PersonPrompt | null>
+  +post(prompt: PersonPrompt, signal: AbortSignal): Promise<PromptResponse>
+  +respond(response: PromptResponse): void
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+  +responded: output<PromptResponse>
+}
+
+class Composer <<component>> {
+  +answersQuestion: input<boolean>
+  +submitted: output<string>
+}
+
+class PersonAnswer {
+  +stepId: string
+  +promptId: string
+  +question: string
+  +offered: string[]
+  +answer: string
+  +freeText?: string
+  +skipped: boolean
+  +answeredAt: number
+}
+
+interface Clock {
+  +now(): number
+  +setTimeout(fn: () => void, ms: number): TimerHandle
+}
+
+AskUserTool ..> AskUserInput
+AskUserTool ..> AskUserOutput : returns
+AskUserTool ..> PersonPrompt : builds
+AskUserTool ..> PromptChannel : posts
+AskUserTool ..> PersonAnswer : records
+PersonPrompt --> PromptKind
+PromptChannel ..> PromptResponse : resolves
+PromptChannel ..> Clock : inactivity timer
+PromptCard ..> PromptResponse : emits
+Composer ..> PromptChannel : free text via page
+@enduml

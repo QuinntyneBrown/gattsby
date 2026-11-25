@@ -1,0 +1,94 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Confirm with an action
+
+enum ConfirmationStatus {
+  confirmed
+  notConfirmed
+}
+
+enum Direction {
+  rises
+  falls
+  increasesWhileMoving
+}
+
+class ConfirmationRule {
+  +id: string
+  +deviceType: string
+  +metric: string
+  +instruction: string
+  +doneLabel: string
+  +direction: Direction
+  +minChange: number
+  +unit: string
+  +windowSeconds: number
+}
+
+class "confirmMetric" as ConfirmMetric <<pure helper>> {
+  +confirmMetric(baseline: FieldSeries, during: FieldSeries, rule: ConfirmationRule, doneAt: number): ConfirmationCheck
+}
+
+class ConfirmationCheck {
+  +status: ConfirmationStatus
+  +from: number
+  +to: number
+  +movedAfterMs?: number
+  +evidence: string[]
+  +otherFieldsMoved: string[]
+}
+
+class MetricConfirmation {
+  +metric: string
+  +status: ConfirmationStatus
+  +ruleId: string
+  +baselineRecordingId: string
+  +actionRecordingId: string
+  +evidence: string[]
+  +personAnswer?: PersonAnswer
+  +consoleCheck?: CompareWithConsoleOutput
+}
+
+class MetricConfirmations {
+  +all: Signal<MetricConfirmation[]>
+  +record(confirmation: MetricConfirmation): void
+  +addConsoleCheck(metric: string, check: CompareWithConsoleOutput): void
+  +statusOf(metric: string): ConfirmationStatus | null
+}
+
+class CompareWithConsoleTool {
+  +run(input: CompareWithConsoleInput, ctx: ToolContext): Promise<ToolResult<CompareWithConsoleOutput>>
+}
+
+class CompareWithConsoleOutput {
+  +consoleValue: number
+  +decodedValue: number
+  +withinTolerance: boolean
+}
+
+class LiveMetricsService {
+  +latest(metric: string): LiveReading | null
+}
+
+ConfirmationRule --> Direction
+ConfirmMetric ..> ConfirmationRule : reads
+ConfirmMetric ..> ConfirmationCheck : returns
+ConfirmationCheck --> ConfirmationStatus
+MetricConfirmations "1" *-- "*" MetricConfirmation
+MetricConfirmation --> ConfirmationStatus
+MetricConfirmation o-- CompareWithConsoleOutput : consoleCheck
+CompareWithConsoleTool ..> LiveMetricsService : newest decoded value
+CompareWithConsoleTool ..> CompareWithConsoleOutput : returns
+CompareWithConsoleTool ..> MetricConfirmations : adds check
+@enduml

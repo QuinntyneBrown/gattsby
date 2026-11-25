@@ -1,0 +1,61 @@
+@startuml
+title UML sequence behaviour — Ask a question and record the answer
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orchestrator
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "AskUserTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+orchestrator -> validator : ask_user { question "What kind of machine is it?", 6 answers }
+alt question over 140 characters or 1 or 7 answers
+  validator --> orchestrator : INVALID_INPUT; refused, counts as a step (TOOL-025)
+else valid
+  validator -> executor : call ask_user
+  executor -> tool : run(input, ctx)
+  tool -> tool : Add "Don't know" if missing (FR-050)
+  tool -> channel : post(question, signal)
+  channel -> channel : Start 2-minute timer on Clock
+  channel -> card : Show title, 7 answer buttons (48 px), composer
+  alt person taps an answer
+    person -> card : Taps "Treadmill"
+    card --> channel : answer "Treadmill"
+    channel --> tool : PromptResponse answer
+    tool --> executor : ok { answer Treadmill, skipped false }, "Person answered: Treadmill"
+  else person types an answer
+    person -> card : Types in the composer, sends
+    card --> channel : freeText, trimmed to 500 characters
+    channel --> tool : PromptResponse answer
+    tool --> executor : ok { answer, freeText, skipped false }
+  else 2 minutes pass
+    channel -> card : Withdraw the prompt
+    channel --> tool : timeout
+    tool --> executor : TIMEOUT; orchestrator shows "Still there?" (FR-051)
+  end
+  executor -> store : commitStep(step, PersonAnswer with the question)
+end
+@enduml

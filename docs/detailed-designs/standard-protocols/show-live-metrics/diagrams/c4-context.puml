@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Show live metrics
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack")
+System_Ext(device, "Device", "Treadmill, bike or heart-rate strap under investigation (Bluetooth LE)")
+
+Rel(gattsby, person, "Shows each decoded value with its unit and confidence")
+Rel(chrome, gattsby, "Delivers notifications", "Web Bluetooth")
+Rel(device, chrome, "GATT notifications over Bluetooth LE")
+@enduml

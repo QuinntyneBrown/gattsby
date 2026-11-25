@@ -1,0 +1,81 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Skip a step
+
+enum SkipTarget {
+  question
+  action
+  stage
+}
+
+abstract class Observation {
+  +id: string
+  +stepId: string
+  +kind: string
+  +at: number
+}
+
+class SkipObservation {
+  +kind: "skipped"
+  +target: SkipTarget
+  +subject: string
+  +stage: PlaybookStage
+}
+
+class SkipRecorder {
+  +record(step: InvestigationStep, response: PromptResponse, prompt: PersonPrompt): SkipObservation
+}
+
+class SkipLedgerEntry {
+  +toolName: string
+  +inputHash: string
+  +stage: PlaybookStage
+  +stepId: string
+}
+
+class SkipLedger {
+  -entries: SkipLedgerEntry[]
+  +add(entry: SkipLedgerEntry): void
+  +wasSkipped(toolName: string, input: unknown, stage: PlaybookStage): boolean
+  +clear(): void
+}
+
+class ActionValidator {
+  +validate(action: AgentAction, state: DecisionState): ValidationResult
+}
+
+class PlaybookStageDefinition {
+  +stage: PlaybookStage
+  +optional: boolean
+  +checks: StageCheck[]
+}
+
+class StageCheck {
+  +id: string
+  +status: "open" | "passed" | "failed" | "skipped"
+}
+
+class HypothesisTracker {
+  +apply(observation: Observation): Hypothesis
+}
+
+Observation <|-- SkipObservation
+SkipObservation --> SkipTarget
+SkipRecorder ..> SkipObservation : creates
+SkipRecorder ..> SkipLedger : adds
+SkipLedger "1" *-- "*" SkipLedgerEntry
+ActionValidator ..> SkipLedger : consults
+PlaybookStageDefinition "1" *-- "*" StageCheck
+HypothesisTracker ..> SkipObservation : no information
+@enduml

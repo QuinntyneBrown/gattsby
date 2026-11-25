@@ -1,0 +1,93 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Determine readable metrics
+
+enum MetricStatus {
+  confirmed
+  claimedOnly
+  claimedNotSeen
+  likely
+}
+
+class DecodingRule {
+  +characteristic: string
+  +offset?: [number, number]
+  +flagBit?: number
+  +type: string
+  +scale: number
+  +endianness: "little" | "big"
+  +note?: string
+}
+
+class ReadableMetric {
+  +metric: string
+  +label: string
+  +unit: string
+  +rule: DecodingRule
+  +rate: string
+  +status: MetricStatus
+  +evidence: string[]
+}
+
+class ClaimedFeatures {
+  +machineFeatures: string[]
+  +rawLogEntryId: string
+}
+
+class FeatureMapEntry {
+  +featureBit: number
+  +feature: string
+  +metric: string
+  +characteristic: string
+  +flagBit: number
+}
+
+class ReadableMetricsBuilder {
+  +build(decoded: DecodedObservation[], claimed: ClaimedFeatures | null, confirmations: MetricConfirmation[], rates: Map<string, string>, proprietary: ReadableMetric[]): ReadableMetric[]
+}
+
+class DecodedValue {
+  +field: string
+  +unit: string
+  +offset: number
+  +type: string
+  +scale: number
+  +flagBit?: number
+}
+
+class MetricConfirmation {
+  +metric: string
+  +status: ConfirmationStatus
+  +evidence: string[]
+}
+
+class DeviceProfileBuilder {
+  +build(investigationId: string): Promise<DeviceProfile>
+}
+
+class ReadableMetricsTable <<component>> {
+  +metrics: input<ReadableMetric[]>
+  +evidenceRequested: output<string>
+}
+
+ReadableMetric *-- DecodingRule
+ReadableMetric --> MetricStatus
+ReadableMetricsBuilder ..> DecodedValue : reads
+ReadableMetricsBuilder ..> ClaimedFeatures : reads
+ReadableMetricsBuilder ..> FeatureMapEntry : maps
+ReadableMetricsBuilder ..> MetricConfirmation : reads
+ReadableMetricsBuilder ..> ReadableMetric : builds
+DeviceProfileBuilder ..> ReadableMetricsBuilder : calls
+ReadableMetricsTable ..> ReadableMetric : renders
+@enduml

@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Skip a question
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orchestrator
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+  participant "SkipRecorder" as recorder
+  participant "SkipLedger" as ledger
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "AskUserTool" as tool
+  participant "HypothesisTracker" as hypo
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+orchestrator -> validator : ask_user "Is there a brand on it?"
+validator -> ledger : wasSkipped? no
+validator -> executor : call ask_user
+executor -> tool : run
+tool -> card : Question with suggested answers and Don't know
+person -> card : Taps Don't know
+card --> tool : answer Don't know
+tool --> executor : ok { answer "Don't know", skipped true }, "Person skipped: brand"
+executor -> recorder : record(skip question "Is there a brand on it?")
+recorder -> ledger : add(ask_user, input, Prepare)
+executor -> store : commitStep(PersonAnswer, SkipObservation) (FR-052)
+executor -> hypo : apply(SkipObservation)
+hypo --> executor : maker stays unknown; confidence unchanged
+executor --> orchestrator : Step done; continue with what is known
+orchestrator -> validator : Model asks the brand question again
+validator -> ledger : wasSkipped? yes
+validator --> orchestrator : PRECONDITION_FAILED "The person skipped this"; nothing shown
+orchestrator -> orchestrator : Next step (power on, Find) is not blocked
+@enduml

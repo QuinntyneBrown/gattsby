@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Decode standard data
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs a validated call_tool action")
+  Component(sar, "SubscribeAndRecordTool", "Tool (listen)", "subscribe_and_record: 1-8 characteristics, 1-120 s")
+  Component(recorder, "NotificationRecorder", "Service", "Collects one recording; ends on time, drop or abort")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Reference-counted subscribe; copy, timestamp, append")
+  Component(log, "RawTrafficLog", "BLE layer", "Last 2,000 entries in memory; batched flush")
+  Component(decode, "DecodeStandardTool", "Tool (read)", "decode_standard: one value or a recording")
+  Component(registry, "DecoderRegistry", "Knowledge base", "Characteristic UUID to decoder")
+  Component(decoders, "Profile decoders", "Pure functions", "FTMS, CPS, CSC, HRS, RSC, Battery")
+  Component(series, "summariseFieldSeries", "Pure helper", "Min, max and trend per field")
+  ComponentDb(store, "InvestigationStore", "Store contract", "saveRecording, commitStep, appendRawLog")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, sar, "run(input, ctx)")
+Rel(sar, recorder, "Starts and awaits")
+Rel(recorder, ble, "subscribe / unsubscribe")
+Rel(device, ble, "characteristicvaluechanged", "Web Bluetooth")
+Rel(ble, log, "Appends every notification")
+Rel(log, store, "Flushes in batches")
+Rel(recorder, store, "saveRecording")
+Rel(executor, decode, "run(input, ctx)")
+Rel(decode, store, "Loads the recording")
+Rel(decode, registry, "Decoder for characteristic")
+Rel(registry, decoders, "Resolves")
+Rel(decode, series, "Summarises each field")
+@enduml

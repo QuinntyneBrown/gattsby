@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Ask a question
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Agent orchestrator, ask_user tool, prompt dock")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps with their questions and answers")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(nano, spa, "ask_user action (untrusted JSON)", "Prompt API")
+Rel(spa, person, "Question card in the dock")
+Rel(person, spa, "Answer", "Touch or keyboard")
+Rel(spa, idb, "Commits the step with the PersonAnswer")
+@enduml

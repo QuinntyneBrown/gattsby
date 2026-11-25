@@ -1,0 +1,72 @@
+@startuml
+title UML sequence behaviour — Subscribe, record and decode
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "SubscribeAndRecordTool" as sar
+  participant "NotificationRecorder" as recorder
+  participant "DecodeStandardTool" as decode
+  participant "DecoderRegistry" as registry
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+rules -> executor : FTMS present: subscribe_and_record(0x2ACD, 10 s, "walking") (FR-046)
+executor -> sar : run(input, ctx) after schema check (TOOL-013)
+sar -> sar : Precondition: connected, 0x2ACD has notify
+sar -> recorder : record([0x2ACD], 10 s, "walking", signal)
+recorder -> ble : subscribe(0x2ACD, listener)
+ble -> device : startNotifications()
+loop every notification for 10 s
+  device -> ble : characteristicvaluechanged
+  ble -> ble : Copy bytes, timestamp, seq; append to RawTrafficLog (FR-073)
+  ble -> recorder : listener(RawLogEntry)
+  recorder -> recorder : Append RecordedValue
+end
+alt time is up
+  recorder -> ble : unsubscribe()
+  recorder -> store : saveRecording(interrupted false)
+else connection drops
+  ble --> recorder : disconnected$
+  recorder -> store : saveRecording(interrupted true), keeps what arrived (TOOL-013)
+end
+recorder --> sar : Recording r-4
+sar --> executor : ok, perCharacteristic [{0x2ACD, 10, [13], silent false}]
+executor -> store : commitStep(step, output)
+
+rules -> executor : decode_standard(recordingId r-4, 0x2ACD)
+executor -> decode : run(input, ctx)
+decode -> store : Load recording r-4
+decode -> registry : decoderFor(0x2ACD)
+registry --> decode : FTMS Treadmill Data decoder
+loop each recorded value
+  decode -> decode : decode(bytes): flags 0x040C, speed, distance, incline, elapsed (FR-024)
+  alt flags announce more bytes than the payload holds
+    decode -> decode : Add { index, reason } to errors; continue (TOOL-015)
+  end
+end
+decode -> decode : summariseFieldSeries: min, max, trend per field
+decode --> executor : ok, values keyed by rawLogEntryId, errors, series
+executor -> store : commitStep(step, decoded output beside raw entries)
+@enduml

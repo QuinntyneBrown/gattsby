@@ -1,0 +1,79 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Show live metrics
+
+enum ReadingConfidence {
+  confirmed
+  likely
+  notLabelled
+}
+
+class LiveReading {
+  +metric: string
+  +label: string
+  +value: number | Uint8Array
+  +unit?: string
+  +confidence: ReadingConfidence
+  +characteristic: string
+  +updatedAt: number
+  +rateHz: number
+  +underConfirmation: boolean
+}
+
+class LiveMetricsService {
+  -pending: Map<string, RawLogEntry>
+  -unsubscribes: Unsubscribe[]
+  -frameId: number | null
+  +readings: Signal<LiveReading[]>
+  +track(characteristic: string): Promise<void>
+  +latest(metric: string): LiveReading | null
+  +release(): void
+  -onFrame(): void
+}
+
+class LiveMetrics <<component>> {
+  +readings: input<LiveReading[]>
+  +layout: input<"strip" | "panel">
+  +live: input<boolean>
+}
+
+class "formatMetricValue" as Format <<pure helper>> {
+  +formatMetricValue(reading: LiveReading): string
+}
+
+class InvestigationPage <<page>> {
+  #readings: Signal<LiveReading[]>
+}
+
+abstract class BleLayer <<contract>> {
+  +subscribe(characteristic: string, listener: NotificationListener): Promise<Unsubscribe>
+}
+
+class DecoderRegistry {
+  +decoderFor(characteristic: string): StandardDecoder | null
+}
+
+class MetricConfirmations {
+  +statusOf(metric: string): ConfirmationStatus | null
+}
+
+LiveReading --> ReadingConfidence
+LiveMetricsService "1" *-- "*" LiveReading
+LiveMetricsService ..> BleLayer : subscribes
+LiveMetricsService ..> DecoderRegistry : decodes
+LiveMetricsService ..> MetricConfirmations : confidence
+InvestigationPage ..> LiveMetricsService : reads
+InvestigationPage ..> LiveMetrics : renders twice
+LiveMetrics ..> Format : formats
+@enduml

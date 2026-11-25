@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Show live metrics
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Live readings service, decoders, investigation page")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Which decoder each data characteristic uses")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Raw log written by the BLE layer")
+}
+System_Ext(device, "Device", "Machine or sensor (Bluetooth LE)")
+
+Rel(device, spa, "Notifies measurements", "Web Bluetooth")
+Rel(spa, kb, "Looks up decoders")
+Rel(spa, idb, "Raw log only (no extra writes for live readings)")
+Rel(spa, person, "Live strip on phones; live readings panel from 992 px")
+@enduml

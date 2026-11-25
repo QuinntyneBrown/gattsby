@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Ask a question
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model through Chrome's Prompt API (full agent mode only)")
+System_Ext(chrome, "Chrome", "IndexedDB")
+
+Rel(nano, gattsby, "Returns an ask_user action", "Prompt API")
+Rel(gattsby, person, "Shows one question with suggested answers and Don't know")
+Rel(person, gattsby, "Taps an answer or types one")
+Rel(gattsby, chrome, "Stores the answer with the question", "IndexedDB")
+@enduml

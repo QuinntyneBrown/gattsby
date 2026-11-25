@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Build the readable-metrics list
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "DeviceProfilePage" as page
+  participant "ReadableMetricsTable" as table
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "DeviceProfileBuilder" as profile
+  participant "ReadableMetricsBuilder" as builder
+  participant "MetricConfirmations" as confirmations
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+profile -> store : Load decoded observations, claimed features, rates
+store --> profile : speed, distance, incline seen; claimed distance, incline, X
+profile -> confirmations : all()
+confirmations --> profile : speed and distance confirmed; incline not confirmed
+profile -> builder : build(decoded, claimed, confirmations, rates, proprietary)
+loop each metric seen or claimed
+  alt confirmed by live data
+    builder -> builder : status confirmed
+  else seen or claimed, not confirmed
+    builder -> builder : status claimedOnly (FR-027 AC1)
+  else claimed, never in the data
+    builder -> builder : status claimedNotSeen (FR-027 AC2)
+  end
+  builder -> builder : Rule: characteristic, offset or flag bit, type, scale, unit
+  builder -> builder : Attach evidence IDs (FR-055)
+end
+builder --> profile : ReadableMetric[]
+profile -> store : saveProfile(readableMetrics)
+person -> page : Opens the device profile
+page -> store : Load profile
+page -> table : metrics
+table --> person : "Distance m · 0x2ACD · flag bit 2 · uint24 · confirmed" as text
+@enduml

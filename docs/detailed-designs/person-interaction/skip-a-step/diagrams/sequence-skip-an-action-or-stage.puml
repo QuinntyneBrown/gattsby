@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Skip an action or an optional stage
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orchestrator
+  participant "Playbook" as playbook
+  participant "ToolExecutor" as executor
+  participant "SkipRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "RequestActionTool" as tool
+  participant "MetricConfirmations" as confirmations
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+alt skip an action
+  executor -> tool : request_action "Raise the incline to 2%"
+  tool -> card : Incline is at 2%, It didn't change
+  person -> card : Taps It didn't change
+  card --> tool : skip
+  tool --> executor : ok { skipped true }; no recording starts
+  executor -> recorder : record(skip action)
+  executor -> store : commitStep(SkipObservation)
+  executor -> confirmations : incline stays notConfirmed (profile: claimed only)
+  executor --> orchestrator : Continue with the next metric or stage
+else skip the optional Control stage
+  orchestrator -> playbook : Enter Control (optional)
+  playbook -> card : "Test control?" Test control, Skip - finish read-only
+  person -> card : Taps Skip - finish read-only
+  card --> orchestrator : skip
+  orchestrator -> recorder : record(skip stage Control)
+  orchestrator -> store : commitStep(SkipObservation)
+  orchestrator -> playbook : Mark Control skipped; no approval, nothing sent
+  playbook --> orchestrator : Next stage Conclude
+end
+@enduml

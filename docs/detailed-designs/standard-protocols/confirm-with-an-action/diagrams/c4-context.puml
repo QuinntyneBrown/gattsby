@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Confirm with an action
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike or sensor exposing a standard Bluetooth SIG service")
+
+Rel(person, gattsby, "Taps Done or It didn't change; answers; reads the console")
+Rel(person, device, "Changes speed, incline or effort on the machine's own controls")
+Rel(gattsby, chrome, "Listens to the data characteristic", "Web Bluetooth")
+Rel(chrome, device, "GATT notifications over Bluetooth LE")
+@enduml

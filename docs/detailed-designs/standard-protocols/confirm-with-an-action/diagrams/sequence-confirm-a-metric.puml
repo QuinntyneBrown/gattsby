@@ -1,0 +1,65 @@
+@startuml
+title UML sequence behaviour — Confirm a metric with an action
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "RequestActionTool" as action
+  participant "SubscribeAndRecordTool" as record
+  participant "DecodeStandardTool" as decode
+  participant "confirmMetric" as confirm
+  participant "MetricConfirmations" as confirmations
+  participant "AskUserTool" as ask
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+rules -> rules : Next unconfirmed metric with a rule: treadmill speed (FR-046)
+rules -> executor : request_action("Now speed up to about 6 km/h. Change only the speed.")
+executor -> action : run
+action -> card : Show instruction; Done, It didn't change
+person -> card : Speeds up on the console, taps Done
+card --> action : done at t0
+action --> executor : ok, doneAt t0
+rules -> executor : subscribe_and_record(0x2ACD, 15 s, "speed up") (A-12)
+executor -> record : run
+record --> executor : Recording r-5
+rules -> executor : decode_standard(r-5, 0x2ACD)
+executor -> decode : run
+decode --> executor : series: speed 3.0 to 6.0 km/h, incline flat
+rules -> confirm : confirmMetric(baseline r-4, action r-5, rule speed rises 0.5 km/h, t0)
+alt speed rose by at least 0.5 km/h within 15 s
+  confirm --> rules : confirmed, movedAfterMs 2000, evidence [raw entries]
+  rules -> confirmations : record(speed confirmed) (FR-025)
+else no qualifying change in 15 s
+  confirm --> rules : notConfirmed, largest change 0.0 km/h
+  rules -> confirmations : record(speed notConfirmed)
+  rules -> executor : ask_user("Did the belt speed up?", [Yes, No])
+  executor -> ask : run
+  ask -> card : Yes, No, Don't know
+  person -> card : Taps No
+  ask --> executor : answer No
+  rules -> confirmations : Attach the answer as evidence; status unchanged
+end
+executor -> store : commitStep(observation, evidence)
+@enduml

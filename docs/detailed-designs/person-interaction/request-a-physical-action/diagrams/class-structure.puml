@@ -1,0 +1,96 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Request a physical action
+
+enum ActionPhase {
+  waitingReady
+  active
+  waitingDone
+  done
+  skipped
+  timedOut
+}
+
+enum ActionEvent {
+  ready
+  done
+  skip
+  recordingEnded
+  inactivity
+  abort
+}
+
+class RequestActionInput {
+  +instruction: string
+  +needsReady: boolean
+  +expectedSeconds?: number
+}
+
+class RequestActionOutput {
+  +readyAt?: number
+  +doneAt: number
+  +skipped: boolean
+}
+
+class PhysicalActionState {
+  +phase: ActionPhase
+  +readyAt?: number
+  +doneAt?: number
+  +recordingEndsAt?: number
+}
+
+class "physicalActionReducer" as Reducer <<pure function>> {
+  +reduce(state: PhysicalActionState, event: ActionEvent, at: number): PhysicalActionState
+  +buttons(state: PhysicalActionState): string[]
+}
+
+class PhysicalActionSession {
+  -state: Signal<PhysicalActionState>
+  +ready: Promise<number>
+  +ended: Promise<RequestActionOutput>
+  +recordingEnded(at: number): void
+  +abort(): void
+}
+
+class RequestActionTool {
+  +run(input: RequestActionInput, ctx: ToolContext): Promise<ToolResult<RequestActionOutput>>
+}
+
+class PromptChannel {
+  +post(prompt: PersonPrompt, signal: AbortSignal): Promise<PromptResponse>
+}
+
+interface Clock {
+  +now(): number
+  +setTimeout(fn: () => void, ms: number): TimerHandle
+  +clearTimeout(handle: TimerHandle): void
+}
+
+class StillThereDialog <<component>> {
+  +picksUpAt: input<string>
+  +connection: input<string>
+  +decided: output<"continue" | "stop">
+}
+
+RequestActionTool ..> RequestActionInput
+RequestActionTool ..> PhysicalActionSession : opens
+RequestActionTool ..> RequestActionOutput : returns
+PhysicalActionSession *-- PhysicalActionState
+PhysicalActionSession ..> Reducer : applies
+PhysicalActionSession ..> PromptChannel : posts action prompt
+PhysicalActionState --> ActionPhase
+Reducer ..> ActionEvent
+PromptChannel ..> Clock : inactivity timer
+PromptChannel ..> StillThereDialog : stillThere rendered by
+@enduml

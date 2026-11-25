@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Request a physical action
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orchestrator, "AgentOrchestrator", "Service", "Turns TIMEOUT into Still there?")
+  Component(executor, "ToolExecutor", "Service", "Runs the tool; commits the step")
+  Component(tool, "RequestActionTool", "Tool (n/a)", "request_action: instruction, needsReady, expectedSeconds")
+  Component(recordTool, "BaselineVsActivityTool", "Tool (listen)", "Records during the action")
+  Component(session, "PhysicalActionSession", "Service", "ready and ended promises")
+  Component(reducer, "physicalActionReducer", "Pure function", "States, events, allowed buttons")
+  Component(channel, "PromptChannel", "Service", "One open prompt; 2-minute inactivity timer")
+  Component(clock, "Clock", "Service", "Injected time source; fake in tests")
+  Component(card, "PromptCard", "Angular component", "Instruction; Ready, Done, Skip")
+  Component(still, "StillThereDialog", "Angular component", "Continue or Stop")
+}
+
+Rel(executor, tool, "run")
+Rel(executor, recordTool, "run")
+Rel(tool, session, "Opens and awaits ended")
+Rel(recordTool, session, "Starts recording on ready")
+Rel(session, reducer, "Applies events")
+Rel(session, channel, "post(action)")
+Rel(channel, clock, "Inactivity timer")
+Rel(channel, card, "Renders")
+Rel(person, card, "Taps Ready or Done")
+Rel(orchestrator, channel, "post(stillThere)")
+Rel(channel, still, "Renders")
+Rel(person, still, "Continue or Stop")
+@enduml

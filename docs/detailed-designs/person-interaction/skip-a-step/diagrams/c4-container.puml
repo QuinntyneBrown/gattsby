@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Skip a step
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Prompt dock, person tools, orchestrator, checklist, playbook")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and observations, including skips")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Skips a question, action or optional stage", "Touch or keyboard")
+Rel(spa, idb, "Commits the skip observation with the step")
+Rel(spa, nano, "Summary: Person skipped ...", "Prompt API")
+@enduml

@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Wait for Ready, record, then analyse
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PhysicalActionSession" as session
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "BaselineVsActivityTool" as tool
+  participant "NotificationRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+executor -> tool : run(baseline_vs_activity, action "Walk slowly")
+tool -> session : open(instruction, needsReady true, expectedSeconds 10)
+session -> channel : post(action prompt, state waitingReady)
+channel -> channel : Start 2-minute inactivity timer
+channel -> card : "Walk slowly, then tap Ready"; Ready, Skip
+note over card : Done is not offered yet (TOOL-026)
+person -> card : Starts walking, taps Ready
+card --> channel : ready
+channel -> channel : Pause inactivity timer
+channel --> session : ready at t1
+session --> tool : ready resolves
+tool -> recorder : record(chars, 10 s, "walk slowly") only now (FR-051)
+card -> person : "Recording... 10 s"
+recorder --> tool : Recording r-7 after 10 s
+tool -> session : recordingEnded(t1 + 10 s)
+session -> channel : Close the prompt
+session --> tool : ended { readyAt t1, doneAt t1 + 10 s, skipped false }
+tool -> tool : Analyse: diff baseline and activity, after the end only
+tool --> executor : ok
+executor -> store : commitStep(step, readyAt, doneAt, recording)
+@enduml

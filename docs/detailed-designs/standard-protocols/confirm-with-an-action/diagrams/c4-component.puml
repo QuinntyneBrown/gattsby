@@ -1,0 +1,36 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Confirm with an action
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Instruction, Done label, It didn't change")
+  Component(rules, "PlaybookHeuristics", "Service", "Picks the next unconfirmed metric with a rule")
+  Component(executor, "ToolExecutor", "Service", "Runs each tool call")
+  Component(action, "RequestActionTool", "Tool (n/a)", "request_action: waits for Done")
+  Component(record, "SubscribeAndRecordTool", "Tool (listen)", "Records the 15 s window")
+  Component(decode, "DecodeStandardTool", "Tool (read)", "Decodes baseline and action recordings")
+  Component(confirm, "confirmMetric", "Pure helper", "Moved the expected way within the window?")
+  Component(confirmations, "MetricConfirmations", "Service", "Status per metric, as a signal")
+  Component(ask, "AskUserTool", "Tool (n/a)", "Did the belt speed up?")
+  Component(console, "CompareWithConsoleTool", "Tool (n/a), P2", "Console value vs decoded value")
+  Component(live, "LiveMetricsService", "Service", "Newest decoded value per metric")
+  Component(kb, "KnowledgeBase", "Knowledge base", "ConfirmationRule entries")
+  Component(hypo, "HypothesisTracker", "Service", "Rescores on new evidence")
+}
+
+Rel(rules, kb, "Reads rules")
+Rel(rules, executor, "request_action, subscribe_and_record, decode_standard")
+Rel(executor, action, "run")
+Rel(action, card, "Shows via PromptChannel")
+Rel(person, card, "Taps Done")
+Rel(executor, record, "run")
+Rel(executor, decode, "run")
+Rel(rules, confirm, "Applies to decoded series")
+Rel(confirm, confirmations, "Result")
+Rel(confirmations, hypo, "Evidence")
+Rel(rules, ask, "When not confirmed")
+Rel(console, live, "Reads decoded value")
+Rel(console, confirmations, "Adds console check")
+@enduml

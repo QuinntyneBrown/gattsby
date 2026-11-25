@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Read the claimed features
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReadSupportedRangesTool" as read
+  participant "FTMS Feature decoder" as decoder
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+rules -> rules : FTMS 0x1826 present, features not read yet (FR-046)
+rules -> executor : read_supported_ranges({})
+executor -> read : run(ctx)
+read -> ble : read(0x2ACC)
+ble -> device : readValue()
+alt read succeeds
+  device --> ble : Feature bytes
+  ble -> ble : Log read entry (FR-073)
+  ble --> read : bytes, rawLogEntryId
+  read -> decoder : decode(bytes)
+  decoder --> read : machineFeatures [Total Distance, Inclination, ...]
+  read -> kb : Map features to metrics and flag bits
+  kb --> read : distance: 0x2ACD flag bit 2; incline: flag bit 3
+  read --> executor : ok, ClaimedFeatures with evidence (FR-027)
+else GATT error
+  device --> ble : ATT error
+  ble --> read : GATT_ERROR
+  read --> executor : ok false; metrics will come from data alone
+end
+executor -> store : commitStep(observation: claimed features)
+@enduml

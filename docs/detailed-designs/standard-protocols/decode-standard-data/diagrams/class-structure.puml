@@ -1,0 +1,112 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Decode standard data
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class SubscribeAndRecordTool {
+  +run(input: SubscribeAndRecordInput, ctx: ToolContext): Promise<ToolResult<SubscribeAndRecordOutput>>
+}
+
+class DecodeStandardTool {
+  +run(input: DecodeStandardInput, ctx: ToolContext): Promise<ToolResult<DecodeStandardOutput>>
+}
+
+class NotificationRecorder {
+  -values: RecordedValue[]
+  -unsubscribes: Unsubscribe[]
+  +record(chars: string[], seconds: number, label: string, signal: AbortSignal): Promise<Recording>
+  -end(interrupted: boolean): void
+}
+
+abstract class BleLayer <<contract>> {
+  +subscribe(characteristic: string, listener: NotificationListener): Promise<Unsubscribe>
+  +disconnected$: Observable<DisconnectEvent>
+}
+
+class WebBluetoothBleLayer {
+  -listeners: Map<string, Set<NotificationListener>>
+  -onValueChanged(event: Event): void
+}
+
+class RawLogEntry {
+  +id: string
+  +seq: number
+  +timestamp: number
+  +characteristic: string
+  +direction: "in" | "out"
+  +bytes: Uint8Array
+}
+
+class Recording {
+  +id: string
+  +label: string
+  +characteristics: string[]
+  +startedAt: number
+  +endedAt: number
+  +interrupted: boolean
+}
+
+class RecordedValue {
+  +rawLogEntryId: string
+  +characteristic: string
+  +timestamp: number
+  +bytes: Uint8Array
+}
+
+class DecoderRegistry {
+  +decoderFor(characteristic: string): StandardDecoder | null
+}
+
+interface StandardDecoder {
+  +decode(bytes: Uint8Array): DecodeResult
+}
+
+class DecodeResult {
+  +fields: DecodedValue[]
+  +error?: DecodeError
+}
+
+class DecodedValue {
+  +field: string
+  +value: number
+  +unit: string
+  +offset: number
+  +type: string
+  +scale: number
+  +flagBit?: number
+}
+
+class "summariseFieldSeries" as Series <<pure helper>> {
+  +summarise(values: DecodedValue[]): FieldSeries
+}
+
+Tool <|.. SubscribeAndRecordTool
+Tool <|.. DecodeStandardTool
+SubscribeAndRecordTool ..> NotificationRecorder : starts
+NotificationRecorder ..> BleLayer : subscribes
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer ..> RawLogEntry : creates
+Recording "1" *-- "*" RecordedValue
+NotificationRecorder ..> Recording : builds
+RecordedValue --> RawLogEntry : rawLogEntryId
+DecodeStandardTool ..> DecoderRegistry : looks up
+DecoderRegistry --> StandardDecoder : resolves
+StandardDecoder ..> DecodeResult : returns
+DecodeResult "1" *-- "*" DecodedValue
+DecodeStandardTool ..> Series : summarises
+@enduml

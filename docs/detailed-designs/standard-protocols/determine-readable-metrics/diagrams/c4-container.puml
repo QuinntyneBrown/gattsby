@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Determine readable metrics
+
+Person(person, "Person", "Developer beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Feature read, readable-metrics builder, profile page")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Observations, confirmations and the device profile")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Feature bit to metric and flag bit map; decoders")
+}
+System_Ext(device, "Device", "FTMS machine (Bluetooth LE)")
+
+Rel(spa, device, "Reads 0x2ACC", "Web Bluetooth")
+Rel(spa, kb, "Maps feature bits to metrics")
+Rel(spa, idb, "Reads observations; saves the profile")
+Rel(person, spa, "Opens the device profile", "Touch or keyboard")
+@enduml

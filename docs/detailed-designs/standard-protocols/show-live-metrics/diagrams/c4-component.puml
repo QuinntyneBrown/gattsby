@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Show live metrics
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Places the strip in the dock and the list in the side panel")
+  Component(view, "LiveMetrics", "Angular component", "Renders readings as text; strip or panel layout")
+  Component(format, "formatMetricValue", "Pure helper", "Decimals, units, m:ss, hex")
+  Component(live, "LiveMetricsService", "Service", "Newest value per characteristic; one decode per frame")
+  Component(confirmations, "MetricConfirmations", "Service", "Confirmed or not, per metric")
+  Component(registry, "DecoderRegistry", "Knowledge base", "Decoder per characteristic")
+  Component(sar, "SubscribeAndRecordTool", "Tool (listen)", "Attaches the live listener on first subscribe")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Reference-counted subscribe")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(device, ble, "characteristicvaluechanged", "Web Bluetooth")
+Rel(sar, live, "Hands over the characteristic")
+Rel(live, ble, "subscribe / unsubscribe")
+Rel(live, registry, "Decodes newest value")
+Rel(live, confirmations, "Reads confidence")
+Rel(page, live, "Reads readings signal")
+Rel(page, view, "readings, layout")
+Rel(view, format, "Formats each value")
+Rel(view, person, "Shows")
+@enduml

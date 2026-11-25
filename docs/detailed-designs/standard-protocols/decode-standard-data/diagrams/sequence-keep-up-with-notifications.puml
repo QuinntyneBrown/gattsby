@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Keep up with notifications
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "LiveMetrics" as ui
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "LiveMetricsService" as live
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "NotificationRecorder" as recorder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+note over device, ble : Up to 4 characteristics x 50 notifications per second (NFR-003)
+loop each notification
+  device -> ble : characteristicvaluechanged(DataView)
+  ble -> ble : Copy into Uint8Array; timestamp = timeOrigin + now(); seq++
+  ble -> log : append(entry): in-memory window of 2,000 (NFR-005)
+  ble -> recorder : listener(entry): array push
+  ble -> live : listener(entry): keep newest per characteristic
+  note right of ble : No decode, no await, no DOM in the handler
+end
+loop each flush interval <TO SUPPLY>
+  log -> store : appendRawLog(batch) in one transaction
+  store --> log : committed
+end
+loop each animation frame with new values
+  live -> live : Decode newest value per characteristic
+  live -> ui : readings signal updates once
+  ui -> ui : Render values as text (NFR-013)
+end
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Ask a question
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orchestrator, "AgentOrchestrator", "Service", "Maps ask_user action to the ask_user tool")
+  Component(checklist, "ChecklistRunner", "Service", "Asks the playbook's questions without a model")
+  Component(validator, "ActionValidator", "Service", "Checks the input schema")
+  Component(executor, "ToolExecutor", "Service", "Runs the tool; commits the step")
+  Component(tool, "AskUserTool", "Tool (n/a)", "Adds Don't know; posts the question")
+  Component(channel, "PromptChannel", "Service", "One open prompt; 2-minute inactivity timer")
+  Component(card, "PromptCard", "Angular component", "Question, 48 px answer buttons, Don't know")
+  Component(composer, "Composer", "Angular component", "Free-text answer, at most 500 characters")
+  ComponentDb(store, "InvestigationStore", "Store contract", "commitStep with PersonAnswer")
+}
+
+Rel(orchestrator, validator, "ask_user action")
+Rel(checklist, executor, "ask_user call")
+Rel(validator, executor, "Valid call")
+Rel(executor, tool, "run")
+Rel(tool, channel, "post(question)")
+Rel(channel, card, "Renders")
+Rel(channel, composer, "Routes free text")
+Rel(person, card, "Taps an answer")
+Rel(person, composer, "Types an answer")
+Rel(executor, store, "commitStep")
+@enduml

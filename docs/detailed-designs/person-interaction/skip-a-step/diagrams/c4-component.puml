@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Skip a step
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Don't know, Skip, or the step's skip label")
+  Component(tools, "AskUserTool / RequestActionTool", "Tools (n/a)", "Return ok with skipped true")
+  Component(executor, "ToolExecutor", "Service", "Commits the step")
+  Component(recorder, "SkipRecorder", "Service", "Skip to observation")
+  Component(ledger, "SkipLedger", "Service", "Skipped prompts of the stage")
+  Component(validator, "ActionValidator", "Service", "Refuses a repeat of a skipped prompt")
+  Component(playbook, "Playbook", "Service", "Stages, optional flag, stage checks")
+  Component(orchestrator, "AgentOrchestrator / ChecklistRunner", "Services", "Continue with what is known")
+  Component(hypo, "HypothesisTracker", "Service", "Skip is no information")
+  ComponentDb(store, "InvestigationStore", "Store contract", "commitStep")
+}
+
+Rel(person, card, "Taps a skip")
+Rel(card, tools, "PromptResponse via PromptChannel")
+Rel(tools, executor, "ok, skipped true")
+Rel(executor, recorder, "Records the skip")
+Rel(recorder, ledger, "Adds entry")
+Rel(executor, store, "commitStep with skip observation")
+Rel(orchestrator, playbook, "Marks check resolved or stage skipped")
+Rel(validator, ledger, "Consults")
+Rel(hypo, store, "Reads observations")
+@enduml

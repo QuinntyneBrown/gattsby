@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Determine readable metrics
+
+Person(person, "Person", "Developer deciding whether their software can talk to the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "FTMS machine or standard sensor (Bluetooth LE)")
+
+Rel(person, gattsby, "Reads the readable-data table in the device profile")
+Rel(gattsby, chrome, "Reads Fitness Machine Feature (0x2ACC)", "Web Bluetooth")
+Rel(chrome, device, "GATT read over Bluetooth LE")
+@enduml
