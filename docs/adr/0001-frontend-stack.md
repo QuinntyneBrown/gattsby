@@ -49,8 +49,10 @@ components and dialogs.
   handler that `script-src 'self'` refuses.
 - **Styles come from the design system.** `docs/design-system/` is the source of the tokens and the
   component classes; the build reads `docs/design-system/tokens/tokens.css` and
-  `docs/design-system/assets/components.css` directly, so the app and the mocks never drift. The
-  Geist and Geist Mono fonts are copied into `frontend/public/fonts/` and self-hosted.
+  `docs/design-system/assets/components.css` directly (the `styles` of `angular.json`), so the app
+  and the mocks never drift. The tokens' `@font-face` rules point at the Geist and Geist Mono files
+  in `docs/design-system/assets/fonts/`; the build copies them, hashed, into its `media/` folder,
+  so the fonts are self-hosted from the app's own origin without a second copy in the repository.
 - **File names** follow the detailed designs: `*.page.ts` for pages, `*.component.ts` for
   presentation components, `*.dialog.ts` for dialogs and plain names for services, helpers and
   tokens. Angular's style guide (v20) drops these suffixes but asks for consistency within a
