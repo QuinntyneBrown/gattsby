@@ -119,6 +119,9 @@ estimate the person's available disk space from its origin quota.
 
 ### Errors
 
+Journey 5 reads and writes the preference in per-tab session storage, and model download is
+independent of the selected mode. Journeys 6 and 7 apply that preference when choosing a decider.
+
 | Situation | Person sees | Effect |
 |---|---|---|
 | Download rejected | "The model download stopped." with "Retry the download" | Checklist mode stays usable (FR-004) |

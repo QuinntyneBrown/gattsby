@@ -135,9 +135,15 @@ adapter-off and available forms, and drive the Readiness page through its page o
 cover `BrowserCapabilityDetector` with a probe that rejects and one that never settles, on a fake
 clock, and `toCapabilityItems` for each row of the readiness rules.
 
-### Built in journey 2
+### Built in journeys 2 and 5
 
-`CapabilityDetector`, `BrowserCapabilityDetector`, `check_capabilities` and `ModeSelector` (full agent mode when the model is available, checklist mode otherwise) are built; the model adapter and the camera adapter answer availability only. Not built yet: `toCapabilityItems`, `CapabilityList` and the Readiness page (journey 5).
+The detector, capability tool and adapters provide the launch and Prepare checks. Readiness uses
+the capability list, offers a re-check for recoverable states and opens Home after the person
+continues. A failed probe writes its name, code, tool, stage and time to a bounded IndexedDB log
+when storage is available. The Prepare tool includes probe diagnostics in its result.
+
+The unsupported-browser state explains how to open Gattsby in a supported browser and offers the
+secure link. Saved devices and history navigation arrive in journey 15.
 
 ## Requirements
 

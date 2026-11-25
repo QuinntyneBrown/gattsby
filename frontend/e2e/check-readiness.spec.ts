@@ -1,8 +1,9 @@
-// Traces to: FR-001, FR-002, FR-003, FR-004, NFR-016, NFR-021, NFR-026, TOOL-001
+// Traces to: FR-001, FR-002, FR-003, FR-004, NFR-016, NFR-021, NFR-025, NFR-026, TOOL-001
 // Given a supported browser with Bluetooth and the model, when Gattsby opens,
 // then Readiness lists the capabilities and Start opens Home without requesting any permission.
 
 import { expect, test } from './fixtures/gattsby-test';
+import { StoredRecords } from './fixtures/stored-records';
 import { HomePage } from './pages/home.page';
 import { ReadinessPage } from './pages/readiness.page';
 
@@ -169,4 +170,44 @@ test.describe('The model is unavailable', () => {
     await expect(new HomePage(page).modeChip).toHaveText('Checklist mode');
     expect(fakeModel.calls()).toEqual([]);
   });
+});
+
+test('finishes a stalled readiness check in a second and keeps the diagnostic local', async ({
+  page,
+  fakeModel,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+      value: () => {
+        throw new Error('Readiness must not request the camera.');
+      },
+    });
+    let checks = 0;
+    Object.defineProperty(navigator, 'bluetooth', {
+      get: () => ({
+        getAvailability: () =>
+          checks++ === 0 ? Promise.resolve(false) : new Promise(() => undefined),
+      }),
+    });
+  });
+  const readiness = new ReadinessPage(page);
+  await readiness.open();
+  await expect(readiness.heading).toHaveText('Bluetooth is off.');
+  await readiness.checkAgain.click();
+  await expect(readiness.heading).toHaveText('Checking this device…');
+  await expect(readiness.capability('Bluetooth')).toContainText('Checking');
+  await page.clock.runFor(1_050);
+  await expect(readiness.heading).not.toHaveText('Checking this device…');
+  expect(fakeModel.calls()).not.toContain('create');
+  await expect
+    .poll(() => new StoredRecords(page).capabilityDiagnostics())
+    .toEqual([
+      expect.objectContaining({
+        capability: 'bluetooth',
+        code: 'CAPABILITY_TIMEOUT',
+        tool: 'check_capabilities',
+        stage: 'prepare',
+        at: expect.any(Number),
+      }),
+    ]);
 });

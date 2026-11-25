@@ -23,9 +23,11 @@ export const checkCapabilitiesTool = entry<Record<string, never>, Capabilities>(
     const capabilities = await ctx.capabilities.detect();
     const missing = [
       !capabilities.bluetooth.api && 'Web Bluetooth',
-      capabilities.bluetooth.api && !capabilities.bluetooth.adapterAvailable && 'Bluetooth adapter',
+      capabilities.bluetooth.api &&
+        (!capabilities.bluetooth.adapterAvailable || capabilities.bluetooth.blocked) &&
+        'Bluetooth adapter',
       capabilities.model.availability !== 'available' && 'on-device model',
-      !capabilities.watchAdvertisements && 'advertisement scanning',
+      !capabilities.watchAdvertisements && !capabilities.requestLEScan && 'advertisement scanning',
       !capabilities.camera && 'camera',
       !capabilities.storage.open && 'storage',
     ].filter((item): item is string => !!item);

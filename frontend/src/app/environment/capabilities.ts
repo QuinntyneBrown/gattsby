@@ -1,8 +1,10 @@
 import type { LanguageModelAvailability } from '../model/language-model-api';
+import type { CapabilityDiagnostic } from './capability-diagnostic';
 
 // What this browser and platform can do: the output of `check_capabilities` (TOOL-001), with
 // `bluetooth.blocked` and `storage.open` added by the check-capabilities design.
 export interface Capabilities {
+  readonly diagnostics?: readonly CapabilityDiagnostic[];
   readonly secureContext: boolean;
   readonly bluetooth: {
     readonly api: boolean;

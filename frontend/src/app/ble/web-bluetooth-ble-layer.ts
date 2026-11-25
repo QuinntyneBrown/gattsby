@@ -73,7 +73,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       };
     }
     const [adapterAvailable, blocked] = await Promise.all([
-      bluetooth.getAvailability().catch(() => false),
+      bluetooth.getAvailability(),
       bluetoothBlocked(),
     ]);
     return {
