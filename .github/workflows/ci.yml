@@ -57,7 +57,8 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps --only-shell chromium
 
-      # Critical paths cover the app shell, readiness, identification, live FTMS confirmation and profile export.
+      # Critical paths cover the app shell, readiness, identification, live FTMS confirmation,
+      # profile export and an FTMS investigation with one model consultation.
       - name: Run the critical behaviour specs
         run: npm run e2e:critical
 

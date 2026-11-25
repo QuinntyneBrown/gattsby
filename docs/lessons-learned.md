@@ -258,3 +258,18 @@ None; this is the first entry.
   This applies journey 3's separation of timed events from IndexedDB completion.
 - Readiness keeps up to 50 probe failure diagnostics in local storage. It returns the same
   diagnostics with the Prepare result so they can appear in the investigation record.
+
+## Journey 6 — Investigate with the agent
+
+- A test for ambiguous identification needs two different plausible protocols. Two profiles
+  within the score margin that both describe FTMS still give the playbook one protocol choice.
+- The session check can succeed at availability and fail at creation. Open the session
+  before Prepare to make the first displayed mode match the session the investigation holds.
+- Compile model-action and tool-input schemas before bundling, as in journey 4. The same
+  production Content Security Policy test then exercises validated actions without runtime compilation.
+- A readable characteristic also needs to appear in the investigation's GATT layout. Refuse
+  a proposed read at validation so it never reaches the Bluetooth adapter.
+- Separate leaving the page from concluding the investigation. Aborting the pending
+  consultation on exit now releases the session and leaves the stored verdict unset.
+- Use the fake clock for model timeouts, as in journey 5, and wait for a stored step before
+  reading its evidence. Repeated missing-tool reports keep one request and reuse its ID.

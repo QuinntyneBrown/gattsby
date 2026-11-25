@@ -1,4 +1,4 @@
-// Traces to: FR-005, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-071, NFR-001, NFR-020
+// Traces to: FR-005, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-058, FR-071, TOOL-029, NFR-001, NFR-020
 // Given a model is available, when the person turns off full agent mode in Settings,
 // then the choice survives reload and the next investigation starts as a checklist.
 
@@ -318,5 +318,65 @@ test.describe('The model takes longer than ten seconds', () => {
     await page.clock.runFor(500);
     await expect(page).toHaveURL('/');
     expect(await new StoredRecords(page).investigation(id)).toMatchObject({ verdict: null });
+  });
+});
+
+test.describe('The model reports a missing tool twice', () => {
+  test.use({
+    bluetooth: ambiguousTreadmill,
+    model: {
+      availability: 'available',
+      responses: [
+        {
+          action: {
+            type: 'request_missing_tool',
+            capability: 'Console data decoder',
+            reason: 'The console service has an unknown format.',
+            evidence: ['s-7'],
+          },
+        },
+        {
+          action: {
+            type: 'request_missing_tool',
+            capability: 'Console data decoder',
+            reason: 'The console service still has an unknown format.',
+            evidence: ['s-7'],
+          },
+        },
+        {
+          action: {
+            type: 'ask_user',
+            question: 'Is there another name on the console?',
+            answers: ['Yes', 'No'],
+            why: 'It may help identify the console protocol.',
+          },
+        },
+      ],
+    },
+  });
+
+  test('keeps one request and reuses its evidence ID', async ({ page }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await investigation.waitForPrompt('Is there another name on the console?');
+    const records = new StoredRecords(page);
+    const id = investigation.id();
+    await expect
+      .poll(async () =>
+        (await records.steps(id))
+          .filter((step) => step.tool === 'request_missing_tool')
+          .map((step) => step.result.data),
+      )
+      .toEqual([
+        { requestId: 'm-1', merged: false },
+        { requestId: 'm-1', merged: true },
+      ]);
+    expect(await records.missingToolRequests(id)).toEqual([
+      expect.objectContaining({
+        id: 'm-1',
+        title: 'Console data decoder',
+        evidence: ['s-7'],
+      }),
+    ]);
   });
 });
