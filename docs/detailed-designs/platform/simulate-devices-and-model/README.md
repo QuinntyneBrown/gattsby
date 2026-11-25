@@ -24,7 +24,10 @@ Security Policy violation
 
 The feature has no product screen. In a development build, "Find the device" opens a list of
 simulated devices in place of Chrome's chooser; that list has no mock, because it never reaches a
-person in production, and its layout is `<TO SUPPLY>`.
+person in production. Its layout reuses the design system's dialog and row list: the title "Pick a
+simulated device", one 48 px row per scripted device with its advertised name and service UUIDs, and
+"Cancel", which rejects `requestDevice` as Chrome's chooser does. It is built by the first journey
+that offers "Find the device" (journey 2).
 
 The feature exists because AGENTS.md forbids a real device, Bluetooth or model in the specs, and
 because a spec that cannot fail on an unapproved write cannot prove the safety rules.
@@ -32,7 +35,7 @@ because a spec that cannot fail on an unapproved write cannot prove the safety r
 ## Description
 
 The design introduces these building blocks. Product code lives under `frontend/src/`; test code
-under `e2e/`.
+under `frontend/e2e/` (written `e2e/` below).
 
 - **Scripted devices** (`frontend/src/simulation/devices/*.device.ts`) — one `ScriptedDevice` each:
   FTMS treadmill (`HZN-T202-4F1A`, services `0x1826 0x180A 0x180D 0xFFF0`), FTMS bike, heart-rate
@@ -40,6 +43,10 @@ under `e2e/`.
   the hostile-name device of the render-untrusted-text design and a device held by another central.
   Notification values are functions of an effort level the spec sets, so "walk faster" raises the
   speed field.
+  The scaffold (journey 1) adds the four devices every MVP journey needs (FTMS treadmill, FTMS bike,
+  heart-rate strap, unknown-services device); the device that drops, the device that requires
+  encryption, the hostile-name device and the device held by another central are added by the
+  journeys that first need them.
 - **`FakeBluetoothApi`** (`frontend/src/simulation/fake-bluetooth-api.ts`) — implements the parts of
   `navigator.bluetooth` that `WebBluetoothBleLayer` uses: `getAvailability`, `requestDevice` (with a
   chooser script that picks a device or cancels), `getDevices`, GATT connect and disconnect, primary
@@ -55,12 +62,15 @@ under `e2e/`.
   `BLUETOOTH` with `FakeBluetoothApi` and show `SimulatedChooserDialog`
   (`frontend/src/simulation/simulated-chooser.dialog.ts`) on `requestDevice`. Only
   `environment.development.ts` imports it, through the build's file replacement, so a production
-  build has no import path to `simulation/` and cannot offer a simulated device. Whether a
-  development build also offers a scripted model is `<TO SUPPLY>`.
-- **`e2e/fixtures/fake-bluetooth.ts`** — bundles `FakeBluetoothApi` and the scripted devices and
-  installs them with `page.addInitScript` before the app loads, on any build, including the
-  production build with its Content Security Policy. Exposes the recorded calls and writes, the
-  chooser script and `setEffort` to the spec.
+  build has no import path to `simulation/` and cannot offer a simulated device. A development
+  build does not offer a scripted model: it uses Chrome's model where one is available and checklist
+  mode where none is, so a demonstration shows the person's real operating mode.
+- **`e2e/fixtures/fake-bluetooth.ts`** — bundles `FakeBluetoothApi` and the scripted devices with
+  esbuild (`src/simulation/install-fakes.ts` as the entry point) and installs them with
+  `page.addInitScript` before the app loads, on any build, including the production build with its
+  Content Security Policy. The fake reports every call, write and unexpected call to the fixture
+  through a binding (`page.exposeBinding`), so the records survive a reload. Exposes the recorded
+  calls and writes, the chooser script and `setEffort` to the spec.
 - **`e2e/fixtures/fake-language-model.ts`** — installs `FakeLanguageModel`: availability
   (`available`, `downloadable`, `downloading`, `unavailable` or absent), download progress events, and
   a queue of `ScriptedResponse`s (action JSON, a delay for timeouts, or an error such as a context
@@ -68,7 +78,10 @@ under `e2e/`.
   (FR-005).
 - **`e2e/fixtures/gattsby-test.ts`** — Playwright's `test` extended with both fakes, `page.clock`
   installed for time-driven rules, a stub `navigator.geolocation` that records any call, and the
-  guards below.
+  guards below. A spec that proves a guard trips calls `guards.acknowledge(kind)` after asserting the
+  violation, so that only unacknowledged violations fail it.
+- **Behaviour specs run against the production build** served by `scripts/serve-dist.ts` with the
+  headers file (ADR 0003), so the Content Security Policy and Trusted Types apply in every spec.
 - **Page objects** (`e2e/pages/*.page.ts`) — one per screen or dialog; they own every selector. The
   `ApprovalDialog` and `EmergencyStopButton` page objects record each approval (the bytes and
   characteristic shown, and the tap on "Send" or "Emergency stop") for the write guard.
@@ -80,7 +93,7 @@ under `e2e/`.
 | Unexpected Bluetooth call | A call the scripted device does not cover | `FakeBluetoothApi.unexpected` |
 | Unapproved write | A recorded write not preceded by a recorded approval for that characteristic and those bytes | `FakeBluetoothApi.writes` and the page objects' approvals |
 | Unexpected model call | A prompt beyond the script, or any call in checklist mode | `FakeLanguageModel.prompts` |
-| Request off localhost | Any request to another host | `context.route('**/*')` |
+| Request off localhost | Any request to another host; the Content Security Policy blocks most of them first, and reports them to the page-error guard | `context.route('**/*')` |
 | Page error | `pageerror`, an unhandled rejection, a `securitypolicyviolation` | Page listeners |
 | Geolocation | Any call to `navigator.geolocation` | The stub |
 
