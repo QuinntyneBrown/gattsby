@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Run a model on phones (later phase)
+
+Person(person, "Person", "On a phone beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Readiness page, model adapter factory, in-browser model adapter, orchestrator")
+  Container(weights, "Phone model weights", "Static files, own origin", "Model files (<TO SUPPLY>, OQ-02)")
+  ContainerDb(cache, "Model cache", "Cache Storage or OPFS (<TO SUPPLY>)", "Weights kept for offline use")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Unchanged")
+  Container(sw, "Service worker", "Angular service worker (pending ADR 0001)", "Serves cached app files offline")
+}
+
+Rel(person, spa, "Taps Download or Use the checklist", "Touch")
+Rel(spa, weights, "Fetches on the tap", "HTTPS, connect-src 'self'")
+Rel(spa, cache, "Stores and loads the weights")
+Rel(spa, idb, "Saves the investigation as before")
+Rel(sw, spa, "Serves the app offline")
+@enduml

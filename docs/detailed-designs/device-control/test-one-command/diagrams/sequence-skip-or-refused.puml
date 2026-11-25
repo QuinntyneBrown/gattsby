@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Skip, a refused command, or an unknown target
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator or ChecklistRunner" as plan
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "SendCommandTool" as tool
+  participant "ControllableFeatures" as features
+  participant "CommandTargetRules" as rules
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+alt The person skips Control
+  plan -> page : Offer "Test control?"
+  person -> page : "Skip — finish read-only"
+  plan -> plan : Record the skip as an observation (FR-052)
+  plan -> features : build(claims from feature bits, no results)
+  features --> plan : every claimed feature: claimed only (FR-038)
+else The device rejects the command
+  plan -> tool : run(setSpeed 2.0, a-17) after approval
+  tool -> ble : write(0x2AD9, 02 C8 00, a-17)
+  ble -> device : writeValueWithResponse
+  device --> ble : Indication 80 02 03
+  tool --> plan : DEVICE_REJECTED "invalid parameter" (TOOL-022)
+  plan -> dialog : Failed state: "The treadmill refused the command"
+  plan -> plan : Set target speed: refused (FR-040)
+else A write names a target no knowledge-base entry holds
+  tool -> ble : write(0x2A00, bytes, a-19)
+  ble -> rules : isKnownTarget(0x2A00) and not isForbidden
+  rules --> ble : false: GAP Device Name is forbidden
+  ble --> tool : PRECONDITION_FAILED; nothing written (NFR-019)
+end
+@enduml

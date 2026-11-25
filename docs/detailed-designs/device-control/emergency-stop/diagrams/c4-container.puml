@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Emergency stop
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Emergency stop button and dialog, controller, approval ledger, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Emergency stop event, steps and raw log")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Stop sequence per protocol")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(person, spa, "One tap on Emergency stop", "Touch or keyboard")
+Rel(spa, kb, "Reads the stop sequence")
+Rel(spa, device, "Writes 08 01, then 01; or disconnects", "Web Bluetooth")
+Rel(spa, nano, "Aborts the pending call")
+Rel(spa, idb, "Commits the event")
+@enduml

@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Control not permitted, or no answer
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "InvestigationSession" as session
+  participant "Playbook" as playbook
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "RequestControlTool" as tool
+  participant "ControlPointSession" as cps
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run({}, approvalId a-16)
+tool -> cps : send(00, a-16, 5 s)
+cps -> ble : write(0x2AD9, 00, a-16)
+ble -> device : writeValueWithResponse(00)
+alt The device refuses control
+  device --> ble : Indication 80 00 05
+  ble --> cps : value
+  cps --> tool : result 05
+  tool -> session : controlState = refused
+  tool --> executor : ok, result "controlNotPermitted", connectionQuirk observation (FR-037)
+  executor -> dialog : Failed state: "Control not permitted"
+  executor -> playbook : Control stage ends
+  playbook -> playbook : Remove send_command; go to Conclude
+else No indication within 5 seconds
+  cps -> cps : Timer fires after 5 s
+  cps --> tool : TIMEOUT
+  tool -> session : controlState = timedOut
+  tool --> executor : ok false, TIMEOUT (FR-037)
+  executor -> dialog : "The machine didn't answer in 5 seconds"
+end
+@enduml

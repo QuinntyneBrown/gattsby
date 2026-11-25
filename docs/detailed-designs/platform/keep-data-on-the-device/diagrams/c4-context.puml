@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Keep data on the device
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(host, "Static host", "Serves Gattsby's own static files over HTTPS with the CSP headers")
+System_Ext(chrome, "Chrome", "Web Bluetooth, Prompt API, IndexedDB, downloads")
+System_Ext(nano, "Gemini Nano", "On-device model inside Chrome")
+System_Ext(device, "Device", "Machine or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Investigates; exports files when they choose")
+Rel(gattsby, host, "Loads own-origin files only", "HTTPS, connect-src 'self'")
+Rel(gattsby, chrome, "Stores data locally; saves export files", "IndexedDB, download")
+Rel(gattsby, nano, "Prompts on the device", "Prompt API")
+Rel(chrome, device, "GATT over Bluetooth LE")
+@enduml

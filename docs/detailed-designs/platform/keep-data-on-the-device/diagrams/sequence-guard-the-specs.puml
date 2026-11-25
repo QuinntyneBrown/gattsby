@@ -1,0 +1,38 @@
+@startuml
+title UML sequence behaviour — Prove it in the specs
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+participant "Behaviour spec (Playwright)" as spec
+participant "Network guard (guards.ts)" as guard
+participant "Local static server" as preview
+box "Browser and device" #F2F4F7
+  participant "Chromium" as chromium
+end box
+
+spec -> guard : install(context)
+spec -> chromium : goto(localhost)
+chromium -> guard : route(localhost /)
+guard --> chromium : continue
+chromium -> preview : GET /
+preview --> chromium : index.html with headers from security-headers.json
+spec -> spec : Header spec: connect-src is 'self'; no third-party origin (NFR-012)
+alt Every request stays on localhost
+  guard --> spec : No off-origin request; spec passes
+else A request to another origin
+  chromium -> guard : route(other origin)
+  guard -> guard : Abort and record
+  guard --> spec : Fail the spec
+end
+@enduml

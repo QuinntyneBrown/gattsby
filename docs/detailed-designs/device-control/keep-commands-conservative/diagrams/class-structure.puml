@@ -1,0 +1,129 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Keep commands conservative
+
+enum MachineType {
+  treadmill
+  bike
+  rower
+  crossTrainer
+  heartRateSensor
+  other
+  unknown
+}
+
+enum UnsafeReason {
+  noSafeLimit
+  aboveLimit
+  notSmallestStep
+  outsideDeviceRange
+  currentUnknown
+}
+
+class SafeLimitEntry {
+  +deviceType: MachineType
+  +firstSpeedMaxKmh: number
+  +inclineMaxPercent: number
+  +powerMaxW: number
+  +stepIncrements: number
+  +riskOrder: CommandName[]
+  +source: string
+  +signedOffBy: string
+}
+
+class SupportedRange {
+  +min: number
+  +max: number
+  +increment: number
+}
+
+class SupportedRanges {
+  +speed?: SupportedRange
+  +incline?: SupportedRange
+  +resistance?: SupportedRange
+  +heartRate?: SupportedRange
+  +power?: SupportedRange
+}
+
+class SupportedRangesResult {
+  +machineFeatures: string[]
+  +targetSettingFeatures: string[]
+  +ranges: SupportedRanges
+}
+
+class LimitContext {
+  +deviceType: MachineType
+  +limits: SafeLimitEntry | null
+  +ranges: SupportedRanges
+  +current: CurrentValues
+  +moving: boolean
+}
+
+class ProposedCommand {
+  +command: CommandName
+  +value?: number
+}
+
+class SafeCommand {
+  +command: CommandName
+  +value: number
+  +entry: CommandEntry
+}
+
+class SafetyLimits <<pure helper>> {
+  +allowedTargets(command: CommandName, ctx: LimitContext): number[]
+  +check(proposed: ProposedCommand, ctx: LimitContext): SafeCommand | ToolError
+  +lowestRiskCommand(ctx: LimitContext): CommandName | null
+}
+
+class ReadSupportedRangesTool {
+  +definition: ToolDefinition
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<SupportedRangesResult>>
+}
+
+class FtmsDecoder <<pure helper>> {
+  +decodeMachineFeatures(bytes: DataView): FeatureNames
+  +decodeSupportedRange(kind: RangeKind, bytes: DataView): SupportedRange
+}
+
+class KnowledgeBase {
+  +limitsFor(deviceType: MachineType): SafeLimitEntry | null
+  +commandFor(protocol: string, command: CommandName): CommandEntry | null
+}
+
+class ApprovalGate {
+  +request(call: PendingCall, ctx: ToolContext): Promise<ApprovalToken | ToolError>
+}
+
+class InvestigationSession {
+  +deviceType: Signal<MachineType | null>
+  +supportedRanges: Signal<SupportedRanges>
+  +current: Signal<CurrentValues>
+}
+
+SupportedRanges "1" *-- "0..5" SupportedRange
+SupportedRangesResult *-- SupportedRanges
+LimitContext --> SafeLimitEntry
+LimitContext --> SupportedRanges
+SafeLimitEntry --> MachineType
+SafetyLimits ..> LimitContext : reads
+SafetyLimits ..> SafeCommand : returns
+SafetyLimits ..> UnsafeReason : refuses with
+SafetyLimits ..> ProposedCommand : checks
+ReadSupportedRangesTool ..> FtmsDecoder : decodes with
+ReadSupportedRangesTool ..> SupportedRangesResult : returns
+ReadSupportedRangesTool ..> InvestigationSession : sets ranges
+KnowledgeBase ..> SafeLimitEntry : provides
+ApprovalGate ..> SafetyLimits : check before prompt
+@enduml

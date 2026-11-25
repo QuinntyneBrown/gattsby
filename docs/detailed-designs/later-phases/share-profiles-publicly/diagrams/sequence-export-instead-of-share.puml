@@ -1,0 +1,42 @@
+@startuml
+title UML sequence behaviour — Pass a profile on today
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "DeviceProfilePage" as page
+  participant "ExportDialog" as dialog
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ExportService" as export
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome downloads" as chrome
+end box
+
+person -> page : Tap "Export profile"
+page -> dialog : Open: "Saved as a file on this device. Nothing is sent anywhere."
+person -> dialog : Choose Device profile
+dialog --> page : export(profile)
+page -> export : export({ kind: profile, id })
+export -> store : readProfile(id)
+store --> export : DeviceProfile (format versioned)
+export -> chrome : FileDownloader: Blob, object URL, download named after device and date
+export -> export : Revoke the object URL
+note over page, chrome : No request leaves the app's origin (FR-075)
+export --> page : ExportResult
+page -> person : Toast: saved on this device
+@enduml

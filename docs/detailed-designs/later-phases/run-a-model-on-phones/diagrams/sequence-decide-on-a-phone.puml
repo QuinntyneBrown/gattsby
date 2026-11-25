@@ -1,0 +1,44 @@
+@startuml
+title UML sequence behaviour — Decide a step on a phone
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "DecisionStateBuilder" as dsb
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelAdapter = InBrowserModelAdapter" as inb
+end box
+box "Browser and device" #F2F4F7
+  participant "WebGPU" as gpu
+end box
+
+orch -> dsb : build()
+dsb --> orch : DecisionState
+orch -> inb : session.prompt(state, actionSchema, signal)
+inb -> gpu : Run the model with constrained output
+gpu --> inb : tokens
+inb --> orch : one JSON action
+note over orch, inb : Same contract as the Prompt API adapter; no orchestrator change (FR-074)
+orch -> validator : validate(action) (FR-043)
+alt Valid action
+  validator --> orch : ok
+  orch -> executor : run
+else Invalid or timed out
+  validator --> orch : refused; counts against the step budget
+end
+@enduml

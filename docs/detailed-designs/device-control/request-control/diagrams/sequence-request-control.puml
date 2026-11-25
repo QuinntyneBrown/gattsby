@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Request control and get it
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ApprovalGate" as gate
+  participant "InvestigationSession" as session
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "RequestControlTool" as tool
+  participant "ControlPointSession" as cps
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> gate : request(request_control)
+gate -> dialog : Show request; no stand-clear check (OQ-12)
+note over dialog, device : Nothing has been written yet (FR-034)
+person -> dialog : Tap Send
+dialog --> gate : decision send
+gate --> executor : token a-16
+executor -> tool : run({}, approvalId a-16) (TOOL-021)
+tool -> session : controlState = requesting
+tool -> cps : open()
+cps -> ble : subscribe(0x2AD9)
+ble -> device : startNotifications (indications on)
+tool -> cps : send(00, a-16, 5 s)
+cps -> ble : write(0x2AD9, 00, a-16)
+ble -> device : writeValueWithResponse(00)
+dialog -> person : Busy: "waiting up to 5 s"
+device --> ble : Indication 80 00 01
+ble --> cps : value
+cps -> cps : decodeResponse: op 00, result 01
+cps --> tool : success
+tool -> session : controlState = granted (FR-037)
+tool --> executor : ok, result "success", raw 80 00 01
+executor --> executor : Commit step; send_command now allowed
+@enduml

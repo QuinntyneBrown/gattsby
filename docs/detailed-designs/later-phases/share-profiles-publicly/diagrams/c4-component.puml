@@ -1,0 +1,23 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Share profiles publicly (later phase)
+
+Person(person, "Person", "Developer or helper")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(profilePage, "DeviceProfilePage", "Angular page", "Shows a profile; opens Export")
+  Component(dialog, "ExportDialog", "Angular component", "Nothing is sent anywhere")
+  Component(export, "ExportService", "Service", "Versioned JSON; Blob download")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Reads the profile")
+  Component(sharing, "ProfileSharingService", "Contract, not built", "<TO SUPPLY> (OQ-03, OQ-05)")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Profiles")
+System_Ext(chrome, "Chrome", "Downloads")
+
+Rel(person, profilePage, "Taps Export profile")
+Rel(profilePage, dialog, "Opens")
+Rel(profilePage, export, "export(request) on the dialog's output")
+Rel(export, store, "Reads the profile")
+Rel(store, idb, "Reads")
+Rel(export, chrome, "Download", "object URL")
+@enduml

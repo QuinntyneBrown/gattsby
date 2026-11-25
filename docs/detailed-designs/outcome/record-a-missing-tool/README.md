@@ -63,9 +63,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 1. A request is raised when the agent asks for one (TOOL-029), a tool reports `UNSUPPORTED`, a needed
    capability is unavailable, a protocol is encrypted (`AUTH_REQUIRED`), or a safe limit is missing
    (FR-058).
-2. A missing safe limit is raised by `SafetyLimits` (see
-   [keep commands conservative](../../device-control/keep-commands-conservative/README.md)), because
-   `UNSAFE_VALUE` alone does not tell a missing limit from a value above it. Hidden services are
+2. A missing safe limit is raised by `ActionValidator` when `SafetyLimits` refuses a value with
+   `UNSAFE_VALUE` and the reason `noSafeLimit` (see
+   [keep commands conservative](../../device-control/keep-commands-conservative/README.md)); the
+   reason tells a missing limit from a value above it. Hidden services are
    raised by Identify (FR-023, see
    [report hidden services](../../identification/report-hidden-services/README.md)). Both call `raise`.
 3. Each request holds the capability, the reason, the evidence IDs and the stage (FR-058). Model text

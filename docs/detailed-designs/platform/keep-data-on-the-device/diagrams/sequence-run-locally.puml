@@ -1,0 +1,49 @@
+@startuml
+title UML sequence behaviour — Run an investigation without leaving the device
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "Gattsby web app" as app
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  participant "CspViolationRecorder" as recorder
+  participant "DiagnosticsRecorder" as diag
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+  participant "Static host (own origin)" as host
+end box
+
+person -> chrome : Open Gattsby
+chrome -> host : GET / and own-origin chunks, knowledge base, fonts
+host --> chrome : Files with the CSP header, connect-src 'self' (NFR-012)
+chrome -> app : Start
+app -> model : prompt(state)
+model -> chrome : LanguageModel.prompt() on the device
+chrome --> model : action
+app -> store : commitStep(...) into IndexedDB
+alt Any code tries another origin
+  app -> chrome : fetch(other origin)
+  chrome -> chrome : Blocked by connect-src 'self'
+  chrome -> recorder : securitypolicyviolation
+  recorder -> diag : DiagnosticEntry(directive, blocked origin)
+  diag -> store : Save locally (NFR-025)
+end
+person -> app : Export profile
+app -> chrome : Blob download; nothing is sent
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Run a model on phones (later phase)
+
+Person(person, "Person", "On a phone")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "ReadinessPage", "Angular page", "Shows the capability report and the offer")
+  Component(offer, "ModelDownloadOffer", "Angular component", "Size, mobile-data cost; Download or Use the checklist")
+  Component(caps, "CapabilityService", "Service", "WebGpuCapability, NetworkTypeCapability, PromptApiCapability")
+  Component(factory, "ModelAdapterFactory", "DI factory", "Chooses the ModelAdapter implementation")
+  Component(inb, "InBrowserModelAdapter", "Model adapter", "Only code that touches the model runtime")
+  Component(papi, "PromptApiModelAdapter", "Model adapter", "Only code that touches LanguageModel")
+  Component(mode, "ModeController", "Service", "Full agent mode or checklist mode")
+  Component(orch, "AgentOrchestrator", "Service", "Unchanged; depends on ModelAdapter only")
+  Component(validator, "ActionValidator", "Service", "Validates every action")
+}
+System_Ext(gpu, "WebGPU", "Chrome for Android")
+System_Ext(host, "Static host", "Own origin")
+
+Rel(page, caps, "Reads the report")
+Rel(page, offer, "Renders")
+Rel(person, offer, "Taps Download")
+Rel(page, inb, "download() on the offer's output")
+Rel(factory, caps, "Reads capabilities")
+Rel(factory, inb, "Provides on Android with WebGPU")
+Rel(factory, papi, "Provides where the Prompt API exists")
+Rel(mode, factory, "Asks for an available adapter")
+Rel(orch, inb, "prompt(state, schema, signal)")
+Rel(orch, validator, "Validates the action")
+Rel(inb, host, "Downloads weights", "HTTPS, same origin")
+Rel(inb, gpu, "Runs the model")
+@enduml

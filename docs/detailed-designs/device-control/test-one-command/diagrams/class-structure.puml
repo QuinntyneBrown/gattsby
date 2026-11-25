@@ -1,0 +1,121 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Test one command
+
+enum ControlTestStep {
+  offer
+  requestControl
+  command
+  confirm
+  check
+  restore
+  done
+}
+
+enum FeatureStatus {
+  confirmed
+  claimedOnly
+  refused
+}
+
+enum EffectAssessment {
+  asExpected
+  noChange
+  against
+  notDecoded
+}
+
+class ControlTestState {
+  +step: ControlTestStep
+  +controlState: ControlState
+  +command: CommandName | null
+  +startValue?: number
+  +sentValue?: number
+  +answer?: "yes" | "no" | "notSure"
+  +effect?: EffectAssessment
+}
+
+class ControlTestPlan <<pure helper>> {
+  +next(state: ControlTestState): PlannedStep
+  +sequenceLabel(state: ControlTestState): string
+}
+
+class CommandEntry {
+  +protocol: string
+  +command: CommandName
+  +characteristic: string
+  +opCode?: number
+  +vendorBytes?: string
+  +parameter?: ParameterEncoding
+  +isMotion: boolean
+  +revertible: boolean
+  +title: string
+  +expectedEffect: string
+  +risk: string
+  +source: string
+}
+
+class SendCommandTool {
+  +definition: ToolDefinition
+  +run(input: SendCommandInput, ctx: ToolContext): Promise<ToolResult<SendCommandResult>>
+}
+
+class SendCommandResult {
+  +sent: string
+  +result: string
+  +raw?: string
+}
+
+class CommandEncoder <<pure helper>> {
+  +encode(entry: CommandEntry, value?: number): Uint8Array
+}
+
+class ControlEffectCheck <<pure helper>> {
+  +assess(command: CommandName, before: DecodedValue[], after: DecodedValue[]): EffectAssessment
+}
+
+class ControllableFeature {
+  +feature: string
+  +howCommanded: string
+  +range?: SupportedRange
+  +status: FeatureStatus
+  +tested?: string
+  +evidence: string[]
+}
+
+class ControllableFeatures <<pure helper>> {
+  +build(claims: FeatureNames, ranges: SupportedRanges, entries: CommandEntry[], results: ControlTestState): ControllableFeature[]
+}
+
+class CommandTargetRules <<pure helper>> {
+  +isForbidden(uuid: string): boolean
+  +isKnownTarget(uuid: string, kb: KnowledgeBase): boolean
+}
+
+class ControlPointSession {
+  +send(bytes: Uint8Array, approvalId: string, timeoutMs: number): Promise<ControlPointResponse | ToolError>
+}
+
+ControlTestPlan ..> ControlTestState : reads
+ControlTestState --> ControlTestStep
+ControlTestState --> EffectAssessment
+SendCommandTool ..> CommandEntry : resolves
+SendCommandTool ..> CommandEncoder : encodes with
+SendCommandTool --> ControlPointSession : sends through
+SendCommandTool ..> SendCommandResult : returns
+ControllableFeatures ..> ControllableFeature : builds
+ControllableFeature --> FeatureStatus
+ControlEffectCheck ..> EffectAssessment : returns
+CommandTargetRules ..> CommandEntry : validates targets of
+@enduml

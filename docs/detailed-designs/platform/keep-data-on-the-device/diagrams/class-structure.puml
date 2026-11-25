@@ -1,0 +1,58 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Keep data on the device
+
+class CspViolationRecorder {
+  -listener: (event: SecurityPolicyViolationEvent) => void
+  +start(): void
+  +stop(): void
+}
+
+class DiagnosticEntry {
+  +code: string
+  +source: string
+  +detail: string
+  +at: number
+  +stage?: PlaybookStage
+}
+
+class DiagnosticsRecorder {
+  +record(entry: DiagnosticEntry): void
+}
+
+abstract class InvestigationStore <<contract>>
+
+class ExportService {
+  +estimate(id: string): Promise<ExportSizes>
+  +export(request: ExportRequest): Promise<ExportResult>
+}
+
+class NetworkGuard <<e2e fixture, guards.ts>> {
+  +appOrigin: string
+  +offOriginRequests: string[]
+  +install(context: BrowserContext): Promise<void>
+  +assertNone(): void
+}
+
+class HeaderSpec <<e2e spec>> {
+  +checksConnectSrcSelf(): void
+  +checksNoThirdPartyOrigin(): void
+}
+
+CspViolationRecorder ..> DiagnosticEntry : creates
+CspViolationRecorder --> DiagnosticsRecorder : hands over
+DiagnosticsRecorder --> InvestigationStore : persists
+ExportService --> InvestigationStore : reads
+HeaderSpec ..> NetworkGuard : runs under, like every behaviour spec
+@enduml

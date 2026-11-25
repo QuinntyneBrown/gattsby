@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Share profiles publicly (later phase)
+
+Person(person, "Person", "Developer or helper")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Profiles, export dialog, export service; no sharing code")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Device profiles and records")
+}
+System_Ext(host, "Static host", "Own origin")
+System_Ext(chrome, "Chrome", "Downloads")
+
+Rel(person, spa, "Taps Export profile", "Touch or keyboard")
+Rel(spa, idb, "Reads the profile")
+Rel(spa, chrome, "Hands over the JSON file", "Blob and object URL")
+Rel(spa, host, "Static files only", "connect-src 'self'")
+@enduml

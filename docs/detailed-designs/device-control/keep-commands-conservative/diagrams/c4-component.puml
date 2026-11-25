@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Keep commands conservative
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(rangeTool, "ReadSupportedRangesTool", "Tool (read)", "Reads feature bits and supported ranges")
+  Component(decoder, "ftms.decoder", "Pure helper", "decodeMachineFeatures, decodeSupportedRange")
+  Component(session, "InvestigationSession", "Signals", "Device type, supported ranges, current decoded values")
+  Component(limits, "SafetyLimits", "Pure helper", "allowedTargets, check, lowestRiskCommand")
+  Component(kbSvc, "KnowledgeBase", "Service", "limitsFor(deviceType), commandFor(protocol, command)")
+  Component(dsb, "DecisionStateBuilder", "Service", "Lists the allowed targets for the model")
+  Component(validator, "ActionValidator", "Service", "Refuses unsafe values; raises a missing-tool request on noSafeLimit")
+  Component(gate, "ApprovalGate", "Service", "Checks the value before any approval prompt")
+  Component(mtr, "MissingToolRequests", "Service", "Records the missing safe limits")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "read(characteristic)")
+}
+ContainerDb(kbData, "Knowledge base data", "Versioned JSON files", "limits.json, commands.json")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(rangeTool, ble, "read 0x2ACC, 0x2AD4 to 0x2AD8")
+Rel(ble, device, "readValue", "Web Bluetooth")
+Rel(rangeTool, decoder, "Decodes bytes")
+Rel(rangeTool, session, "Sets supportedRanges")
+Rel(kbSvc, kbData, "Loads and validates")
+Rel(limits, kbSvc, "Reads limits and risk order")
+Rel(limits, session, "Reads LimitContext inputs")
+Rel(dsb, limits, "allowedTargets(command)")
+Rel(validator, limits, "check(proposed)")
+Rel(gate, limits, "check again before any prompt")
+Rel(validator, mtr, "raise(missing safe limits)")
+@enduml

@@ -1,0 +1,40 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Emergency stop
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(button, "EmergencyStopButton", "Angular component", "In the top bar and inside each modal dialog")
+  Component(dialog, "EmergencyStopDialog", "Angular component", "busy, stopped, failed; no close")
+  Component(ctrl, "EmergencyStopController", "Service", "Latch; runs the stop in a fixed order")
+  Component(orch, "AgentOrchestrator", "Service", "abortCurrentStep; end(emergencyStopped)")
+  Component(channel, "PromptChannel", "Service", "cancelAll(EMERGENCY_STOPPED)")
+  Component(gate, "ApprovalGate", "Service", "Refuses every later call")
+  Component(tool, "EmergencyStopTool", "Tool (control)", "Writes the stop sequence; no stage")
+  Component(kbSvc, "KnowledgeBase", "Service", "stopSequence(protocol)")
+  Component(cps, "ControlPointSession", "Tool helper", "Priority send; awaits 80 08 01")
+  Component(ledger, "ApprovalLedger", "BLE layer", "revokeAll, issueEmergencyStop, sealed")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Write queue with priority; disconnect")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "Pending prompt() with AbortSignal")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Event and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, button, "Taps")
+Rel(button, ctrl, "pressed -> trigger()")
+Rel(gate, ctrl, "Reads stopped")
+Rel(ctrl, ledger, "revokeAll")
+Rel(tool, ledger, "issueEmergencyStop per step")
+Rel(ctrl, orch, "abortCurrentStep, then end(emergencyStopped)")
+Rel(orch, model, "abort()")
+Rel(ctrl, channel, "cancelAll")
+Rel(ctrl, dialog, "Shows outcome")
+Rel(ctrl, tool, "run({})")
+Rel(tool, kbSvc, "stopSequence(FTMS)")
+Rel(tool, cps, "send(08 01), then send(01)")
+Rel(cps, ble, "Priority write with emergency token")
+Rel(ble, ledger, "consume")
+Rel(ble, device, "writeValueWithResponse or disconnect", "Web Bluetooth")
+Rel(ctrl, idb, "Commits the event")
+@enduml

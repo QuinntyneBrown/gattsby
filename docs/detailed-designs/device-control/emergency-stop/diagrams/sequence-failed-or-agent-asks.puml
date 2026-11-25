@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — No acknowledgement, no known stop, or the agent asks
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "EmergencyStopDialog" as dialog
+  participant "ToastService" as toast
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ActionValidator" as validator
+  participant "EmergencyStopController" as ctrl
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "EmergencyStopTool" as tool
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+alt Stop is not acknowledged
+  ctrl -> tool : run({}) after latch, abort and cancel
+  tool -> ble : priority write(0x2AD9, 08 01, e-1)
+  ble -> device : writeValueWithResponse(08 01)
+  tool -> tool : No 80 08 01 within 5 s (FR-037)
+  tool --> ctrl : sent [08 01], acknowledged false
+  ctrl -> ble : disconnect()
+  ctrl -> dialog : Failed: "No answer to Stop." Use the machine's own stop (FR-039)
+  ctrl -> ctrl : AgentOrchestrator.end(emergencyStopped)
+else No stop sequence is known for the device
+  ctrl -> tool : run({})
+  tool -> kb : stopSequence(protocol)
+  kb --> tool : null
+  tool --> ctrl : sent [], loopStopped, writesBlocked
+  ctrl -> ble : disconnect()
+  ctrl -> dialog : Failed: use the machine's own stop
+  ctrl -> ctrl : AgentOrchestrator.end(emergencyStopped)
+else The model returns call_tool emergency_stop
+  validator -> validator : emergency_stop is allowed at no stage
+  validator --> validator : NOT_ALLOWED_AT_STAGE (TOOL-024)
+  validator -> toast : "The agent asked for an emergency stop."
+  toast -> person : Tap Emergency stop if the machine needs stopping
+end
+@enduml

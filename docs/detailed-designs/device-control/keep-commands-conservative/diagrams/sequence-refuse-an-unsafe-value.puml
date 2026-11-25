@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Offer only safe values, refuse the rest
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "DecisionStateBuilder" as dsb
+  participant "ActionValidator" as validator
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "SafetyLimits" as limits
+  participant "KnowledgeBase" as kb
+  participant "MissingToolRequests" as mtr
+end box
+
+alt A bike with resistance increment 1 at level 5
+  dsb -> limits : allowedTargets(setResistance, ctx)
+  limits -> kb : limitsFor(bike)
+  kb --> limits : SafeLimitEntry (A-06)
+  limits --> dsb : [4, 6] only (FR-036)
+  dsb -> dsb : Decision state lists the allowed targets
+else The model proposes setSpeed 8.0 to a treadmill at rest
+  validator -> limits : check(send_command setSpeed 8.0, ctx)
+  limits -> kb : limitsFor(treadmill)
+  kb --> limits : firstSpeedMaxKmh 2.0
+  limits --> validator : UNSAFE_VALUE aboveLimit
+  validator -> validator : Refused step; no prompt posted, no token (FR-036)
+  validator -> page : Feed: "Not sent: 8.0 km/h is above the safe first speed"
+  page -> person : Shows the refusal
+  note over gate, limits : ApprovalGate repeats check() before any prompt, for every path
+else No safe limits exist for the device type
+  validator -> limits : check(send_command start, ctx)
+  limits -> kb : limitsFor(rower)
+  kb --> limits : null
+  limits --> validator : UNSAFE_VALUE noSafeLimit
+  validator -> validator : Refused step; no prompt posted
+  validator -> mtr : raise("safe command limits for rower") (FR-036)
+end
+@enduml

@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Unexpected effect
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+  participant "UnexpectedEffectDialog" as ued
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator or ChecklistRunner" as plan
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ControlEffectCheck" as effect
+  participant "SendCommandTool" as tool
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+device --> plan : Decoded speed 9.2 km/h after setSpeed 5.9
+plan -> effect : assess(setSpeed, 6.0, 9.2)
+effect --> plan : against
+plan -> plan : Halt the loop; refuse further test commands (FR-038)
+plan -> gate : send_command stop, at once
+gate -> dialog : "Stop the belt?" no stand-clear check
+note over dialog, person : Emergency stop stays one tap away (FR-039)
+person -> dialog : Tap Send
+gate --> plan : token a-18
+plan -> tool : run(stop, a-18)
+tool -> device : 08 01
+device --> tool : 80 08 01
+plan -> ued : Open: "Speed jumped to 9.2 km/h. I sent Stop."
+ued -> person : "Use the machine's own stop now if the belt is still moving."
+person -> ued : "I'm safe, belt stopped" or "Finish read-only"
+ued --> plan : decision
+plan -> plan : Set target speed: claimed only, evidence of the unexpected effect; go to Conclude
+@enduml

@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Request control
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(dialog, "ApprovalDialog", "Angular component", "Default, busy and failed states")
+  Component(executor, "ToolExecutor", "Service", "Runs the validated call with its approval ID")
+  Component(gate, "ApprovalGate", "Service", "Asks the person; issues one token")
+  Component(tool, "RequestControlTool", "Tool (control)", "Writes 00 and reports the result")
+  Component(cps, "ControlPointSession", "Tool helper", "Indications on 0x2AD9; send and await the response")
+  Component(decoder, "ftms-control-point.decoder", "Pure helper", "decodeResponse(80 op result)")
+  Component(session, "InvestigationSession", "Signals", "controlState")
+  Component(playbook, "Playbook", "Service", "Ends the Control stage after a refusal")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "subscribe, write with approval ID")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, gate, "Requests approval")
+Rel(gate, dialog, "Shows the request")
+Rel(person, dialog, "Taps Send")
+Rel(executor, tool, "run({}, ctx with approvalId)")
+Rel(tool, cps, "open(), send(00, approvalId, 5 s)")
+Rel(cps, ble, "subscribe(0x2AD9), write(0x2AD9, 00, approvalId)")
+Rel(ble, device, "startNotifications, writeValueWithResponse", "Web Bluetooth")
+Rel(cps, decoder, "Decodes the indication")
+Rel(tool, session, "Sets controlState")
+Rel(playbook, session, "Reads controlState")
+Rel(executor, idb, "Commits the step")
+@enduml

@@ -1,0 +1,39 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Test one command
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Offer, confirmation question, live readings")
+  Component(ued, "UnexpectedEffectDialog", "Angular component", "Opens after a stop when data moved against the command")
+  Component(orch, "AgentOrchestrator / ChecklistRunner", "Service", "Drives the Control stage step by step")
+  Component(plan, "ControlTestPlan", "Pure helper", "offer, requestControl, command, confirm, check, restore")
+  Component(channel, "PromptChannel", "Service", "Offer and confirmation prompts")
+  Component(gate, "ApprovalGate", "Service", "One approval per command")
+  Component(tool, "SendCommandTool", "Tool (control)", "Encodes and sends one known command")
+  Component(encoder, "CommandEncoder", "Pure helper", "CommandEntry and value to bytes")
+  Component(cps, "ControlPointSession", "Tool helper", "Sends on 0x2AD9; awaits 80 op result")
+  Component(effect, "ControlEffectCheck", "Pure helper", "asExpected, noChange, against, notDecoded")
+  Component(features, "ControllableFeatures", "Pure helper", "Builds the profile's controllable features")
+  Component(rules, "CommandTargetRules", "Pure helper", "Forbidden and known write targets")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Writes only known, approved targets")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(orch, plan, "next(state)")
+Rel(orch, channel, "Posts offer and confirmation")
+Rel(channel, page, "Renders prompts")
+Rel(person, page, "Answers")
+Rel(orch, gate, "Each command needs approval")
+Rel(orch, tool, "Runs send_command with the token")
+Rel(gate, encoder, "Bytes for the prompt")
+Rel(tool, encoder, "Same bytes for the write")
+Rel(tool, cps, "send(bytes, approvalId)")
+Rel(cps, ble, "write(0x2AD9, bytes, approvalId)")
+Rel(ble, rules, "Is the target allowed?")
+Rel(ble, device, "writeValueWithResponse", "Web Bluetooth")
+Rel(orch, effect, "Assesses decoded data")
+Rel(orch, ued, "Opens after the stop on an unexpected effect")
+Rel(orch, features, "Builds controllable features from the results")
+@enduml

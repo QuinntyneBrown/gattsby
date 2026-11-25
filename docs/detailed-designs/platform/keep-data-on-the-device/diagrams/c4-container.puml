@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Keep data on the device
+
+Person(person, "Person", "Developer or helper")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "No HttpClient; CSP violation recorder; export service")
+  Container(sw, "Service worker", "Angular service worker (pending ADR 0001)", "Caches own-origin files only")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Every investigation, profile, photo and diagnostic")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Loaded from the own origin")
+}
+System_Ext(host, "Static host", "Own origin; CSP header with connect-src 'self'")
+
+Rel(person, spa, "Uses; starts exports", "Touch or keyboard")
+Rel(spa, sw, "Fetches through")
+Rel(sw, host, "Own-origin static files", "HTTPS")
+Rel(spa, kb, "Reads")
+Rel(spa, idb, "Reads and writes all data")
+@enduml

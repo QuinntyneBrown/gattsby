@@ -1,0 +1,99 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Run a model on phones (later phase)
+
+enum ModelAvailability {
+  unavailable
+  downloadable
+  downloading
+  available
+}
+
+enum NetworkType {
+  cellular
+  notCellular
+  unknown
+}
+
+abstract class ModelAdapter <<contract>> {
+  +availability(): Promise<ModelAvailability>
+  +download(onProgress: (fraction: number) => void, signal: AbortSignal): Promise<void>
+  +createSession(): Promise<ModelSession>
+}
+
+class PromptApiModelAdapter
+class InBrowserModelAdapter {
+  -spec: InBrowserModelSpec
+  -runtime: unknown
+  +availability(): Promise<ModelAvailability>
+  +download(onProgress: (fraction: number) => void, signal: AbortSignal): Promise<void>
+  +createSession(): Promise<ModelSession>
+  +destroy(): void
+}
+
+class ModelSession {
+  +prompt(state: string, schema: JsonSchema, signal: AbortSignal): Promise<string>
+  +destroy(): void
+}
+
+class InBrowserModelSpec {
+  +runtime: string
+  +modelId: string
+  +weightsPath: string
+  +downloadBytes: number
+  +contextTokens: number
+  +minGpu: string
+}
+
+class ModelAdapterFactory {
+  +create(report: CapabilityReport, phoneModelEnabled: boolean): ModelAdapter | null
+}
+
+class CapabilityReport {
+  +promptApi: ModelAvailability
+  +webGpu: WebGpuReport
+  +network: NetworkReport
+}
+
+class WebGpuCapability {
+  +detect(): Promise<WebGpuReport>
+}
+
+class NetworkTypeCapability {
+  +detect(): NetworkReport
+}
+
+class NetworkReport {
+  +type: NetworkType
+  +saveData: boolean
+}
+
+class ModelDownloadOffer <<component>> {
+  +sizeBytes: input<number>
+  +network: input<NetworkReport>
+  +download: output<void>
+  +useChecklist: output<void>
+}
+
+ModelAdapter <|-- PromptApiModelAdapter
+ModelAdapter <|-- InBrowserModelAdapter
+InBrowserModelAdapter --> InBrowserModelSpec
+InBrowserModelAdapter ..> ModelSession : creates
+ModelAdapterFactory ..> CapabilityReport : reads
+ModelAdapterFactory ..> ModelAdapter : provides
+CapabilityReport ..> WebGpuCapability : from
+CapabilityReport ..> NetworkTypeCapability : from
+NetworkReport --> NetworkType
+ModelDownloadOffer ..> NetworkReport : shows
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Share profiles publicly (later phase)
+
+class DeviceProfile {
+  +formatVersion: number
+  +identity: DeviceIdentity
+  +protocol: string
+  +readableMetrics: ReadableMetric[]
+  +controllableFeatures: ControllableFeature[]
+  +verdict: Verdict
+  +locationLabel?: string
+}
+
+abstract class InvestigationStore <<contract>> {
+  +listProfiles(): Promise<DeviceProfile[]>
+}
+
+class ExportService {
+  +estimate(id: string): Promise<ExportSizes>
+  +export(request: ExportRequest): Promise<ExportResult>
+}
+
+class ExportResult {
+  +fileName: string
+  +bytes: number
+}
+
+abstract class ProfileSharingService <<contract, not built>> {
+  +share(profile: DeviceProfile): Promise<ShareResult>
+}
+
+note right of ProfileSharingService
+  Not written until OQ-03 and OQ-05 are answered.
+  Fields shared, redaction, consent and origin: <TO SUPPLY>
+end note
+
+ExportService --> InvestigationStore : reads
+ExportService ..> DeviceProfile : serialises
+ExportService ..> ExportResult : returns
+ProfileSharingService ..> DeviceProfile : would share
+@enduml

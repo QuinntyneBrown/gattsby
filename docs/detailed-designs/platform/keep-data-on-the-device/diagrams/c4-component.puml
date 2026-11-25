@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Keep data on the device
+
+Person(person, "Person", "Developer or helper")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(csp, "Content Security Policy", "Header and index.html meta", "Header from security-headers.json; meta connect-src 'self'")
+  Component(recorder, "CspViolationRecorder", "Service", "Records blocked requests locally")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "On-device model only")
+  Component(diag, "DiagnosticsRecorder", "Service", "Local diagnostics (NFR-025)")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Only code that touches IndexedDB")
+  Component(export, "ExportService", "Service", "The only way data leaves: a download")
+  Component(settings, "SettingsPage", "Angular page", "States that nothing leaves this device")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "All data")
+System_Ext(chrome, "Chrome", "securitypolicyviolation, downloads, Prompt API")
+
+Rel(chrome, csp, "Enforces")
+Rel(chrome, recorder, "securitypolicyviolation event")
+Rel(recorder, diag, "DiagnosticEntry for the violation")
+Rel(diag, store, "Saves")
+Rel(store, idb, "Reads and writes")
+Rel(model, chrome, "LanguageModel.prompt()")
+Rel(person, export, "Starts an export")
+Rel(export, chrome, "Blob download")
+Rel(person, settings, "Reads the privacy statement")
+@enduml

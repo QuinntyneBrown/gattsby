@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Share profiles publicly (later phase)
+
+Person(person, "Person", "Developer or helper who completed an investigation")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Downloads, IndexedDB")
+System_Ext(host, "Static host", "Serves Gattsby's files over HTTPS; the only network peer")
+System_Ext(library, "Public device library", "Does not exist; <TO SUPPLY> (OQ-03, OQ-05)")
+
+Rel(person, gattsby, "Exports a profile as a file")
+Rel(gattsby, chrome, "Saves the file on the device", "Download")
+Rel(gattsby, host, "Loads its own static files", "HTTPS, same origin")
+Rel_R(person, library, "May pass files on outside Gattsby, by their own means")
+@enduml

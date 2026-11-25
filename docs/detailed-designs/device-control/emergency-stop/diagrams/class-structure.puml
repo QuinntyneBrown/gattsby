@@ -1,0 +1,103 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Emergency stop
+
+class EmergencyStopController {
+  +stopped: Signal<boolean>
+  +outcome: Signal<EmergencyStopOutcome | null>
+  +trigger(): Promise<void>
+  +answer(personAnswer: "beltStopped" | "stillMoving"): Promise<void>
+}
+
+class EmergencyStopTool {
+  +definition: ToolDefinition
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<EmergencyStopOutput>>
+}
+
+class EmergencyStopOutput {
+  +sent: string[]
+  +loopStopped: true
+  +writesBlocked: true
+}
+
+class EmergencyStopOutcome {
+  +tappedAt: number
+  +steps: StopStepResult[]
+  +disconnected: boolean
+  +stoppedAt?: number
+}
+
+class StopStepResult {
+  +bytes: string
+  +acknowledged: boolean
+  +error?: ToolErrorCode
+}
+
+class StopSequence {
+  +protocol: string
+  +steps: StopStep[]
+}
+
+class StopStep {
+  +characteristic: string
+  +bytes: Uint8Array
+  +expectResponse: boolean
+}
+
+class ApprovalLedger {
+  -tokens: Map<string, ApprovalToken>
+  -sealed: boolean
+  +issue(request: ApprovalRequest): ApprovalToken | ToolError
+  +issueEmergencyStop(characteristic: string, bytes: Uint8Array): ApprovalToken
+  +consume(id: string, characteristic: string, bytes: Uint8Array): ApprovalToken | ToolError
+  +revokeAll(): void
+}
+
+class AgentOrchestrator {
+  +abortCurrentStep(reason: string): void
+  +end(reason: StopReason): Promise<void>
+}
+
+class PromptChannel {
+  +cancelAll(code: ToolErrorCode): void
+}
+
+class KnowledgeBase {
+  +stopSequence(protocol: string): StopSequence | null
+}
+
+class EmergencyStopButton <<component>> {
+  +visible: input<boolean>
+  +pressed: output<void>
+}
+
+class EmergencyStopDialog <<component>> {
+  +view: input<EmergencyStopView>
+  +beltStopped: output<void>
+  +stillMoving: output<void>
+}
+
+EmergencyStopButton ..> EmergencyStopController : pressed triggers
+EmergencyStopController --> ApprovalLedger : revokeAll
+EmergencyStopTool --> ApprovalLedger : issueEmergencyStop
+EmergencyStopController --> AgentOrchestrator : abortCurrentStep, end
+EmergencyStopController --> PromptChannel : cancelAll
+EmergencyStopController --> EmergencyStopTool : runs
+EmergencyStopController *-- EmergencyStopOutcome
+EmergencyStopController ..> EmergencyStopDialog : shows
+EmergencyStopTool ..> KnowledgeBase : stopSequence
+EmergencyStopTool ..> EmergencyStopOutput : returns
+StopSequence "1" *-- "*" StopStep
+EmergencyStopOutcome "1" *-- "*" StopStepResult
+@enduml

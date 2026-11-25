@@ -1,0 +1,66 @@
+@startuml
+title UML sequence behaviour — Stop while a prompt and a model call are pending
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "EmergencyStopButton" as button
+  participant "EmergencyStopDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "EmergencyStopController" as ctrl
+  participant "AgentOrchestrator" as orch
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "EmergencyStopTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "PromptApiModelAdapter" as model
+  participant "WebBluetoothBleLayer" as ble
+  participant "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+note over channel, model : An approval prompt is open and a model call is pending
+person -> button : Tap "Emergency stop"
+button -> ctrl : trigger()
+ctrl -> ctrl : stopped = true (latch) (FR-039)
+ctrl -> ledger : revokeAll()
+ctrl -> orch : abortCurrentStep(emergencyStop)
+orch -> model : abort() via the step's AbortController (FR-047)
+ctrl -> channel : cancelAll(EMERGENCY_STOPPED); approval closes, nothing sent
+ctrl -> dialog : Busy: "Sending Stop, then Reset"
+ctrl -> tool : run({}) (TOOL-024)
+tool -> ledger : issueEmergencyStop(0x2AD9, 08 01); ledger sealed
+tool -> ble : priority write(0x2AD9, 08 01, e-1)
+ble -> device : writeValueWithResponse(08 01) within 500 ms of the tap
+device --> ble : Indication 80 08 01
+ble --> tool : acknowledged
+tool -> ledger : issueEmergencyStop(0x2AD9, 01)
+tool -> ble : priority write(0x2AD9, 01, e-2)
+ble -> device : writeValueWithResponse(01)
+device --> ble : Indication 80 01 01
+tool --> ctrl : sent [08 01, 01], loopStopped, writesBlocked
+ctrl -> dialog : "All commands stopped." and use the machine's own stop if it still moves
+ctrl -> store : commitStep(EmergencyStopEvent)
+ctrl -> orch : end(emergencyStopped): release, Verdict page beneath the dialog
+person -> dialog : "The belt has stopped"
+dialog --> ctrl : beltStopped
+ctrl -> store : Record the answer; the dialog closes
+@enduml

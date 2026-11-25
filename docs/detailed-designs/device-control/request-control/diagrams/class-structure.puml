@@ -1,0 +1,85 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Request control
+
+enum ControlState {
+  notRequested
+  requesting
+  granted
+  refused
+  timedOut
+}
+
+enum RequestControlOutcome {
+  success
+  opNotSupported
+  invalidParameter
+  operationFailed
+  controlNotPermitted
+}
+
+class RequestControlResult {
+  +result: RequestControlOutcome
+  +raw: string
+}
+
+class ControlPointResponse {
+  +requestOpCode: number
+  +result: number
+  +raw: string
+}
+
+class RequestControlTool {
+  +definition: ToolDefinition
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<RequestControlResult>>
+}
+
+class ControlPointSession {
+  -subscription: Subscription | null
+  -pending: Map<number, PendingResponse>
+  +open(): Promise<void>
+  +send(bytes: Uint8Array, approvalId: string, timeoutMs: number): Promise<ControlPointResponse | ToolError>
+  +close(): void
+}
+
+class FtmsControlPointDecoder <<pure helper>> {
+  +decodeResponse(bytes: DataView): ControlPointResponse | null
+}
+
+abstract class BleLayer <<contract>> {
+  +subscribe(characteristic: string, onValue: Listener): Promise<Subscription>
+  +write(characteristic: string, bytes: Uint8Array, approvalId: string | null): Promise<ToolResult<void>>
+}
+
+class InvestigationSession {
+  +controlState: Signal<ControlState>
+}
+
+class Observation {
+  +id: string
+  +kind: "connectionQuirk" | string
+  +text: string
+  +evidence: string[]
+}
+
+RequestControlTool --> ControlPointSession : uses
+RequestControlTool ..> RequestControlResult : returns
+RequestControlTool ..> InvestigationSession : sets controlState
+RequestControlTool ..> Observation : records quirk on 05
+ControlPointSession --> BleLayer : subscribe and write
+ControlPointSession ..> FtmsControlPointDecoder : decodes
+FtmsControlPointDecoder ..> ControlPointResponse : returns
+RequestControlResult --> RequestControlOutcome
+InvestigationSession --> ControlState
+@enduml

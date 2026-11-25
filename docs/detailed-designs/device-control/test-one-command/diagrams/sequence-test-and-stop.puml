@@ -1,0 +1,70 @@
+@startuml
+title UML sequence behaviour — Test one command and stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator or ChecklistRunner" as plan
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "SendCommandTool" as tool
+  participant "ControlEffectCheck" as effect
+  participant "ControllableFeatures" as features
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+note over plan : Each next step comes from ControlTestPlan.next(state)
+plan -> page : Offer "Test control?" with Skip (FR-038)
+person -> page : Tap "Test control"
+plan -> plan : Command 1 of 3: request_control (see request-control design)
+note over plan, device : Control granted: 80 00 01
+plan -> plan : Lowest-risk command: setSpeed 5.9, one step down (FR-036)
+plan -> gate : Command 2 of 3: send_command setSpeed 5.9
+gate -> dialog : "Lower the target speed to 5.9 km/h?"
+person -> dialog : Tick stand-clear, tap Send
+gate --> plan : token a-17
+plan -> tool : run(setSpeed 5.9, a-17) (TOOL-022)
+tool -> ble : write(0x2AD9, 02 4E 02, a-17)
+ble -> device : writeValueWithResponse
+device --> ble : Indication 80 02 01
+ble --> tool : success
+tool --> plan : ok, sent 02 4E 02, result success
+plan -> page : "Did the belt slow down a little?" Yes / No / Not sure
+person -> page : Yes
+plan -> effect : assess(setSpeed, 6.0, 5.9)
+effect --> plan : asExpected
+plan -> plan : Set target speed: confirmed (FR-040)
+plan -> gate : Command 3 of 3: send_command stop
+gate -> dialog : "Stop the belt?" no stand-clear check
+person -> dialog : Tap Send
+gate --> plan : token a-18
+plan -> tool : run(stop, a-18)
+tool -> ble : write(0x2AD9, 08 01, a-18)
+ble -> device : writeValueWithResponse
+device --> ble : Indication 80 08 01
+tool --> plan : ok, stop acknowledged
+plan -> features : build(claims, ranges, entries, results)
+features --> plan : target speed confirmed 6.0 to 5.9; start/stop confirmed; incline claimed only
+@enduml

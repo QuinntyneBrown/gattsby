@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Offer and download the phone model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+  participant "ModelDownloadOffer" as offer
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ModeController" as mode
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityService" as caps
+  participant "ModelAdapterFactory" as factory
+  participant "InBrowserModelAdapter" as inb
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome for Android" as chrome
+  participant "Static host (own origin)" as host
+end box
+
+page -> caps : check()
+caps -> chrome : navigator.gpu.requestAdapter(); navigator.connection
+chrome --> caps : WebGPU adapter; type cellular
+caps --> page : CapabilityReport: no Prompt API, WebGPU yes, cellular
+page -> factory : create(report, phoneModelEnabled)
+factory --> page : InBrowserModelAdapter
+page -> inb : availability()
+inb --> page : downloadable, size <TO SUPPLY> (OQ-02)
+page -> offer : Show size and "uses mobile data, may cost money" (FR-074)
+note over offer, host : Nothing downloads before the tap
+alt The person taps Download
+  person -> offer : Download
+  offer --> page : download output
+  page -> inb : download(onProgress, signal)
+  inb -> host : GET weights (connect-src 'self', NFR-012)
+  host --> inb : weight files
+  inb -> inb : Cache for offline use
+  inb --> mode : available
+  mode -> mode : Full agent mode
+else The person taps Use the checklist
+  person -> offer : Use the checklist
+  offer --> page : useChecklist output
+  page -> mode : checklist
+end
+@enduml

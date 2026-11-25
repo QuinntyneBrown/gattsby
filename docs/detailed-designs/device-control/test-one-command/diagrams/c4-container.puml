@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Test one command
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Control stage plan, send_command, effect check, profile builder, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, answers, raw log, device profile")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "commands.json, limits.json, forbidden-targets.json")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Test control or Skip; Send; Yes, No or Not sure", "Touch or keyboard")
+Rel(spa, kb, "Reads command templates, risk order and forbidden targets")
+Rel(spa, device, "Writes approved commands; reads responses and data", "Web Bluetooth")
+Rel(spa, idb, "Commits commands, answers and controllable features")
+@enduml

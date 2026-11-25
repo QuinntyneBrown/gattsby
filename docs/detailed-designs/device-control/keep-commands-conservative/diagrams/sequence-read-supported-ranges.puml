@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Read the supported ranges
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "InvestigationSession" as session
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReadSupportedRangesTool" as tool
+  participant "ftms.decoder" as decoder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run({}) after FTMS is found (TOOL-031)
+tool -> ble : read(0x2ACC Fitness Machine Feature)
+ble -> device : readValue
+device --> ble : 8 bytes
+ble --> tool : bytes
+tool -> decoder : decodeMachineFeatures(bytes)
+decoder --> tool : machineFeatures, targetSettingFeatures
+loop each range characteristic the device exposes (0x2AD4 to 0x2AD8)
+  tool -> ble : read(0x2AD4 Supported Speed Range)
+  ble -> device : readValue
+  device --> ble : 64 00 B0 04 0A 00
+  ble --> tool : bytes
+  tool -> decoder : decodeSupportedRange(speed, bytes)
+  decoder --> tool : 1.00 to 12.00 km/h, increment 0.10
+end
+note over tool : A range the device lacks is left out; it is not an error
+tool -> session : supportedRanges.set(ranges) (FR-036)
+tool --> executor : ok, summary "Speed 1.00–12.00 km/h in 0.10 steps"
+executor -> store : commitStep(observation with ranges and evidence)
+@enduml
