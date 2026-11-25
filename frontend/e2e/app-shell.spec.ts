@@ -10,17 +10,21 @@ const paper = 'rgb(243, 241, 234)';
 const ink = 'rgb(21, 23, 27)';
 
 test.describe('App shell', () => {
-  test('Given the production build, when the person opens /, then Gattsby opens with its app bar', async ({
-    page,
-  }) => {
-    const home = new HomePage(page);
+  // Journey 1's critical acceptance path, run in CI: the production build opens under its Content
+  // Security Policy, with the fakes and every guard installed.
+  test(
+    'Given the production build, when the person opens /, then Gattsby opens with its app bar',
+    { tag: '@critical' },
+    async ({ page }) => {
+      const home = new HomePage(page);
 
-    await home.goto();
+      await home.goto();
 
-    expect(await home.title()).toBe('Gattsby');
-    await expect(home.brand).toBeVisible();
-    await expect(home.main).toBeAttached();
-  });
+      expect(await home.title()).toBe('Gattsby');
+      await expect(home.brand).toBeVisible();
+      await expect(home.main).toBeAttached();
+    },
+  );
 
   test('Given the Home page, when the person presses Tab then Enter on "Skip to content", then focus moves to the main content', async ({
     page,
