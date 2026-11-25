@@ -1,5 +1,6 @@
 import type { ChosenDevice } from '../ble/chosen-device';
 import type { GattServiceInfo } from '../ble/gatt-layout';
+import type { ReadableMetric } from '../outcome/readable-metric';
 import type { Stage } from '../store/model/stage';
 import type { Step } from '../store/model/step';
 import type { DeviceInformation } from './device-information';
@@ -33,6 +34,17 @@ export interface DecisionState {
   readonly candidates: readonly ProfileCandidate[] | null;
   readonly ambiguityResolved: boolean;
   readonly reads: readonly string[];
+  readonly rangesAttempted: boolean;
+  readonly machineFeatures: readonly string[];
+  readonly machineFeatureEvidence: readonly string[];
+  readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
+  readonly standardRecordingId: string | null;
+  readonly speedAction: number | 'skipped' | null;
+  readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
+  readonly readableMetrics: readonly ReadableMetric[];
+  readonly inclineAction: number | 'skipped' | null;
+  readonly inclineConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
+  readonly inclineBaseline: number | null;
   readonly finished: boolean;
 }
 
@@ -56,6 +68,17 @@ export const INITIAL_STATE: DecisionState = {
   candidates: null,
   ambiguityResolved: false,
   reads: [],
+  rangesAttempted: false,
+  machineFeatures: [],
+  machineFeatureEvidence: [],
+  standardRecording: 'pending',
+  standardRecordingId: null,
+  speedAction: null,
+  speedConfirmation: null,
+  readableMetrics: [],
+  inclineAction: null,
+  inclineConfirmation: null,
+  inclineBaseline: null,
   finished: false,
 };
 
@@ -85,8 +108,22 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       if (step.ruleId === 'prepare.brand') {
         return { ...next, brand: answer && answer !== DONT_KNOW ? answer : null };
       }
+      if (step.ruleId === 'standard.speed-follow-up') {
+        return { ...next, speedConfirmation: 'reported' };
+      }
+      if (step.ruleId === 'standard.incline-follow-up') {
+        return { ...next, inclineConfirmation: 'reported' };
+      }
       return next;
     case 'request_action':
+      if (step.ruleId === 'standard.ready') {
+        return { ...next, standardRecording: answer === 'Ready' ? 'ready' : 'skipped' };
+      }
+      if (step.ruleId === 'standard.speed-action' || step.ruleId === 'standard.incline-action') {
+        const doneAt = data?.['doneAt'];
+        const key = step.ruleId === 'standard.speed-action' ? 'speedAction' : 'inclineAction';
+        return { ...next, [key]: answer && typeof doneAt === 'number' ? doneAt : 'skipped' };
+      }
       if (step.ruleId === 'prepare.power-on') return { ...next, poweredOn: true };
       if (step.ruleId === 'identify.held-by-other') {
         return { ...next, heldPrompts: state.heldPrompts + 1 };
@@ -141,8 +178,40 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       const input = step.input as { characteristic: string };
       return { ...next, reads: [...state.reads, input.characteristic] };
     }
+    case 'read_supported_ranges':
+      return {
+        ...next,
+        rangesAttempted: true,
+        machineFeatures: (data?.['machineFeatures'] as string[] | undefined) ?? [],
+        machineFeatureEvidence: step.result.ok ? step.result.evidence.slice(0, 1) : [],
+      };
     case 'disconnect':
       return { ...next, connected: false };
+    case 'subscribe_and_record':
+      return {
+        ...next,
+        standardRecordingId: typeof data?.['recordingId'] === 'string' ? data['recordingId'] : null,
+        standardRecording:
+          data?.['silent'] === false &&
+          data['interrupted'] !== true &&
+          data['count'] !== data['decodeErrors']
+            ? 'recorded'
+            : 'attempted',
+      };
+    case 'decode_standard': {
+      const key =
+        step.ruleId === 'standard.confirm-incline' ? 'inclineConfirmation' : 'speedConfirmation';
+      return {
+        ...next,
+        [key]: data?.['confirmed'] === true ? 'confirmed' : 'notConfirmed',
+        readableMetrics:
+          (data?.['readableMetrics'] as ReadableMetric[] | undefined) ?? state.readableMetrics,
+        inclineBaseline:
+          typeof data?.['inclineBaseline'] === 'number'
+            ? data['inclineBaseline']
+            : state.inclineBaseline,
+      };
+    }
     case 'finish':
       return { ...next, finished: true, connected: false };
     default:

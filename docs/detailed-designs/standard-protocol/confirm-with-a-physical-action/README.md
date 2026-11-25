@@ -67,11 +67,13 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 | Metric | Action asked | Confirmed when | Source |
 |---|---|---|---|
-| Speed (treadmill, bike) | "Now speed up to about 6 km/h. Change only the speed." | A value in the window is at least 0.5 km/h above the baseline median | FR-025 AC1, A-12 |
-| Total distance | Keep the belt moving | The value increases during the window while decoded speed is above 0 | A-12 |
-| Elapsed time | None; read while recording | The value increases during the recording | `<TO SUPPLY>` minimum (the mock marks it confirmed from "0:52 → 1:02") |
-| Inclination | "Raise the incline to 2%" | `<TO SUPPLY>` minimum change | Mock prompt |
-| Cadence, power, resistance level, heart rate | `<TO SUPPLY>` | `<TO SUPPLY>` | FR-025 names only speed |
+| Speed (treadmill, bike) | Treadmill: "Now speed up to about 6 km/h. Change only the speed." Bike: "Now pedal faster." | A value in the window is at least 0.5 km/h above the baseline median | FR-025 AC1, A-12 |
+| Total distance | Keep the belt moving during the speed check | The counter increases from its last baseline reading during the window while decoded speed is above 0 and the speed change is confirmed | A-12 |
+| Elapsed time | Keep the belt moving during the speed check | At least 1 second of increase and at least 1 second between the samples while the device reports movement | Mock reading, FR-025 |
+| Inclination | "Raise the incline to 2%, and keep the same speed." The person can skip. | After confirming speed, offer the check if the device reported an incline no higher than 1.5%. At least 0.5 percentage points of rise, measured from the latest incline before the prompt. | Mock prompt, FR-025 |
+| Heart rate (strap) | "Walk briefly at an easy pace." | A value in the window is at least 5 BPM above the baseline median | FR-025, FR-054 AC2 |
+| Cadence, power (bike) | "Now pedal faster." | When speed is confirmed, cadence rises by at least 1 rpm or power rises by at least 1 W from its last baseline reading. Evaluate each reading independently. | FR-025 |
+| Resistance level and other reported metrics | The speed check changes only the person's pace. | Retain the reading and decoding rule. Confirm only fields with an applicable check and matching evidence. | FR-027 |
 
 The speed action asks for a change of only one value, so the summary can also say which other
 fields moved ("Incline did not move"). That note is evidence for the person and the agent; it is not

@@ -4,14 +4,15 @@ import { CONCLUDE_RULES } from './rules/conclude.rules';
 import { FIND_RULES } from './rules/find.rules';
 import { IDENTIFY_RULES } from './rules/identify.rules';
 import { PREPARE_RULES } from './rules/prepare.rules';
+import { STANDARD_RULES } from './rules/standard.rules';
 import type { RuleContext, StageRule } from './stage-rule';
 
-// The stages journey 2 runs. The Standard path (journey 3), the Proprietary path (journey 13) and
-// Control (journey 8) join when they are built; until then the rules skip them.
+// The Proprietary path (journey 13) and Control (journey 8) join when they are built.
 const RULES: Readonly<Partial<Record<Stage, readonly StageRule[]>>> = {
   prepare: PREPARE_RULES,
   find: FIND_RULES,
   identify: IDENTIFY_RULES,
+  standard: STANDARD_RULES,
   conclude: CONCLUDE_RULES,
 };
 

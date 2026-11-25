@@ -84,7 +84,7 @@ export class FakeGattCharacteristic extends EventTarget {
       this.timer = setInterval(() => {
         this.context.state.ticks += 1;
         this.emit(notify(this.context.state));
-      }, NOTIFY_INTERVAL_MS);
+      }, this.script.notificationIntervalMs ?? NOTIFY_INTERVAL_MS);
     }
     return this;
   }

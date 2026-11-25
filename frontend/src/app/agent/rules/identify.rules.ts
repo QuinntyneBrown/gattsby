@@ -1,6 +1,11 @@
 import { decide } from '../../knowledge-base/profile-matcher';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { machineWord } from '../../tools/discovery/scan';
+import {
+  FITNESS_MACHINE,
+  FITNESS_MACHINE_FEATURE,
+  FTMS_RANGE_CHARACTERISTICS,
+} from '../../tools/inspection/read-supported-ranges.tool';
 import { decided, type RuleContext, type StageRule } from '../stage-rule';
 
 const DEVICE_INFORMATION = '0000180a-0000-1000-8000-00805f9b34fb';
@@ -22,6 +27,11 @@ function nextFeatureRead(ctx: RuleContext): { service: string; characteristic: s
   const next = service?.characteristics.find(
     (c) =>
       c.properties.includes('read') &&
+      !(
+        service.uuid === FITNESS_MACHINE &&
+        ctx.state.rangesAttempted &&
+        FTMS_RANGE_CHARACTERISTICS.has(c.uuid)
+      ) &&
       !!ctx.kb.decoderFor(c.uuid) &&
       !ctx.state.reads.includes(c.uuid),
   );
@@ -107,6 +117,22 @@ export const IDENTIFY_RULES: readonly StageRule[] = [
     stage: 'identify',
     when: ({ state }) => state.layout !== null && state.candidates === null,
     then: () => decided('identify.match', 'identify', 'match_known_profiles', {}),
+  },
+  {
+    id: 'identify.supported-ranges',
+    stage: 'identify',
+    when: (ctx) =>
+      ctx.state.connected &&
+      !ctx.state.rangesAttempted &&
+      decidedCandidate(ctx)?.serviceUuid === FITNESS_MACHINE &&
+      !!ctx.state.layout?.some(
+        (s) =>
+          s.uuid === FITNESS_MACHINE &&
+          s.characteristics.some(
+            (c) => c.uuid === FITNESS_MACHINE_FEATURE && c.properties.includes('read'),
+          ),
+      ),
+    then: () => decided('identify.supported-ranges', 'identify', 'read_supported_ranges', {}),
   },
   {
     id: 'identify.read-features',

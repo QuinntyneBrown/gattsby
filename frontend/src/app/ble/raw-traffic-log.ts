@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Clock } from '../shared/clock';
 import type { RawLogEntry } from '../store/model/raw-log-entry';
+import type { NotificationDecoding } from '../store/model/notification-decoding';
 import { InvestigationStore } from '../store/investigation-store';
 
 export const WINDOW = 2000;
@@ -38,7 +39,10 @@ export class RawTrafficLog {
   }
 
   /** Appends one entry and returns its evidence ID (`r-` and its sequence number). */
-  append(entry: NewRawLogEntry): string {
+  append(
+    entry: NewRawLogEntry,
+    decode?: (stamp: Pick<RawLogEntry, 'id' | 't'>) => NotificationDecoding | undefined,
+  ): string {
     const id = `r-${this.seq}`;
     const full: RawLogEntry = {
       ...entry,
@@ -50,6 +54,7 @@ export class RawTrafficLog {
     };
     this.window.push(full);
     if (this.window.length > WINDOW) this.window.splice(0, this.window.length - WINDOW);
+    if (decode) Object.assign(full, decode({ id, t: full.t }));
     if (this.investigationId) {
       this.pending.push(full);
       if (this.pending.length >= FLUSH_BATCH) void this.flush();

@@ -50,6 +50,17 @@ export class FakeBluetooth {
     );
   }
 
+  /** Changes the simulated console incline without a GATT write. */
+  async setIncline(percent: number): Promise<void> {
+    await this.page.evaluate(
+      (value) =>
+        (
+          globalThis as unknown as { __gattsbyFakes: { setIncline(percent: number): void } }
+        ).__gattsbyFakes.setIncline(value),
+      percent,
+    );
+  }
+
   /** The options of every `requestDevice` call, in order. */
   requestDeviceOptions(): RequestDeviceOptions[] {
     return this.recorder.events.flatMap(({ event }) =>

@@ -12,7 +12,11 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
+import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { PromptChannel } from '../../agent/prompt-channel';
+import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
+import { LiveMetrics } from '../../live/live-metrics';
+import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { confidenceWord } from '../../outcome/confidence-scorer';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { ActivityFeedComponent } from '../../ui/activity-feed/activity-feed.component';
@@ -36,12 +40,25 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     EmergencyStopButtonComponent,
     PromptCardComponent,
     StageTrackComponent,
+    StillThereDialog,
   ],
-  providers: [PlaybookOrchestrator, PromptChannel],
+  providers: [
+    PlaybookOrchestrator,
+    PromptChannel,
+    LiveMetrics,
+    NotificationRecorder,
+    ConfirmationCheck,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
       display: contents;
+    }
+    .reading {
+      min-height: 48px;
+    }
+    .reading__label {
+      display: block;
     }
   `,
   template: `
@@ -120,6 +137,32 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
               </div>
             }
             @default {
+              @if (metrics().length > 0) {
+                <div class="dock__inner" aria-live="off">
+                  <div class="live-strip" role="group" aria-label="Live readings">
+                    @if (connected()) {
+                      <span class="live-badge">Live</span>
+                    }
+                    @for (field of metrics(); track field.metric) {
+                      <div class="reading">
+                        <span class="reading__label">
+                          <span>{{ field.label }}</span>
+                          @if (!orchestrator.confirmedMetrics().has(field.metric)) {
+                            <span aria-hidden="true">~</span>
+                            <span class="visually-hidden">likely</span>
+                          } @else {
+                            <span class="visually-hidden">confirmed</span>
+                          }
+                        </span>
+                        <span class="reading__value">{{
+                          metricValue(field.value, field.scale)
+                        }}</span>
+                        <span class="reading__unit">{{ field.unit }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
               <g-prompt-card
                 [prompt]="prompts.current()"
                 [running]="orchestrator.running()"
@@ -154,10 +197,35 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
             }
           </section>
           <section>
-            <h2 class="section-title">Live readings</h2>
-            <p class="text-muted text-sm" style="margin-top: var(--space-2)">
-              Appear here once the machine is moving.
-            </p>
+            <div class="section-head">
+              <h2 class="section-title">Live readings</h2>
+              @if (connected() && liveRate(); as rate) {
+                <span class="live-badge">{{ rate }} Hz</span>
+              }
+            </div>
+            @if (metrics().length > 0) {
+              <dl class="readings">
+                @for (field of metrics(); track field.metric) {
+                  <div class="readings__row">
+                    <dt>{{ field.label }}</dt>
+                    <dd class="readings__value">
+                      {{ metricValue(field.value, field.scale) }} {{ field.unit }}
+                    </dd>
+                    <dd class="readings__tag">
+                      <g-confidence-badge
+                        [word]="
+                          orchestrator.confirmedMetrics().has(field.metric) ? 'confirmed' : 'likely'
+                        "
+                      />
+                    </dd>
+                  </div>
+                }
+              </dl>
+            } @else {
+              <p class="text-muted text-sm" style="margin-top: var(--space-2)">
+                Appear here once the machine is moving.
+              </p>
+            }
           </section>
           <section>
             <h2 class="section-title">Device</h2>
@@ -184,6 +252,15 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </section>
         </aside>
       </main>
+      @if (prompts.idle()) {
+        <g-still-there-dialog
+          [instruction]="prompts.current()?.title ?? ''"
+          [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
+          (continued)="prompts.continueAfterIdle()"
+          (stop)="orchestrator.stop('personStop')"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      }
     </div>
   `,
 })
@@ -191,6 +268,12 @@ export class InvestigationPage implements OnInit, OnDestroy {
   readonly id = input.required<string>();
   protected readonly orchestrator = inject(PlaybookOrchestrator);
   protected readonly prompts = inject(PromptChannel);
+  private readonly live = inject(LiveMetrics);
+  protected readonly metrics = this.live.metrics;
+  protected readonly liveRate = computed(() => {
+    const rate = this.live.rateHz();
+    return rate === null ? null : Math.round(rate * 10) / 10;
+  });
   private readonly router = inject(Router);
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
 
@@ -255,5 +338,9 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   protected respond(response: PromptCardResponse): void {
     this.prompts.respond(response);
+  }
+
+  protected metricValue(value: number, scale: number): string {
+    return value.toFixed(scale < 1 ? 1 : 0);
   }
 }

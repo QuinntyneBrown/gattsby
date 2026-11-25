@@ -81,8 +81,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 2. A characteristic without `notify` or `indicate` is refused with `PROPERTY_MISSING`. A
    `startNotifications` failure for insufficient authentication or encryption returns
    `AUTH_REQUIRED`, and FR-033 applies (see the unlock-vendor-data-safely design).
-3. Each value is stamped with `t`, milliseconds since the investigation started, and the `id` of its
-   `RawLogEntry`. The BLE layer logs the raw value before the recorder sees it (FR-073).
+3. Each value carries the `t` timestamp and `id` of its `RawLogEntry`. The BLE layer logs the raw
+   value before the recorder sees it (FR-073).
+   Store the decoded fields or decode error on the same raw log row, before its batch is flushed.
+   This keeps the original bytes and their interpretation together without a second per-packet
+   write. The log preserves the epoch timestamp from the log-raw-traffic design.
 4. The recording closes after `seconds` on the investigation clock; unit tests advance a fake clock.
    Notifications stay enabled after it closes, so live values keep arriving until the stage ends or
    the connection is released.
@@ -184,7 +187,7 @@ keeps the last value of each field.
 | Type | Fields |
 |---|---|
 | `Recording` | `id`, `investigationId`, `label`, `level?`, `characteristics`, `startedAt`, `seconds`, `interrupted`, `valueCount` |
-| `RecordedValue` | `recordingId`, `uuid`, `t`, `hex`, `rawLogId`, `decoded?`, `decodeError?` |
+| Recorded raw log row | `recordingId`, `uuid`, `t`, `hex`, `id`, `decoded?`, `decodeError?` |
 | `DecodedValue` | `fields: DecodedField[]`, `flags?`, `trailingBytes?`, `reservedBits?` |
 | `DecodedField` | `name`, `value`, `unit`, `offset`, `type`, `scale`, `flagBit?` |
 | `DecodeError` | `reason`, `announcedLength?`, `actualLength` |

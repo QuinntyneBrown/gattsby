@@ -117,8 +117,9 @@ with an increment of 0.10 km/h (TOOL-031 AC1).
 3. A read refused for insufficient authentication or encryption is handled as FR-033 requires (see
    the unlock-vendor-data-safely design). It is never retried.
 4. Reserved bits that are set are kept, by number, in the step's data and noted in the summary.
-5. The tool reads each characteristic once per investigation. The playbook calls it at the start of
-   the Standard path, and the result stays in the investigation record.
+5. The tool reads each characteristic once per investigation. Identify calls it after deciding on
+   FTMS, while it has the GATT layout and before asking the person to start moving. The result stays
+   in the investigation record even if the person skips live confirmation.
 
 ### Status rules (`ReadableMetricResolver`)
 
@@ -145,6 +146,9 @@ keeps that fourth word is the mocks' open question 4 (`docs/mocks/README.md`).
 4. The rate is the median notification rate of the characteristic across the recordings ("1 Hz").
 5. Every readable metric carries at least one evidence ID: the feature read, the recording and, when
    confirmed, the confirmation observation (FR-055 AC2, FR-056).
+
+Journey 3 saves these rules and statuses in the investigation record. Journey 4 uses the saved
+facts when it builds the device profile and adds export.
 
 ### Data shapes
 

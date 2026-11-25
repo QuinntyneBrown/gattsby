@@ -20,6 +20,11 @@ export abstract class InvestigationStore {
   abstract get(id: string): Promise<InvestigationRecord>;
   abstract list(): Promise<Investigation[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
+  /** Returns the packets linked to one recording, or null if the recording does not exist. */
+  abstract recordedPackets(
+    investigationId: string,
+    recordingId: string,
+  ): Promise<RawLogEntry[] | null>;
   /** Whether storage opens, and how much of the quota is used; prompts for nothing. */
   abstract usage(): Promise<{
     open: boolean;

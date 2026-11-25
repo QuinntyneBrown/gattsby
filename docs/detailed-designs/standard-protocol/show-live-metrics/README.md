@@ -95,10 +95,20 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 ### Tests that prove it
 
-The acceptance spec subscribes the fake heart-rate strap of `e2e/fixtures/fake-bluetooth.ts`, sends
-a notification and expects the Investigation page object's BPM tile to show it within 1 second. A
-second spec at a 360 px viewport measures the emphasised tile at 48 px or taller. Unit tests cover
-`MetricFormatter` and the frame coalescing with a fake scheduler.
+The acceptance spec subscribes the fake heart-rate strap, changes the simulated effort and checks
+that the Investigation page object's BPM tile updates. The same spec checks that the tile is at
+least 48 px tall at a 390 px viewport.
+
+Journey 3 tests the three scripted standard devices. The desktop panel gives the rate estimated
+from the ten most recent decoded notifications on the active characteristic. A decoded field
+starts as *likely*. The confirmation observation changes its status to *confirmed*. A missed
+confirmation has its own prompt explaining what the data showed. The Proprietary path supplies
+the raw-only readings and unknown-field states when that path is implemented.
+
+The recorder integration test advances a fake clock over four simultaneous 50 Hz streams and
+checks all 12,000 decoded rows, their order, and the 2,000-row in-memory log window. Run the separate
+`npm run e2e:memory` check against a production build to sample Chromium heap once a minute
+during an investigation with 36,000 simulated notifications.
 
 ## Requirements
 

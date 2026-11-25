@@ -13,15 +13,18 @@ import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
 import type { Observation } from '../store/model/observation';
+import type { Recording } from '../store/model/recording';
 import { STAGES, type Stage } from '../store/model/stage';
 import type { Step, StepPersonExchange } from '../store/model/step';
 import type { StopReason } from '../store/model/stop-reason';
 import type { Verdict, VerdictKind } from '../store/model/verdict';
 import { TOOL_CATALOG } from '../tools/tool-catalog';
+import { NotificationRecorder } from '../tools/listening/notification-recorder';
 import type { NewMissingToolRequest, ToolContext } from '../tools/tool-context';
 import { ToolRegistry } from '../tools/tool-registry';
 import { fail, type ToolResult } from '../tools/tool-result';
 import { applyStep, stateFrom, type DecisionState } from './decision-state';
+import { ConfirmationCheck } from './confirmation-check';
 import { Decider } from './decider';
 import { buildFeed } from './feed-builder';
 import type { FeedEntry } from './feed-entry';
@@ -58,6 +61,8 @@ export class PlaybookOrchestrator {
   private readonly store = inject(InvestigationStore);
   private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly ble = inject(BleLayer);
+  private readonly notificationRecorder = inject(NotificationRecorder);
+  private readonly confirmationCheck = inject(ConfirmationCheck);
   private readonly log = inject(RawTrafficLog);
   private readonly capabilities = inject(CapabilityDetector);
   private readonly clock = inject(Clock);
@@ -81,6 +86,14 @@ export class PlaybookOrchestrator {
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
   private readonly observations = signal<readonly Observation[]>([]);
+  readonly confirmedMetrics = computed(
+    () =>
+      new Set(
+        this.observations()
+          .filter((evidence) => evidence.kind === 'metric-confirmed')
+          .map((evidence) => evidence.subject),
+      ),
+  );
   private readonly requests = signal<readonly MissingToolRequest[]>([]);
   private readonly hypotheses = signal<readonly Hypothesis[]>([]);
   private readonly pending = signal<PendingStep | null>(null);
@@ -286,6 +299,7 @@ export class PlaybookOrchestrator {
     this.log.setStep(n);
     const startedAt = this.clock.now();
     const observations: Observation[] = [];
+    const recordings: Recording[] = [];
     const requests: MissingToolRequest[] = [];
     const handedOut: string[] = [];
     const signal = this.abort.signal;
@@ -295,6 +309,8 @@ export class PlaybookOrchestrator {
       stepN: n,
       state,
       ble: this.ble,
+      notificationRecorder: this.notificationRecorder,
+      confirmationCheck: this.confirmationCheck,
       kb,
       prompts: this.prompts,
       capabilities: this.capabilities,
@@ -320,6 +336,12 @@ export class PlaybookOrchestrator {
         handedOut.push(observation.id);
         return observation.id;
       },
+      saveRecording: (recording) => {
+        recordings.push({ ...recording, investigationId: id, stepN: n });
+        handedOut.push(recording.id);
+        return recording.id;
+      },
+      recordedPackets: (recordingId) => this.store.recordedPackets(id, recordingId),
       raiseMissingTool: (r: NewMissingToolRequest) => {
         const existing = [...this.requests(), ...requests].find(
           (x) => x.capabilityKey === r.capabilityKey,
@@ -425,6 +447,7 @@ export class PlaybookOrchestrator {
       investigationId: id,
       step,
       rawLog,
+      recordings,
       observations,
       hypothesis,
       missingToolRequests: requests,

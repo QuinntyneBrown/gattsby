@@ -13,6 +13,8 @@ export interface BluetoothScript {
   readonly chooser: readonly ChooserStep[];
   /** Milliseconds a read of a characteristic (canonical UUID) takes, on the page's clock. */
   readonly readDelays?: Readonly<Record<string, number>>;
+  /** Notification periods keyed by canonical characteristic UUID. */
+  readonly notificationPeriods?: Readonly<Record<string, number>>;
 }
 
 export type ModelAvailability =

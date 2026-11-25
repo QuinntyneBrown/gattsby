@@ -11,6 +11,7 @@
     {
       "uuid": "0x2acd",
       "name": "Treadmill Data",
+      "decoder": "treadmill-data",
       "properties": ["notify"],
       "deviceType": "treadmill"
     },
@@ -24,6 +25,7 @@
     {
       "uuid": "0x2ad2",
       "name": "Indoor Bike Data",
+      "decoder": "indoor-bike-data",
       "properties": ["notify"],
       "deviceType": "bike"
     },

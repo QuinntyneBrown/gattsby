@@ -95,3 +95,129 @@ None; this is the first entry.
 - Lesson 5 (design-system CSS from `docs/`): the pages use the design system's classes
   unchanged; the side-by-side screenshots differ only where a part is deferred.
 - Lesson 6 (pin Playwright): unchanged; no browser download was needed.
+
+## Journey 3, slice 1: Subscribe to Treadmill Data
+
+- The acceptance test failed on the old build because Identify went straight to Conclude. It
+  then caught a second problem: the saved action answer defaulted to "Done" after the person
+  tapped "Ready". The action result now carries the button the person used.
+- The scripted treadmill already produced FTMS notifications from the fixture’s effort setting.
+  Advancing the browser clock exercised the real subscription and decoder without adding fixed
+  waits or a second fake transport.
+- Journey 2’s verdict lesson still applies. Seeing a speed on the live tile does not yet make it
+  confirmed. The confirmation slice will supply the evidence the Connected verdict needs.
+- On Windows, the global Git configuration checks tracked files out with CRLF. Prettier passed
+  with the local end-of-line mode set to auto. The repository still stores LF.
+
+## Journey 3, slice 2: Confirm treadmill speed
+
+- Both new Chromium cases failed first at the missing speed action. The speed increase test changes
+  the fake’s effort before "Done", so it catches a window that opens too late. The unchanged-speed
+  test advances the clock after "Done" and records the person’s answer without treating it as
+  confirmation.
+- Keep the baseline and the first qualifying notification separately. Their raw log IDs let the
+  investigation explain what changed without consulting the model or holding the action recording
+  in memory.
+
+## Journey 3, slice 3: Read FTMS features and ranges
+
+- The existing Identify rules already read the FTMS feature and speed range individually. The new
+  acceptance test checks both the structured probe in the feed and the number of raw reads, so
+  adding the dedicated tool cannot accidentally read the same characteristics twice.
+- Read the ranges during Identify, before asking the person to move. The answers survive even if
+  they skip live confirmation.
+
+## Journey 3, slice 4: Issue the Connected verdict
+
+- The new critical path failed first with "Partially decoded". The verdict builder already
+  accepted a `metric-confirmed` observation, so the confirmation step now publishes that kind
+  with raw evidence for both Speed and Distance when the readings support it.
+- Check the counter against its last baseline reading while the belt moves. The unchanged-speed
+  case still records the person’s answer without treating it as evidence that speed was confirmed.
+
+## Journey 3, slice 5: Confirm the FTMS bike
+
+- The bike acceptance test failed first at Identify’s exit to Conclude. The bike uses the same
+  subscription and speed threshold as the treadmill but has its own data layout and prompts.
+- Cadence has half-RPM precision, while power is an integer in watts. Checking both values with the
+  simulator proves that the optional cadence field does not throw off the power offset.
+
+## Journey 3, slice 6: Confirm a heart-rate strap
+
+- The phone-width acceptance test failed first because Identify did not enter the Standard path.
+  It now checks a 95 to 120 BPM change, the 48 px live reading, and the Connected verdict.
+- Use one confirmation window for the treadmill, bike and strap. The device-specific metric and
+  minimum rise determine what counts, and the tool records only a change it saw in a notification.
+
+## Journey 3, slice 7: Persist decoded notifications
+
+- The acceptance test found the baseline’s raw notifications but no decoded fields. A raw log
+  entry now carries its decoding or error before it is handed to the existing batch flush.
+- Keep the epoch timestamp and evidence ID assigned by the raw log. Confirmation uses that same
+  timestamp, so a result and its evidence describe the same packet.
+
+## Journey 3, slice 8: Ask whether the person is still there
+
+- The fake clock exposes a missing two-minute transition without slowing the test. The two waits in
+  the new spec cover both reopening the original prompt and stopping without starting a recording.
+- Keep the original prompt pending while the modal is open. Closing it can return focus to the
+  original control, and continuing can restart the timer without duplicating a prompt or an answer.
+
+## Journey 3, slice 9: Save timed recordings
+
+- Decoded rows alone did not tell a later tool which packets belonged to the baseline. The
+  acceptance test now reads the persisted recording and checks that the linked raw rows match its
+  value count.
+- Save the recording with the same transaction as the tool step. Keep packet counts and distinct
+  lengths in memory while listening, and batch the packet writes through the existing raw log.
+
+## Journey 3, slice 10: Analyse the saved baseline
+
+- The critical path already asserted the verdict. Extending it to inspect the saved
+  `decode_standard` result caught a missing link between confirmation and the timed baseline.
+- Use the recording’s step index to fetch only its packets. Keep the statistics and errors in the
+  playbook step. Per-packet values are available from the raw rows when a person needs the evidence.
+
+## Journey 3, slice 11: Keep the rules for readable metrics
+
+- The critical path could show a confirmed metric before it had enough saved information to
+  explain how to decode it. It now checks a fixed byte offset, a flag rule, and the difference
+  between a field seen without confirmation and a device claim that never appeared.
+- Reuse the decoder’s layout for claims without live samples. The saved rule then agrees with the
+  code even when no packet carried the field during this investigation.
+
+## Journey 3, slice 12: Verify the recording rate
+
+- Run the actual BLE adapter and notification recorder with four independent 50 Hz streams and
+  a fake clock. A packet on the deadline was excluded until the recorder compared its timestamp
+  with the inclusive cutoff.
+- A later recording of the same characteristic used to leave both listeners attached. Replace
+  the prior listener before starting the next one so each packet is logged once.
+
+## Journey 3, slice 13: Compare the live and not-confirmed states
+
+- A follow-up question alone left the missed check implicit. The dock now states what was not
+  confirmed and explains that the person's answer will be saved with the samples.
+- Read the notification rate from the actual packet times. The panel and confirmation badges
+  update with the frame that shows the reading.
+- Chromium loaded the Identify, live readings, not-confirmed and Verdict mocks at 360, 768, 992
+  and 1280 px in both themes. The phone and laptop comparisons are in
+  `docs/assets/journey-03/`. The Verdict mock also illustrates features from later journeys,
+  including Evidence and Export.
+
+## Journey 3, slice 14: Check memory through a long investigation
+
+- Keep the device subscribed for 30 virtual minutes at 20 Hz. The fake clock preserves every
+  notification and the normal IndexedDB writes. The Chromium heap test runs on demand because
+  it takes several minutes even with virtual time.
+- Verify the number of stored packets as well as the collected heap. A quiet characteristic could
+  otherwise pass a memory check without exercising continuous traffic.
+
+## Journey 3, slice 15: Keep evidence for each confirmed reading
+
+- An incline check needs the most recent incline before the prompt. Offer the check when a small
+  rise to the mock's target can be measured, and preserve the earlier speed and distance evidence
+  when the person skips it or the incline does not change.
+- A single pace change can supply separate evidence for distance, elapsed time, bike cadence and
+  bike power. Each confirmed field links to its own before and after packets. Other claimed
+  readings retain their decoding rules and the status supported by the investigation.

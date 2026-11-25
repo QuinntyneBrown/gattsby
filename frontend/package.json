@@ -13,6 +13,7 @@
     "serve:dist": "node scripts/serve-dist.ts",
     "e2e": "npm run build && playwright test",
     "e2e:only": "playwright test",
+    "e2e:memory": "playwright test --config playwright.memory.config.ts",
     "check:bundle": "node scripts/check-initial-bundle.ts",
     "check:headers": "node scripts/check-headers.ts",
     "e2e:critical": "playwright test --grep @critical",

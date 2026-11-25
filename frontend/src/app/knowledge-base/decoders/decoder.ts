@@ -1,3 +1,5 @@
+import type { MetricLayoutField } from './metric-layout-field';
+
 // Turns the bytes of one characteristic into a value a person can read. Pure and deterministic:
 // the model never decodes bytes (AGENTS.md "Architecture").
 export interface DecodedValue {
@@ -9,6 +11,7 @@ export interface DecodedValue {
 
 export interface Decoder {
   readonly id: string;
+  readonly metricLayout?: readonly MetricLayoutField[];
   /** Throws `DecodeError` when the bytes do not fit. */
   decode(bytes: Uint8Array): DecodedValue;
 }

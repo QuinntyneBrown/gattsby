@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { DecodedMetric } from '../../src/app/knowledge-base/decoders/decoded-metric';
 
 // Reads what Gattsby committed to IndexedDB, as a spec's evidence that a step was saved (FR-007,
 // FR-060). It opens the database read-only from the page and never writes to it.
@@ -19,10 +20,53 @@ export interface StoredStep {
   readonly stage: string;
   readonly tool: string;
   readonly status: string;
+  readonly result: { readonly ok: boolean; readonly data: unknown };
+}
+
+export interface StoredObservation {
+  readonly investigationId: string;
+  readonly kind: string;
+  readonly subject: string;
+  readonly value: string;
+  readonly evidence: readonly string[];
+}
+
+export interface StoredRecording {
+  readonly investigationId: string;
+  readonly id: string;
+  readonly label: string;
+  readonly characteristics: readonly string[];
+  readonly seconds: number;
+  readonly valueCount: number;
+  readonly interrupted: boolean;
 }
 
 export class StoredRecords {
   constructor(private readonly page: Page) {}
+
+  rawCount(investigationId: string): Promise<number> {
+    return this.page.evaluate(
+      (id) =>
+        new Promise<number>((resolve, reject) => {
+          const open = indexedDB.open('gattsby');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const db = open.result;
+            const range = IDBKeyRange.bound([id, 0], [id, Number.MAX_SAFE_INTEGER]);
+            const count = db.transaction('rawLog').objectStore('rawLog').count(range);
+            count.onsuccess = () => {
+              db.close();
+              resolve(count.result);
+            };
+            count.onerror = () => {
+              db.close();
+              reject(count.error);
+            };
+          };
+        }),
+      investigationId,
+    );
+  }
 
   investigations(): Promise<StoredInvestigation[]> {
     return this.readAll<StoredInvestigation>('investigations');
@@ -37,13 +81,26 @@ export class StoredRecords {
     return rows.filter((row) => row.investigationId === id);
   }
 
-  async rawLog(id: string): Promise<{ kind: string; t: number; uuid?: string; hex: string }[]> {
+  async observations(id: string): Promise<StoredObservation[]> {
+    const rows = await this.readAll<StoredObservation>('observations');
+    return rows.filter((row) => row.investigationId === id);
+  }
+
+  async recordings(id: string): Promise<StoredRecording[]> {
+    const rows = await this.readAll<StoredRecording>('recordings');
+    return rows.filter((row) => row.investigationId === id);
+  }
+
+  async rawLog(id: string) {
     const rows = await this.readAll<{
       investigationId: string;
       kind: string;
       t: number;
       uuid?: string;
       hex: string;
+      decoded?: readonly DecodedMetric[];
+      decodeError?: string;
+      recordingId?: string;
     }>('rawLog');
     return rows.filter((row) => row.investigationId === id);
   }
