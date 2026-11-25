@@ -20,7 +20,7 @@ export class FakeLanguageModelSession {
 
   async prompt(input: unknown, options: PromptOptions = {}): Promise<string> {
     const text = typeof input === 'string' ? input : JSON.stringify(input);
-    this.report({ kind: 'model-prompt', input: text });
+    this.report({ kind: 'model-prompt', input: text, constraint: options.responseConstraint });
     this.inputUsage += Math.ceil(text.length / 4);
     const response = this.responses.shift();
     if (!response) {
@@ -32,7 +32,7 @@ export class FakeLanguageModelSession {
     if ('error' in response) {
       throw new DOMException(response.message ?? response.error, response.error);
     }
-    return JSON.stringify(response.action);
+    return 'rawText' in response ? response.rawText : JSON.stringify(response.action);
   }
 
   async measureInputUsage(input: unknown): Promise<number> {
@@ -52,8 +52,10 @@ export class FakeLanguageModelSession {
     return this.unexpected('append');
   }
 
-  clone(): never {
-    return this.unexpected('clone');
+  async clone(options?: { signal?: AbortSignal }): Promise<FakeLanguageModelSession> {
+    options?.signal?.throwIfAborted();
+    this.report({ kind: 'model-call', method: 'clone' });
+    return new FakeLanguageModelSession(this.responses, this.report);
   }
 
   private unexpected(method: string): never {
@@ -72,14 +74,14 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
       resolve();
       return;
     }
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
-      },
-      { once: true },
-    );
+    const abort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', abort, { once: true });
   });
 }

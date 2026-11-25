@@ -25,7 +25,7 @@
       "const": "gattsby.investigation-record"
     },
     "formatVersion": {
-      "const": "1.0"
+      "enum": ["1.0", "1.1"]
     },
     "kbVersion": {
       "type": "string"
@@ -233,6 +233,20 @@
           },
           "tool": {
             "type": "string"
+          },
+          "mode": {
+            "enum": ["agent", "checklist"]
+          },
+          "modelDecision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["startedAt", "promptTokens", "modelMs"],
+            "properties": {
+              "startedAt": { "type": "number" },
+              "promptTokens": { "type": ["number", "null"] },
+              "modelMs": { "type": "number", "minimum": 0 },
+              "rawText": { "type": "string", "maxLength": 8192 }
+            }
           },
           "action": {
             "type": "object",

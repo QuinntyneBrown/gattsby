@@ -65,7 +65,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    builder replaces any run of more than 4 hex byte pairs in a summary with "[bytes omitted]" in the
    model's copy.
 3. Device-derived strings (advertised name, maker, model) are untrusted. They enter the state quoted
-   and cut to a fixed length (`<TO SUPPLY>` characters). A name that reads like an instruction gains
+   and cut to 120 characters, matching the device profile's identity limit. A name that reads like an instruction gains
    nothing, because every action is validated (see the validate-every-action design).
 4. Device facts include the safety-relevant flags the rules and preconditions need: connected,
    control granted, emergency stop latched.

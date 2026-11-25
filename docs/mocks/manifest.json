@@ -115,6 +115,8 @@
         "find-cancelled",
         "cannot-find",
         "identify",
+        "model-decision",
+        "model-refusal",
         "not-confirmed",
         "proprietary",
         "recording",

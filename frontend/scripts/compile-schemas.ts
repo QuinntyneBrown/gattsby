@@ -36,3 +36,38 @@ for (const [module, key] of validators) {
     'declare const validate: { (value: unknown): boolean; errors?: readonly { instancePath: string; keyword: string }[] | null };\nexport default validate;\n',
   );
 }
+
+// The catalog is the source of the executable input checks as well as the model's tool list.
+const catalogModule = new URL('tool-catalog.mjs', generated);
+await build({
+  entryPoints: [fileURLToPath(new URL('../src/app/tools/tool-catalog.ts', import.meta.url))],
+  outfile: fileURLToPath(catalogModule),
+  bundle: true,
+  packages: 'external',
+  format: 'esm',
+  platform: 'node',
+});
+const { TOOL_CATALOG } = (await import(
+  catalogModule.href
+)) as typeof import('../src/app/tools/tool-catalog');
+const inputs = new Ajv({ code: { source: true }, strict: true, strictRequired: false });
+const exported: Record<string, string> = {};
+for (const tool of TOOL_CATALOG) {
+  const id = `tool:${tool.name}`;
+  exported[tool.name] = id;
+  inputs.addSchema(tool.inputSchema, id);
+}
+await build({
+  stdin: {
+    contents: standaloneCode(inputs, exported),
+    resolveDir: fileURLToPath(new URL('../', import.meta.url)),
+  },
+  outfile: fileURLToPath(new URL('tool-inputs.js', generated)),
+  bundle: true,
+  format: 'esm',
+  platform: 'browser',
+});
+await writeFile(
+  new URL('tool-inputs.d.ts', generated),
+  'declare const inputs: Record<string, (value: unknown) => boolean>;\nexport default inputs;\n',
+);

@@ -22,6 +22,7 @@ export const ERROR_CODES = [
   'DEVICE_REJECTED',
   'INSUFFICIENT_DATA',
   'DECODE_ERROR',
+  'CONTEXT_EXHAUSTED',
   'STORAGE_FULL',
   'ABORTED',
 ] as const;

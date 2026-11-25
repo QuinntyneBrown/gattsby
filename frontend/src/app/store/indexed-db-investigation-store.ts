@@ -367,6 +367,16 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     });
   }
 
+  async useAgentWhenAvailable(): Promise<boolean> {
+    return (await this.setting('useAgentWhenAvailable')) !== false;
+  }
+
+  async setUseAgentWhenAvailable(enabled: boolean): Promise<void> {
+    await this.write(['settings'], 'strict', (tx) => {
+      tx.objectStore('settings').put({ key: 'useAgentWhenAvailable', value: enabled });
+    });
+  }
+
   private async setting(key: string): Promise<unknown> {
     const db = await this.open();
     const row = await request(

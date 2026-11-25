@@ -33,6 +33,7 @@ export interface DecisionState {
   readonly deviceInfo: DeviceInformation | 'absent' | null;
   readonly candidates: readonly ProfileCandidate[] | null;
   readonly ambiguityResolved: boolean;
+  readonly selectedProtocol: string | null;
   readonly reads: readonly string[];
   readonly rangesAttempted: boolean;
   readonly machineFeatures: readonly string[];
@@ -67,6 +68,7 @@ export const INITIAL_STATE: DecisionState = {
   deviceInfo: null,
   candidates: null,
   ambiguityResolved: false,
+  selectedProtocol: null,
   reads: [],
   rangesAttempted: false,
   machineFeatures: [],
@@ -187,6 +189,12 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       };
     case 'disconnect':
       return { ...next, connected: false };
+    case 'update_hypothesis':
+      return step.result.ok &&
+        step.ruleId === 'identify.ambiguous' &&
+        typeof data?.['protocol'] === 'string'
+        ? { ...next, ambiguityResolved: true, selectedProtocol: data['protocol'] }
+        : next;
     case 'subscribe_and_record':
       return {
         ...next,
@@ -213,7 +221,7 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       };
     }
     case 'finish':
-      return { ...next, finished: true, connected: false };
+      return step.result.ok ? { ...next, finished: true, connected: false } : next;
     default:
       return step.decidedBy === 'orchestrator' && step.ruleId === 'identify.ambiguous'
         ? { ...next, ambiguityResolved: true }

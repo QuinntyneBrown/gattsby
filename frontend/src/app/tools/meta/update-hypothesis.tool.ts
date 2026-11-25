@@ -21,7 +21,7 @@ export interface HypothesisProposer {
 // journey 6; the rules update the hypothesis through the tracker directly.
 export const updateHypothesisTool = entry<
   UpdateHypothesisInput,
-  { version: number; confidence: number }
+  { version: number; confidence: number; protocol: string }
 >({
   name: 'update_hypothesis',
   group: 'Meta',
@@ -56,6 +56,6 @@ export const updateHypothesisTool = entry<
       return fail('INVALID_INPUT', `Evidence that doesn’t exist: ${unknown.join(', ')}.`);
     }
     const result = tracker.propose(input);
-    return ok(`Hypothesis version ${result.version}.`, result);
+    return ok(`Hypothesis version ${result.version}.`, { ...result, protocol: input.protocol });
   },
 });

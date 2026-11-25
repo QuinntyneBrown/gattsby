@@ -19,6 +19,7 @@ const MVP_TOOLS = [
   'ask_user',
   'request_action',
   'update_hypothesis',
+  'request_missing_tool',
   'finish',
 ];
 

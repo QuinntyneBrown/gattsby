@@ -4,6 +4,7 @@ import type { DecisionState } from '../agent/decision-state';
 import type { LoopConfig } from '../agent/loop-config';
 import type { Hypothesis } from '../store/model/hypothesis';
 import type { Observation } from '../store/model/observation';
+import type { UpdateHypothesisInput } from '../tools/meta/update-hypothesis.tool';
 import { scoreConfidence } from './confidence-scorer';
 
 interface Guess {
@@ -24,8 +25,12 @@ export function currentGuess(
 ): Guess | null {
   if (state.candidates) {
     const decision = decide(state.candidates, config.profileThreshold, config.profileMargin);
-    if (decision.kind === 'decided') {
-      const c = decision.candidate;
+    const c = state.selectedProtocol
+      ? state.candidates.find((candidate) => candidate.protocol === state.selectedProtocol)
+      : decision.kind === 'decided'
+        ? decision.candidate
+        : undefined;
+    if (c) {
       return {
         serviceUuid: c.serviceUuid,
         protocol: c.protocol,
@@ -79,6 +84,7 @@ export class HypothesisTracker {
     kb: KnowledgeBaseIndex,
     config: LoopConfig,
     now: number,
+    proposal?: UpdateHypothesisInput,
   ): Hypothesis | null {
     const guess = currentGuess(state, kb, config);
     if (!guess) return null;
@@ -94,6 +100,7 @@ export class HypothesisTracker {
       confidence,
     };
     if (
+      !proposal &&
       previous &&
       previous.protocol === next.protocol &&
       previous.label === next.label &&
@@ -110,10 +117,16 @@ export class HypothesisTracker {
       version,
       id: `h-${version}`,
       stepN,
-      source: 'rules',
+      source: proposal ? 'model' : 'rules',
       previousVersion: previous?.version ?? null,
       ...next,
-      evidence: [...new Set(contributions.flatMap((c) => c.observationIds))],
+      ...(proposal ? { proposedConfidence: proposal.proposedConfidence } : {}),
+      evidence: [
+        ...new Set([
+          ...contributions.flatMap((c) => c.observationIds),
+          ...(proposal?.evidence ?? []),
+        ]),
+      ],
       contributions,
       createdAt: now,
     };

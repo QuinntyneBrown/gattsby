@@ -30,16 +30,20 @@ function install(config: SimulationConfig): void {
       throw new Error(`No scripted device "${id}".`);
     }
     const periods = config.bluetooth.notificationPeriods;
-    if (!periods) return device;
+    const omitted = new Set((config.bluetooth.omitCharacteristics ?? []).map(canonicalUuid));
+    if (!periods && !omitted.size) return device;
     return {
       ...device,
       services: device.services.map((service) => ({
         ...service,
-        characteristics: service.characteristics.map((characteristic) => ({
-          ...characteristic,
-          notificationIntervalMs:
-            periods[canonicalUuid(characteristic.uuid)] ?? characteristic.notificationIntervalMs,
-        })),
+        characteristics: service.characteristics
+          .filter((characteristic) => !omitted.has(canonicalUuid(characteristic.uuid)))
+          .map((characteristic) => ({
+            ...characteristic,
+            notificationIntervalMs:
+              periods?.[canonicalUuid(characteristic.uuid)] ??
+              characteristic.notificationIntervalMs,
+          })),
       })),
     };
   });

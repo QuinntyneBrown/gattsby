@@ -15,8 +15,13 @@ export interface LanguageModelApi {
 }
 
 export interface LanguageModelSessionApi {
-  readonly inputQuota: number;
-  readonly inputUsage: number;
+  readonly inputQuota?: number;
+  readonly inputUsage?: number;
+  readonly contextWindow?: number;
+  readonly contextUsage?: number;
+  measureContextUsage?(input: string, options?: { responseConstraint?: object }): Promise<number>;
+  measureInputUsage?(input: string): Promise<number>;
+  clone(options?: { signal?: AbortSignal }): Promise<LanguageModelSessionApi>;
   prompt(
     input: string,
     options?: { signal?: AbortSignal; responseConstraint?: object },

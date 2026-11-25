@@ -15,8 +15,25 @@ const MAX_HELD_PROMPTS = 2;
 /** The decided profile, when the scores leave no doubt (FR-021). */
 export function decidedCandidate({ state, config }: RuleContext) {
   if (!state.candidates) return null;
+  if (state.selectedProtocol) {
+    return (
+      state.candidates.find((candidate) => candidate.protocol === state.selectedProtocol) ?? null
+    );
+  }
   const decision = decide(state.candidates, config.profileThreshold, config.profileMargin);
   return decision.kind === 'decided' ? decision.candidate : null;
+}
+
+function plausibleProtocols({ state, config }: RuleContext) {
+  const candidates = state.candidates ?? [];
+  const best = candidates[0]?.score ?? 0;
+  const protocols = new Map<string, (typeof candidates)[number]>();
+  for (const candidate of candidates) {
+    if (candidate.score < config.profileThreshold || best - candidate.score > config.profileMargin)
+      continue;
+    if (!protocols.has(candidate.protocol)) protocols.set(candidate.protocol, candidate);
+  }
+  return [...protocols.values()];
 }
 
 /** The next readable characteristic of the decided protocol's service that has a decoder. */
@@ -144,24 +161,34 @@ export const IDENTIFY_RULES: readonly StageRule[] = [
   {
     id: 'identify.ambiguous',
     stage: 'identify',
-    when: (ctx) => ctx.state.candidates !== null && decidedCandidate(ctx) === null,
-    then: ({ state }) => ({
+    when: (ctx) =>
+      ctx.state.connected &&
+      !ctx.state.ambiguityResolved &&
+      decidedCandidate(ctx) === null &&
+      plausibleProtocols(ctx).length > 1,
+    then: (ctx) => ({
       kind: 'ambiguous',
       ruleId: 'identify.ambiguous',
       stage: 'identify',
-      options: (state.layout ?? [])
-        .filter((s) => !s.uuid.endsWith('-0000-1000-8000-00805f9b34fb'))
-        .map((s) => ({
-          action: {
-            tool: 'read_characteristic',
-            input: { service: s.uuid, characteristic: s.characteristics[0]?.uuid ?? s.uuid },
-            ruleId: 'identify.ambiguous',
-            stage: 'identify' as const,
+      options: plausibleProtocols(ctx).map((candidate, index) => ({
+        action: {
+          tool: 'update_hypothesis',
+          input: {
+            protocol: candidate.protocol,
+            proposedConfidence: candidate.score / 100,
+            evidence: ctx.facts.observations
+              .filter(
+                (entry) => entry.kind === 'service' && entry.subject === candidate.serviceUuid,
+              )
+              .map((entry) => entry.id),
           },
-          label: `Look at service ${shortUuid(s.uuid)}`,
-          purpose: 'It isn’t in the knowledge base.',
-          recommended: false,
-        })),
+          ruleId: 'identify.ambiguous',
+          stage: 'identify' as const,
+        },
+        label: candidate.label,
+        purpose: `Continue with ${candidate.protocol} using service ${shortUuid(candidate.serviceUuid)}.`,
+        recommended: index === 0,
+      })),
     }),
   },
 ];

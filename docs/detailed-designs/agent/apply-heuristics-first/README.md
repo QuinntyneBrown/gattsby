@@ -56,7 +56,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 |---|---|---|
 | Prepare | `check_capabilities`; ask machine type; ask brand; ask to power on and disconnect other apps (FR-008) | — |
 | Find | `scan_devices`; if nothing chosen, `scan_all_devices`; several look-alikes, `power_cycle_match`; after 3 empty scans, `assess_reachability` | — |
-| Identify | `connect`; `enumerate_gatt`; `read_device_info` when `0x180A` is present; `match_known_profiles`; `vendor_signature_lookup` when unknown services remain; `read_supported_ranges` for FTMS | two profiles score within a margin of each other (`<TO SUPPLY>` points) |
+| Identify | `connect`; `enumerate_gatt`; `read_device_info` when `0x180A` is present; `match_known_profiles`; `vendor_signature_lookup` when unknown services remain; `read_supported_ranges` for FTMS | two protocols score within the configured margin of 10 points |
 | Standard path | for each claimed metric not yet confirmed: record, ask for the matching action, decode and compare (FR-025) | an unknown notifying service beside the standard one (the mocks' `0xFFF0`) |
 | Proprietary path | `baseline_vs_activity` once; `find_varying_bytes` after each recording | which characteristic to record next, which action to ask for, which encoding test to run |
 | Control | the steps in the test-one-command design | — |

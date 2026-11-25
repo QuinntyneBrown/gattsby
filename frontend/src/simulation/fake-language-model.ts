@@ -16,6 +16,7 @@ export class FakeLanguageModel {
   private readonly responses: ScriptedResponse[];
   private status: ModelScript['availability'];
   private downloadFailures: number;
+  private readonly createError?: string;
 
   constructor(
     script: ModelScript,
@@ -24,6 +25,7 @@ export class FakeLanguageModel {
     this.responses = [...script.responses];
     this.status = script.availability;
     this.downloadFailures = script.downloadFailures ?? 0;
+    this.createError = script.createError;
   }
 
   async availability(): Promise<string> {
@@ -38,6 +40,7 @@ export class FakeLanguageModel {
 
   async create(options: CreateOptions = {}): Promise<FakeLanguageModelSession> {
     this.report({ kind: 'model-call', method: 'create' });
+    if (this.createError) throw new DOMException('Test session refused.', this.createError);
     if (this.status === 'unavailable') {
       throw new DOMException('The model is not available.', 'NotSupportedError');
     }

@@ -23,6 +23,11 @@ import { BrandComponent } from '../../ui/brand/brand.component';
       <g-brand />
       <div class="appbar__actions">
         <a class="btn btn--ghost" routerLink="/start">Readiness</a>
+        <a class="btn btn--ghost btn--icon" routerLink="/settings" aria-label="Settings">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16M8 4v4m8 2v4m-8 2v4" />
+          </svg>
+        </a>
         @if (mode(); as m) {
           <span class="mode-chip">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -94,7 +99,10 @@ export class HomePage implements OnInit {
       (investigations) => this.returning.set(investigations.length > 0),
       () => this.returning.set(false),
     );
-    void this.capabilities.detect().then((c) => this.mode.set(this.modes.select(c)));
+    void this.modes.prefersAgent().then(async (prefersAgent) => {
+      const capabilities = await this.capabilities.detect({ model: prefersAgent });
+      this.mode.set(this.modes.select(capabilities, prefersAgent));
+    });
   }
 
   protected async identify(): Promise<void> {

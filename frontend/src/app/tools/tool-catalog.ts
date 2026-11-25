@@ -11,6 +11,7 @@ import { readSupportedRangesTool } from './inspection/read-supported-ranges.tool
 import { subscribeAndRecordTool } from './listening/subscribe-and-record.tool';
 import { decodeStandardTool } from './analysis/decode-standard.tool';
 import { finishTool } from './meta/finish.tool';
+import { requestMissingTool } from './meta/request-missing-tool.tool';
 import { updateHypothesisTool } from './meta/update-hypothesis.tool';
 import { askUserTool } from './person/ask-user.tool';
 import { requestActionTool } from './person/request-action.tool';
@@ -34,5 +35,6 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   askUserTool,
   requestActionTool,
   updateHypothesisTool,
+  requestMissingTool,
   finishTool,
 ];

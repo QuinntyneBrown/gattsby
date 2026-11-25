@@ -29,6 +29,8 @@ export async function executeTool(
   for (const precondition of tool.preconditions) {
     if (!precondition.check(ctx)) return fail(precondition.code, precondition.message);
   }
+  const inputRefusal = tool.inputPrecondition?.(input, ctx.state);
+  if (inputRefusal) return fail('PRECONDITION_FAILED', inputRefusal);
   let result: ToolResult<unknown>;
   try {
     result = await tool.run(input, ctx);

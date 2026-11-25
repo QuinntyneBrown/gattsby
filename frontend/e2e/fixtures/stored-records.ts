@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import type { DecodedMetric } from '../../src/app/knowledge-base/decoders/decoded-metric';
+import type { MissingToolRequest } from '../../src/app/store/model/missing-tool-request';
 
 // Reads what Gattsby committed to IndexedDB, as a spec's evidence that a step was saved (FR-007,
 // FR-060). It opens the database read-only from the page and never writes to it.
@@ -12,6 +13,7 @@ export interface StoredInvestigation {
   readonly stage: string;
   readonly status: string;
   readonly lastCommittedStep: number;
+  readonly modelConsultations?: number;
   readonly verdict?: { readonly kind: string; readonly label: string } | null;
 }
 
@@ -20,7 +22,12 @@ export interface StoredStep {
   readonly stage: string;
   readonly tool: string;
   readonly status: string;
-  readonly result: { readonly ok: boolean; readonly data: unknown };
+  readonly decidedBy?: string;
+  readonly result: {
+    readonly ok: boolean;
+    readonly data: unknown;
+    readonly error?: { readonly code: string; readonly message: string } | null;
+  };
 }
 
 export interface StoredObservation {
@@ -97,6 +104,11 @@ export class StoredRecords {
 
   async recordings(id: string): Promise<StoredRecording[]> {
     const rows = await this.readAll<StoredRecording>('recordings');
+    return rows.filter((row) => row.investigationId === id);
+  }
+
+  async missingToolRequests(id: string): Promise<MissingToolRequest[]> {
+    const rows = await this.readAll<MissingToolRequest>('missingToolRequests');
     return rows.filter((row) => row.investigationId === id);
   }
 

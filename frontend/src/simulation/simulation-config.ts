@@ -8,6 +8,9 @@ export interface BluetoothScript {
   readonly advertisementScanning?: boolean;
   readonly absent?: boolean;
   readonly blocked?: boolean;
+  /** Services the test's chooser grants alongside the matching filter and optional services. */
+  readonly permittedServices?: readonly (string | number)[];
+  readonly omitCharacteristics?: readonly (string | number)[];
   /** What `getAvailability()` reports; true when omitted. */
   readonly available?: boolean;
   /** Ids of the scripted devices nearby. */
@@ -26,12 +29,14 @@ export type ModelAvailability =
 /** One `prompt` call: an action to return as JSON, or an error to reject with. */
 export type ScriptedResponse =
   | { readonly action: unknown; readonly delayMs?: number }
+  | { readonly rawText: string; readonly delayMs?: number }
   | { readonly error: string; readonly message?: string; readonly delayMs?: number };
 
 export interface ModelScript {
   readonly availability: ModelAvailability;
   readonly responses: readonly ScriptedResponse[];
   readonly downloadFailures?: number;
+  readonly createError?: string;
 }
 
 export interface SimulationConfig {

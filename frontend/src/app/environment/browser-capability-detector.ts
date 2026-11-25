@@ -17,7 +17,7 @@ export class BrowserCapabilityDetector extends CapabilityDetector {
   private readonly injector = inject(Injector);
   private readonly clock = inject(Clock);
 
-  async detect(): Promise<Capabilities> {
+  async detect(options: { model?: boolean } = {}): Promise<Capabilities> {
     const diagnostics: CapabilityDiagnostic[] = [];
     const diagnose = (capability: CapabilityDiagnostic['capability'], code: string): void => {
       diagnostics.push({
@@ -41,14 +41,16 @@ export class BrowserCapabilityDetector extends CapabilityDetector {
         },
         (code) => diagnose('bluetooth', code),
       ),
-      this.probe(
-        async () => {
-          const { PromptApiModelAdapter } = await import('../model/prompt-api-model-adapter');
-          return this.injector.get(PromptApiModelAdapter).availability();
-        },
-        { api: false, availability: 'unavailable' as const, imageInput: false },
-        (code) => diagnose('model', code),
-      ),
+      options.model === false
+        ? { api: false, availability: 'unavailable' as const, imageInput: false }
+        : this.probe(
+            async () => {
+              const { PromptApiModelAdapter } = await import('../model/prompt-api-model-adapter');
+              return this.injector.get(PromptApiModelAdapter).availability();
+            },
+            { api: false, availability: 'unavailable' as const, imageInput: false },
+            (code) => diagnose('model', code),
+          ),
       this.probe(
         () => this.store.usage(),
         {

@@ -11,7 +11,7 @@ export type SimulationEvent =
     }
   | { readonly kind: 'unexpected-bluetooth'; readonly detail: string }
   | { readonly kind: 'model-call'; readonly method: string }
-  | { readonly kind: 'model-prompt'; readonly input: string }
+  | { readonly kind: 'model-prompt'; readonly input: string; readonly constraint?: unknown }
   | { readonly kind: 'unexpected-model'; readonly detail: string }
   | { readonly kind: 'geolocation'; readonly detail: string }
   | { readonly kind: 'csp-violation'; readonly detail: string };
