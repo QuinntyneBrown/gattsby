@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Approve and send one command
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ApprovalGate" as gate
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> gate : request(send_command setSpeed 5.9)
+gate -> gate : Check latch, safe value (FR-036) and recent denial
+gate -> channel : post(approval: what, where, effect, risk, motion)
+channel -> dialog : Show request; Send disabled
+dialog -> person : "Lower the target speed to 5.9 km/h?"
+note over dialog, person : Nothing has been written yet (FR-034)
+person -> dialog : Tick "I am clear and know where the stop is" (FR-035)
+dialog -> dialog : Enable Send
+person -> dialog : Tap Send
+dialog --> channel : decision send, standClear true
+channel --> gate : PromptResponse
+gate -> ledger : issue(request) for 0x2AD9 and 02 4E 02
+ledger --> gate : ApprovalToken a-17
+gate --> executor : token a-17
+executor -> ble : write(0x2AD9, 02 4E 02, a-17)
+ble -> ledger : consume(a-17, 0x2AD9, 02 4E 02) (NFR-018)
+ledger --> ble : valid, marked used
+ble -> device : writeValueWithResponse(02 4E 02)
+device --> ble : Write response
+ble -> log : Append write entry with approvalId a-17 (FR-073)
+ble --> executor : ok
+executor --> executor : Commit step with approval and result
+@enduml

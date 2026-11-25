@@ -104,6 +104,11 @@ stop and leave confirmations (FR-009, FR-018), the connection and mode banners (
 toasts, readiness states for model download, insecure context and blocked storage (FR-003, FR-004),
 and a not-found page.
 
+Later states added from the specs: the three “can’t find it” checks (FR-014), a metric that didn’t
+follow the console (FR-025), a recording in progress (FR-028, FR-051), storage full mid-recording
+(NFR-008), checking a command’s effect (FR-038), and the vendor-handshake approval (FR-032, P2).
+Past investigations now show storage use (NFR-008).
+
 ## Open questions and assumptions
 
 1. **Behaviour Description.** Every user-facing string is provisional until the companion
@@ -122,8 +127,13 @@ and a not-found page.
 6. **Model size.** The download is shown as 2.2 GB, from the designs; Chrome reports the real size.
 7. **Export file names** use `<device>-<date>-profile.gattsby.json` and `…-record.gattsby.json`,
    matching the `*.gattsby.json` pattern in `.gitignore`.
-8. **Phase.** The photo-read dialog (FR-022) and automatic candidate matching (FR-013) are P2; they
-   are drawn now so the layout has room for them.
+8. **Phase.** The photo-read dialog (FR-022), automatic candidate matching (FR-013) and the vendor
+   handshake (FR-032) are P2; they are drawn now so the layout has room for them. The Kingsmith
+   handshake bytes (`F7 A2 00 00 A2 FD` to `0xFE02`) are illustrative until the knowledge base holds
+   a sourced entry (FR-068).
+9. **App update prompt.** The app is a PWA (NFR-006), so a new version reaches the person through
+   the service worker. No requirement says whether Gattsby tells them; no update banner is drawn
+   until one does.
 
 ## Re-checking and re-screenshotting
 
@@ -148,37 +158,37 @@ Legend: ✅ mock exists · ➖ not applicable (reason in manifest) · ❌ missin
 
 ### Pages
 
-| Screen | default | loading | empty | error | checklist | downloadable | downloading | download-failed | bluetooth-off | permission-denied | unsupported | insecure | prepare | find | find-candidates | find-cancelled | identify | proprietary | control | held-by-other | partial | missing-tool | not-connectable | stopped | success | filtered | no-results | Requirements |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Readiness check (`readiness`) | [✅](pages/readiness/default.html) | [✅](pages/readiness/loading.html) | ➖ | [✅](pages/readiness/error.html) | [✅](pages/readiness/checklist.html) | [✅](pages/readiness/downloadable.html) | [✅](pages/readiness/downloading.html) | [✅](pages/readiness/download-failed.html) | [✅](pages/readiness/bluetooth-off.html) | [✅](pages/readiness/permission-denied.html) | [✅](pages/readiness/unsupported.html) | [✅](pages/readiness/insecure.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-001`, `FR-002`, `FR-003`, `FR-004`, `FR-005`, `NFR-016` |
-| Home (`home`) | [✅](pages/home/default.html) | [✅](pages/home/loading.html) | [✅](pages/home/empty.html) | [✅](pages/home/error.html) | [✅](pages/home/checklist.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-005`, `FR-007`, `FR-009`, `FR-059`, `FR-061`, `NFR-012` |
-| Investigation (`investigation`) | [✅](pages/investigation/default.html) | [✅](pages/investigation/loading.html) | ➖ | [✅](pages/investigation/error.html) | [✅](pages/investigation/checklist.html) |  |  |  |  |  |  |  | [✅](pages/investigation/prepare.html) | [✅](pages/investigation/find.html) | [✅](pages/investigation/find-candidates.html) | [✅](pages/investigation/find-cancelled.html) | [✅](pages/investigation/identify.html) | [✅](pages/investigation/proprietary.html) | [✅](pages/investigation/control.html) | [✅](pages/investigation/held-by-other.html) |  |  |  |  |  |  |  | `FR-005`, `FR-008`, `FR-011`, `FR-012`, `FR-013`, `FR-015`, `FR-017`, `FR-024`, `FR-025`, `FR-026`, `FR-028`, `FR-038`, `FR-039`, `FR-048`, `FR-049`, `FR-050`, `FR-051`, `FR-052`, `FR-053`, `NFR-009`, `NFR-010` |
-| Verdict (`verdict`) | [✅](pages/verdict/default.html) | [✅](pages/verdict/loading.html) | ➖ | [✅](pages/verdict/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/verdict/partial.html) | [✅](pages/verdict/missing-tool.html) | [✅](pages/verdict/not-connectable.html) | [✅](pages/verdict/stopped.html) |  |  |  | `FR-009`, `FR-018`, `FR-054`, `FR-056`, `FR-057`, `FR-058`, `FR-060`, `FR-062`, `FR-063` |
-| Device profile (`device-profile`) | [✅](pages/device-profile/default.html) | [✅](pages/device-profile/loading.html) | ➖ | [✅](pages/device-profile/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/device-profile/partial.html) |  |  |  | [✅](pages/device-profile/success.html) |  |  | `FR-010`, `FR-023`, `FR-027`, `FR-040`, `FR-055`, `FR-062` |
-| Evidence log (`evidence`) | [✅](pages/evidence/default.html) | [✅](pages/evidence/loading.html) | [✅](pages/evidence/empty.html) | [✅](pages/evidence/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/evidence/filtered.html) | [✅](pages/evidence/no-results.html) | `FR-056`, `FR-073`, `NFR-013` |
-| Saved devices (`profiles`) | [✅](pages/profiles/default.html) | [✅](pages/profiles/loading.html) | [✅](pages/profiles/empty.html) | [✅](pages/profiles/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/profiles/filtered.html) | [✅](pages/profiles/no-results.html) | `FR-002`, `FR-055`, `FR-061`, `FR-064` |
-| Past investigations (`history`) | [✅](pages/history/default.html) | [✅](pages/history/loading.html) | [✅](pages/history/empty.html) | [✅](pages/history/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-009`, `FR-061` |
-| Missing tools (`missing-tools`) | [✅](pages/missing-tools/default.html) | [✅](pages/missing-tools/loading.html) | [✅](pages/missing-tools/empty.html) | [✅](pages/missing-tools/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-058`, `FR-059` |
-| Settings (`settings`) | [✅](pages/settings/default.html) | [✅](pages/settings/loading.html) | ➖ | [✅](pages/settings/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-005`, `FR-064`, `FR-065`, `NFR-008`, `NFR-012` |
-| Not found (`not-found`) | [✅](pages/not-found/default.html) | ➖ | ➖ | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-064` |
+| Screen | default | loading | empty | error | checklist | downloadable | downloading | download-failed | bluetooth-off | permission-denied | unsupported | insecure | prepare | find | find-candidates | find-cancelled | cannot-find | identify | not-confirmed | proprietary | recording | storage-full | control | control-check | held-by-other | partial | missing-tool | not-connectable | stopped | success | filtered | no-results | Requirements |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Readiness check (`readiness`) | [✅](pages/readiness/default.html) | [✅](pages/readiness/loading.html) | ➖ | [✅](pages/readiness/error.html) | [✅](pages/readiness/checklist.html) | [✅](pages/readiness/downloadable.html) | [✅](pages/readiness/downloading.html) | [✅](pages/readiness/download-failed.html) | [✅](pages/readiness/bluetooth-off.html) | [✅](pages/readiness/permission-denied.html) | [✅](pages/readiness/unsupported.html) | [✅](pages/readiness/insecure.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-001`, `FR-002`, `FR-003`, `FR-004`, `FR-005`, `NFR-016`, `NFR-025` |
+| Home (`home`) | [✅](pages/home/default.html) | [✅](pages/home/loading.html) | [✅](pages/home/empty.html) | [✅](pages/home/error.html) | [✅](pages/home/checklist.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-005`, `FR-007`, `FR-009`, `FR-059`, `FR-061`, `NFR-012` |
+| Investigation (`investigation`) | [✅](pages/investigation/default.html) | [✅](pages/investigation/loading.html) | ➖ | [✅](pages/investigation/error.html) | [✅](pages/investigation/checklist.html) |  |  |  |  |  |  |  | [✅](pages/investigation/prepare.html) | [✅](pages/investigation/find.html) | [✅](pages/investigation/find-candidates.html) | [✅](pages/investigation/find-cancelled.html) | [✅](pages/investigation/cannot-find.html) | [✅](pages/investigation/identify.html) | [✅](pages/investigation/not-confirmed.html) | [✅](pages/investigation/proprietary.html) | [✅](pages/investigation/recording.html) | [✅](pages/investigation/storage-full.html) | [✅](pages/investigation/control.html) | [✅](pages/investigation/control-check.html) | [✅](pages/investigation/held-by-other.html) |  |  |  |  |  |  |  | `FR-005`, `FR-008`, `FR-011`, `FR-012`, `FR-013`, `FR-014`, `FR-015`, `FR-017`, `FR-024`, `FR-025`, `FR-026`, `FR-028`, `FR-038`, `FR-039`, `FR-048`, `FR-049`, `FR-050`, `FR-051`, `FR-052`, `FR-053`, `NFR-005`, `NFR-008`, `NFR-009`, `NFR-010`, `NFR-025` |
+| Verdict (`verdict`) | [✅](pages/verdict/default.html) | [✅](pages/verdict/loading.html) | ➖ | [✅](pages/verdict/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/verdict/partial.html) | [✅](pages/verdict/missing-tool.html) | [✅](pages/verdict/not-connectable.html) | [✅](pages/verdict/stopped.html) |  |  |  | `FR-009`, `FR-014`, `FR-018`, `FR-033`, `FR-054`, `FR-056`, `FR-057`, `FR-058`, `FR-060`, `FR-062`, `FR-063` |
+| Device profile (`device-profile`) | [✅](pages/device-profile/default.html) | [✅](pages/device-profile/loading.html) | ➖ | [✅](pages/device-profile/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/device-profile/partial.html) |  |  |  | [✅](pages/device-profile/success.html) |  |  | `FR-010`, `FR-023`, `FR-027`, `FR-040`, `FR-055`, `FR-062` |
+| Evidence log (`evidence`) | [✅](pages/evidence/default.html) | [✅](pages/evidence/loading.html) | [✅](pages/evidence/empty.html) | [✅](pages/evidence/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/evidence/filtered.html) | [✅](pages/evidence/no-results.html) | `FR-056`, `FR-073`, `NFR-013` |
+| Saved devices (`profiles`) | [✅](pages/profiles/default.html) | [✅](pages/profiles/loading.html) | [✅](pages/profiles/empty.html) | [✅](pages/profiles/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [✅](pages/profiles/filtered.html) | [✅](pages/profiles/no-results.html) | `FR-002`, `FR-055`, `FR-061`, `FR-064` |
+| Past investigations (`history`) | [✅](pages/history/default.html) | [✅](pages/history/loading.html) | [✅](pages/history/empty.html) | [✅](pages/history/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-009`, `FR-061`, `NFR-008` |
+| Missing tools (`missing-tools`) | [✅](pages/missing-tools/default.html) | [✅](pages/missing-tools/loading.html) | [✅](pages/missing-tools/empty.html) | [✅](pages/missing-tools/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-033`, `FR-058`, `FR-059` |
+| Settings (`settings`) | [✅](pages/settings/default.html) | [✅](pages/settings/loading.html) | ➖ | [✅](pages/settings/error.html) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-005`, `FR-064`, `FR-065`, `NFR-008`, `NFR-012` |
+| Not found (`not-found`) | [✅](pages/not-found/default.html) | ➖ | ➖ | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-064` |
 
 ### Dialogs
 
-| Screen | default | busy | invalid | confirmed | failed | stop | paused | unavailable | success | confirm | Requirements |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| Approve a command (`approval`) | [✅](dialogs/approval/default.html) | [✅](dialogs/approval/busy.html) | ➖ | [✅](dialogs/approval/confirmed.html) | [✅](dialogs/approval/failed.html) | [✅](dialogs/approval/stop.html) |  |  |  |  | `FR-034`, `FR-035`, `FR-036`, `FR-037`, `FR-038`, `FR-039`, `NFR-018` |
-| Emergency stop (`emergency-stop`) | [✅](dialogs/emergency-stop/default.html) | [✅](dialogs/emergency-stop/busy.html) | ➖ |  | [✅](dialogs/emergency-stop/failed.html) |  |  |  |  |  | `FR-039` |
-| Unexpected response (`unexpected-effect`) | [✅](dialogs/unexpected-effect/default.html) | ➖ | ➖ |  |  |  |  |  |  |  | `FR-038`, `FR-039` |
-| Still there? / Paused (`still-there`) | [✅](dialogs/still-there/default.html) | ➖ | ➖ |  |  |  | [✅](dialogs/still-there/paused.html) |  |  |  | `FR-009`, `FR-051` |
-| Investigation options (`investigation-menu`) | [✅](dialogs/investigation-menu/default.html) | ➖ | ➖ |  |  |  |  |  |  |  | `FR-009`, `FR-010`, `FR-022`, `FR-056` |
-| Add a note or the location (`add-note`) | [✅](dialogs/add-note/default.html) | ➖ | [✅](dialogs/add-note/invalid.html) |  |  |  |  |  |  |  | `FR-010` |
-| Read the model plate (`photo-read`) | [✅](dialogs/photo-read/default.html) | [✅](dialogs/photo-read/busy.html) | [✅](dialogs/photo-read/invalid.html) |  |  |  |  | [✅](dialogs/photo-read/unavailable.html) |  |  | `FR-022`, `NFR-017` |
-| Stop the investigation (`stop-investigation`) | [✅](dialogs/stop-investigation/default.html) | [✅](dialogs/stop-investigation/busy.html) | ➖ |  |  |  |  |  |  |  | `FR-009`, `FR-018` |
-| Leave the investigation (`leave-investigation`) | [✅](dialogs/leave-investigation/default.html) | [✅](dialogs/leave-investigation/busy.html) | ➖ |  |  |  |  |  |  |  | `FR-018`, `FR-060` |
-| Export (`export`) | [✅](dialogs/export/default.html) | [✅](dialogs/export/busy.html) | ➖ |  |  |  |  |  | [✅](dialogs/export/success.html) |  | `FR-062`, `FR-063`, `NFR-012` |
-| Import (`import`) | [✅](dialogs/import/default.html) | [✅](dialogs/import/busy.html) | [✅](dialogs/import/invalid.html) |  | [✅](dialogs/import/failed.html) |  |  |  | [✅](dialogs/import/success.html) |  | `FR-064`, `NFR-015` |
-| Delete an investigation (`delete-investigation`) | [✅](dialogs/delete-investigation/default.html) | [✅](dialogs/delete-investigation/busy.html) | ➖ |  |  |  |  |  |  |  | `FR-061` |
-| Delete all data (`delete-all-data`) | [✅](dialogs/delete-all-data/default.html) | [✅](dialogs/delete-all-data/busy.html) | [✅](dialogs/delete-all-data/invalid.html) |  |  |  |  |  |  | [✅](dialogs/delete-all-data/confirm.html) | `FR-065` |
+| Screen | default | busy | invalid | confirmed | failed | stop | handshake | paused | unavailable | success | confirm | Requirements |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Approve a command (`approval`) | [✅](dialogs/approval/default.html) | [✅](dialogs/approval/busy.html) | ➖ | [✅](dialogs/approval/confirmed.html) | [✅](dialogs/approval/failed.html) | [✅](dialogs/approval/stop.html) | [✅](dialogs/approval/handshake.html) |  |  |  |  | `FR-032`, `FR-033`, `FR-034`, `FR-035`, `FR-036`, `FR-037`, `FR-038`, `FR-039`, `NFR-018` |
+| Emergency stop (`emergency-stop`) | [✅](dialogs/emergency-stop/default.html) | [✅](dialogs/emergency-stop/busy.html) | ➖ |  | [✅](dialogs/emergency-stop/failed.html) |  |  |  |  |  |  | `FR-039` |
+| Unexpected response (`unexpected-effect`) | [✅](dialogs/unexpected-effect/default.html) | ➖ | ➖ |  |  |  |  |  |  |  |  | `FR-038`, `FR-039` |
+| Still there? / Paused (`still-there`) | [✅](dialogs/still-there/default.html) | ➖ | ➖ |  |  |  |  | [✅](dialogs/still-there/paused.html) |  |  |  | `FR-009`, `FR-051` |
+| Investigation options (`investigation-menu`) | [✅](dialogs/investigation-menu/default.html) | ➖ | ➖ |  |  |  |  |  |  |  |  | `FR-009`, `FR-010`, `FR-022`, `FR-056` |
+| Add a note or the location (`add-note`) | [✅](dialogs/add-note/default.html) | ➖ | [✅](dialogs/add-note/invalid.html) |  |  |  |  |  |  |  |  | `FR-010` |
+| Read the model plate (`photo-read`) | [✅](dialogs/photo-read/default.html) | [✅](dialogs/photo-read/busy.html) | [✅](dialogs/photo-read/invalid.html) |  |  |  |  |  | [✅](dialogs/photo-read/unavailable.html) |  |  | `FR-022`, `NFR-017` |
+| Stop the investigation (`stop-investigation`) | [✅](dialogs/stop-investigation/default.html) | [✅](dialogs/stop-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  | `FR-009`, `FR-018` |
+| Leave the investigation (`leave-investigation`) | [✅](dialogs/leave-investigation/default.html) | [✅](dialogs/leave-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  | `FR-018`, `FR-060` |
+| Export (`export`) | [✅](dialogs/export/default.html) | [✅](dialogs/export/busy.html) | ➖ |  |  |  |  |  |  | [✅](dialogs/export/success.html) |  | `FR-062`, `FR-063`, `NFR-012` |
+| Import (`import`) | [✅](dialogs/import/default.html) | [✅](dialogs/import/busy.html) | [✅](dialogs/import/invalid.html) |  | [✅](dialogs/import/failed.html) |  |  |  |  | [✅](dialogs/import/success.html) |  | `FR-064`, `NFR-015` |
+| Delete an investigation (`delete-investigation`) | [✅](dialogs/delete-investigation/default.html) | [✅](dialogs/delete-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  | `FR-061` |
+| Delete all data (`delete-all-data`) | [✅](dialogs/delete-all-data/default.html) | [✅](dialogs/delete-all-data/busy.html) | [✅](dialogs/delete-all-data/invalid.html) |  |  |  |  |  |  |  | [✅](dialogs/delete-all-data/confirm.html) | `FR-065` |
 
 ### Notifications
 
