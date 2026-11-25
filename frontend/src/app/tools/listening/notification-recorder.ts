@@ -24,6 +24,7 @@ export class NotificationRecorder {
     let count = 0;
     let decodeErrors = 0;
     let recording = false;
+    let deadline = 0;
     const stops: (() => Promise<void>)[] = [];
     const byCharacteristic = sources.map(({ uuid }) => ({
       uuid,
@@ -37,8 +38,9 @@ export class NotificationRecorder {
         stops.push(
           await ble.subscribe(service, uuid, ({ bytes, entryId, t }) => {
             if (signal.aborted || this.prompts.idle()) return undefined;
-            const capture = recording ? { recordingId } : {};
-            if (recording) {
+            const inWindow = recording && t <= deadline;
+            const capture = inWindow ? { recordingId } : {};
+            if (inWindow) {
               count++;
               stats.count++;
               stats.lengths.add(bytes.length);
@@ -49,10 +51,10 @@ export class NotificationRecorder {
               if (!Array.isArray(fields)) return capture;
               const metrics = fields as readonly DecodedMetric[];
               this.live.update(metrics);
-              this.confirmation.sample(metrics, entryId, t, recording);
+              this.confirmation.sample(metrics, entryId, t, inWindow);
               return { ...capture, decoded: metrics };
             } catch (error) {
-              if (recording) decodeErrors++;
+              if (inWindow) decodeErrors++;
               return {
                 ...capture,
                 decodeError:
@@ -63,6 +65,7 @@ export class NotificationRecorder {
         );
       }
       const startedAt = this.clock.now();
+      deadline = startedAt + seconds * 1000;
       recording = true;
       const interrupted = await this.wait(seconds, ble, signal);
       if (signal.aborted) await Promise.all(stops.map((stop) => stop()));
@@ -88,7 +91,8 @@ export class NotificationRecorder {
 
   private wait(seconds: number, ble: BleLayer, signal: AbortSignal): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      const cancel = this.clock.setTimeout(() => close(false), seconds * 1000);
+      // Finalize after the last eligible millisecond so a queued boundary packet can be tagged.
+      const cancel = this.clock.setTimeout(() => close(false), seconds * 1000 + 1);
       const disconnected = ble.disconnected.subscribe(() => close(true));
       const abort = (): void => close(true);
       function close(interrupted: boolean): void {

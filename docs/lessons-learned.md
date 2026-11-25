@@ -185,3 +185,11 @@ None; this is the first entry.
   between a field seen without confirmation and a device claim that never appeared.
 - Reuse the decoder’s layout for claims without live samples. The saved rule then agrees with the
   code even when no packet carried the field during this investigation.
+
+## Journey 3, slice 12: Verify the recording rate
+
+- Run the actual BLE adapter and notification recorder with four independent 50 Hz streams and
+  a fake clock. A packet on the deadline was excluded until the recorder compared its timestamp
+  with the inclusive cutoff.
+- A later recording of the same characteristic used to leave both listeners attached. Replace
+  the prior listener before starting the next one so each packet is logged once.
