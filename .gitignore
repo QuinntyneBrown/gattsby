@@ -1,0 +1,20 @@
+# Generated caches
+.cache/
+
+# Python caches (skill scripts)
+__pycache__/
+
+# Node
+node_modules/
+
+# Build output
+dist/
+
+# macOS
+.DS_Store
+
+# Exported investigations and photos used while testing by hand
+*.gattsby.json
+
+# Worktrees of parallel Claude Code sessions
+.claude/worktrees/
