@@ -15,6 +15,10 @@ export class DeviceProfilePage {
     return this.page.getByRole('alert');
   }
 
+  get exportButton() {
+    return this.page.getByRole('button', { name: 'Export', exact: true });
+  }
+
   open(id: string) {
     return this.page.goto(`/profiles/${id}`);
   }

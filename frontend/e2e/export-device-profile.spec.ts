@@ -1,9 +1,10 @@
 // Acceptance Test
-// Traces to: FR-055
+// Traces to: FR-055, FR-062, NFR-012, NFR-013, NFR-024
 // Given an FTMS treadmill, when the investigation concludes, then its saved profile
 // conforms to the published schema and each metric points to evidence in the record.
 
 import type { Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import Ajv from 'ajv';
 import schema from '../src/schemas/device-profile-1.schema.json';
 import type { FakeBluetooth } from './fixtures/fake-bluetooth';
@@ -11,6 +12,7 @@ import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { DeviceProfilePage } from './pages/device-profile.page';
+import { ExportDialogPage } from './pages/export.dialog.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { VerdictPage } from './pages/verdict.page';
@@ -60,6 +62,42 @@ async function finishTreadmill(page: Page, bluetooth: FakeBluetooth): Promise<st
   await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
   return investigation.id();
 }
+
+// Given a completed investigation, when the person chooses Device profile in Export,
+// then Chrome saves a schema-valid profile. The two entry points offer the same local export.
+test('downloads a versioned profile from the verdict and device profile @critical', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const id = await finishTreadmill(page, fakeBluetooth);
+  const verdict = new VerdictPage(page);
+  const profile = new DeviceProfilePage(page);
+  const dialog = new ExportDialogPage(page);
+  const validate = new Ajv().compile(schema);
+  const downloads: string[] = [];
+  page.on('download', (file) => downloads.push(file.suggestedFilename()));
+
+  for (const trigger of [verdict.exportProfile, profile.exportButton]) {
+    const before = downloads.length;
+    await trigger.click({ timeout: 3_000 });
+    await expect(dialog.includeNotesAndPhotos).not.toBeChecked();
+    expect(downloads).toHaveLength(before);
+    const download = page.waitForEvent('download');
+    await dialog.deviceProfile.click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(
+      /^hzn-t202-4f1a-\d{4}-\d{2}-\d{2}-profile\.gattsby\.json$/,
+    );
+    const exported: unknown = JSON.parse(await readFile((await file.path())!, 'utf8'));
+    expect(validate(exported), JSON.stringify(validate.errors)).toBe(true);
+    expect(exported).toMatchObject({ investigationId: id, formatVersion: '1.0' });
+    expect(exported).not.toHaveProperty('rawLog');
+    await expect(dialog.success).toContainText(file.suggestedFilename());
+    await dialog.done.click();
+    if (before === 0) await verdict.deviceProfile.click();
+  }
+  expect(downloads).toHaveLength(2);
+});
 
 test('saves one versioned device profile with evidence for each reading', async ({
   page,

@@ -5,6 +5,7 @@ export type StoreErrorCode =
   | 'ALREADY_EXISTS'
   | 'ALREADY_CONCLUDED'
   | 'UNREADABLE_PROFILE'
+  | 'EXPORT_UNAVAILABLE'
   | 'DATABASE_BLOCKED';
 
 // A refusal from the investigation store; a screen branches on its `code`.

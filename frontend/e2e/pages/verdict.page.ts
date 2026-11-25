@@ -31,4 +31,8 @@ export class VerdictPage {
   get deviceProfile(): Locator {
     return this.page.getByRole('link', { name: 'Open device profile' });
   }
+
+  get exportProfile(): Locator {
+    return this.page.getByRole('button', { name: 'Export profile' });
+  }
 }

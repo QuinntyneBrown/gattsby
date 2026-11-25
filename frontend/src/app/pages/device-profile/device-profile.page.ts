@@ -2,6 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
+import { ExportDialog } from '../../dialogs/export/export.dialog';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { InvestigationStore } from '../../store/investigation-store';
 import { ConfidenceBadgeComponent } from '../../ui/confidence-badge/confidence-badge.component';
@@ -9,7 +10,14 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
 
 @Component({
   selector: 'g-device-profile-page',
-  imports: [DatePipe, DecimalPipe, RouterLink, ConfidenceBadgeComponent, VerdictMarkComponent],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    RouterLink,
+    ConfidenceBadgeComponent,
+    VerdictMarkComponent,
+    ExportDialog,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -41,6 +49,7 @@ export class DeviceProfilePage {
   });
   protected readonly starting = signal(false);
   protected readonly startFailed = signal(false);
+  protected readonly exporting = signal(false);
   protected readonly shortUuid = shortUuid;
   protected readonly statusWords = {
     confirmed: 'confirmed',

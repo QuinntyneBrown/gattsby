@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
+import { ExportDialog } from '../../dialogs/export/export.dialog';
 import { KnowledgeBase } from '../../knowledge-base/knowledge-base';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { InvestigationRecord } from '../../store/model/investigation-record';
@@ -12,7 +13,7 @@ import { verdictView, type VerdictView } from './verdict-view';
 // device is already disconnected when it appears (FR-018).
 @Component({
   selector: 'g-verdict-page',
-  imports: [RouterLink, ConfidenceBadgeComponent, VerdictMarkComponent],
+  imports: [RouterLink, ConfidenceBadgeComponent, VerdictMarkComponent, ExportDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -126,6 +127,9 @@ import { verdictView, type VerdictView } from './verdict-view';
         <div class="action-bar__inner">
           @if (record()?.investigation?.profileId; as profileId) {
             <a class="btn btn--lg" [routerLink]="['/profiles', profileId]">Open device profile</a>
+            <button class="btn btn--lg" type="button" (click)="exporting.set(profileId)">
+              Export profile
+            </button>
           }
           <button
             class="btn btn--primary btn--lg"
@@ -141,6 +145,9 @@ import { verdictView, type VerdictView } from './verdict-view';
         </div>
       </div>
     </div>
+    @if (exporting(); as profileId) {
+      <g-export-dialog [profileId]="profileId" (closed)="exporting.set(null)" />
+    }
   `,
 })
 export class VerdictPage implements OnInit {
@@ -153,6 +160,7 @@ export class VerdictPage implements OnInit {
   protected readonly view = signal<VerdictView | null>(null);
   protected readonly failed = signal(false);
   protected readonly starting = signal(false);
+  protected readonly exporting = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     try {
