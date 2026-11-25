@@ -20,7 +20,7 @@ export class FakeLanguageModelSession {
 
   async prompt(input: unknown, options: PromptOptions = {}): Promise<string> {
     const text = typeof input === 'string' ? input : JSON.stringify(input);
-    this.report({ kind: 'model-prompt', input: text });
+    this.report({ kind: 'model-prompt', input: text, constraint: options.responseConstraint });
     this.inputUsage += Math.ceil(text.length / 4);
     const response = this.responses.shift();
     if (!response) {
@@ -32,7 +32,7 @@ export class FakeLanguageModelSession {
     if ('error' in response) {
       throw new DOMException(response.message ?? response.error, response.error);
     }
-    return JSON.stringify(response.action);
+    return 'rawText' in response ? response.rawText : JSON.stringify(response.action);
   }
 
   async measureInputUsage(input: unknown): Promise<number> {

@@ -31,6 +31,8 @@ export function validateModelAction(candidate: unknown, ctx: ModelDecisionContex
   if (!toolInputs[tool]?.(input)) {
     throw new ToolError('INVALID_INPUT', `The input for ${tool} is incomplete or invalid.`);
   }
+  const inputRefusal = definition.inputPrecondition?.(input, ctx.state);
+  if (inputRefusal) throw new ToolError('PRECONDITION_FAILED', inputRefusal);
   const ids = input['evidence'];
   if (Array.isArray(ids) && ids.some((id: string) => !ctx.resolves(id))) {
     throw new ToolError('INVALID_INPUT', 'One or more evidence references could not be found.');

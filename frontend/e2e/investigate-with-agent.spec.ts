@@ -1,4 +1,4 @@
-// Traces to: FR-005, FR-041, FR-042, FR-044, FR-046, FR-048, FR-071, NFR-001, NFR-020
+// Traces to: FR-005, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-071, NFR-001, NFR-020
 // Given a model is available, when the person turns off full agent mode in Settings,
 // then the choice survives reload and the next investigation starts as a checklist.
 
@@ -9,6 +9,23 @@ import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { SettingsPage } from './pages/settings.page';
 import { VerdictPage } from './pages/verdict.page';
+import type { Page } from '@playwright/test';
+
+const ambiguousTreadmill = {
+  devices: [devices.treadmill.id],
+  chooser: [{ pick: devices.treadmill.id }],
+  permittedServices: [0xfff0],
+  omitCharacteristics: [0x2ad9],
+};
+
+async function beginTreadmill(page: Page): Promise<InvestigationPage> {
+  const home = new HomePage(page);
+  const investigation = new InvestigationPage(page);
+  await home.goto();
+  await home.identify();
+  await investigation.prepare('Treadmill', 'Don’t know');
+  return investigation;
+}
 
 test('uses the saved choice to start without calling the model', async ({ page, fakeModel }) => {
   const home = new HomePage(page);
@@ -70,12 +87,7 @@ test.describe('The model refuses a session', () => {
 
 test.describe('Two plausible protocols on the FTMS treadmill', () => {
   test.use({
-    bluetooth: {
-      devices: [devices.treadmill.id],
-      chooser: [{ pick: devices.treadmill.id }],
-      permittedServices: [0xfff0],
-      omitCharacteristics: [0x2ad9],
-    },
+    bluetooth: ambiguousTreadmill,
     model: {
       availability: 'available',
       responses: [
@@ -96,11 +108,7 @@ test.describe('Two plausible protocols on the FTMS treadmill', () => {
     fakeBluetooth,
     fakeModel,
   }) => {
-    const home = new HomePage(page);
-    const investigation = new InvestigationPage(page);
-    await home.goto();
-    await home.identify();
-    await investigation.prepare('Treadmill', 'Don’t know');
+    const investigation = await beginTreadmill(page);
     expect(fakeModel.prompts()).toEqual([]);
     await investigation.choose('Find the device');
     await expect.poll(() => fakeModel.prompts().length, { timeout: 3_000 }).toBe(1);
@@ -108,6 +116,20 @@ test.describe('Two plausible protocols on the FTMS treadmill', () => {
     expect(prompt).toContain('FTMS');
     expect(prompt).toContain('0000fff0');
     expect(prompt).not.toMatch(/(?:\b[0-9a-f]{2}\s+){5}/i);
+    const [constraint] = fakeModel.constraints() as {
+      oneOf: { properties: { type: { const: string }; tool?: { enum: string[] } } }[];
+    }[];
+    expect(constraint.oneOf.map((choice) => choice.properties.type.const)).toEqual([
+      'call_tool',
+      'ask_user',
+      'update_hypothesis',
+      'request_missing_tool',
+      'finish',
+    ]);
+    const tools = constraint.oneOf[0].properties.tool?.enum ?? [];
+    expect(tools).toContain('read_characteristic');
+    expect(tools).not.toContain('scan_devices');
+    expect(tools).not.toContain('request_action');
     await expect(investigation.feed).toContainText(
       'Treadmill Data is a stronger fit for this machine.',
     );
@@ -133,5 +155,95 @@ test.describe('Two plausible protocols on the FTMS treadmill', () => {
     expect(fakeModel.prompts()).toHaveLength(1);
     expect(fakeBluetooth.writes()).toEqual([]);
     expect(await page.evaluate(() => performance.now())).toBeLessThan(180_000);
+  });
+});
+
+test.describe('The model proposes reads that cannot run', () => {
+  test.use({
+    bluetooth: ambiguousTreadmill,
+    model: {
+      availability: 'available',
+      responses: [
+        { action: { type: 'call_tool', tool: '<b>unknown</b>', input: {} } },
+        {
+          action: {
+            type: 'call_tool',
+            tool: 'read_characteristic',
+            input: { service: '0000fff0-0000-1000-8000-00805f9b34fb' },
+          },
+        },
+        {
+          action: {
+            type: 'call_tool',
+            tool: 'read_characteristic',
+            input: {
+              service: '0000fff0-0000-1000-8000-00805f9b34fb',
+              characteristic: '0000ffff-0000-1000-8000-00805f9b34fb',
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  test('records each refusal, explains it in the next prompt and reaches a verdict', async ({
+    page,
+    fakeBluetooth,
+    fakeModel,
+  }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect(new VerdictPage(page).title).toHaveText('Partially decoded');
+    const id = investigation.id();
+    const records = new StoredRecords(page);
+    const refused = (await records.steps(id)).filter((step) => step.decidedBy === 'model');
+    expect(refused.map((step) => step.result.error?.code)).toEqual([
+      'UNKNOWN_TOOL',
+      'INVALID_INPUT',
+      'PRECONDITION_FAILED',
+    ]);
+    expect(refused.every((step) => step.status === 'refused')).toBe(true);
+    expect(fakeModel.prompts()[1]).toContain('Unknown tool: <b>unknown</b>');
+    expect(fakeModel.prompts()[2]).toContain('input for read_characteristic is incomplete');
+    expect(fakeBluetooth.writes()).toEqual([]);
+    expect(fakeBluetooth.calls().filter((call) => call === 'readValue')).toHaveLength(3);
+  });
+});
+
+test.describe('The model returns unstructured or forbidden actions', () => {
+  test.use({
+    bluetooth: ambiguousTreadmill,
+    model: {
+      availability: 'available',
+      responses: [
+        { rawText: '{} {}' },
+        {
+          action: {
+            type: 'call_tool',
+            tool: 'request_action',
+            input: { instruction: 'Use the console' },
+          },
+        },
+        { action: { type: 'call_tool', tool: 'send_command', input: {} } },
+      ],
+    },
+  });
+
+  test('refuses malformed output, physical prompts and unavailable writes', async ({
+    page,
+    fakeBluetooth,
+  }) => {
+    const investigation = await beginTreadmill(page);
+    await investigation.choose('Find the device');
+    await expect(new VerdictPage(page).title).toBeVisible();
+    const refused = (await new StoredRecords(page).steps(investigation.id())).filter(
+      (step) => step.decidedBy === 'model',
+    );
+    expect(refused.map((step) => step.result.error?.code)).toEqual([
+      'INVALID_INPUT',
+      'NOT_ALLOWED_AT_STAGE',
+      'UNKNOWN_TOOL',
+    ]);
+    expect(fakeBluetooth.writes()).toEqual([]);
   });
 });

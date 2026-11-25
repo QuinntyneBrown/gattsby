@@ -31,6 +31,15 @@ export const readCharacteristicTool = entry<ReadCharacteristicInput, ReadCharact
   },
   outputSchema: { type: 'object' },
   safetyClass: 'read',
+  inputPrecondition: (input, state) => {
+    const characteristic = state.layout
+      ?.find((service) => service.uuid === input.service)
+      ?.characteristics.find((entry) => entry.uuid === input.characteristic);
+    if (!characteristic) return 'Choose a characteristic from the device’s discovered layout.';
+    return characteristic.properties.includes('read')
+      ? null
+      : 'That characteristic cannot be read.';
+  },
   preconditions: [
     {
       id: 'connected',

@@ -22,7 +22,11 @@ export interface StoredStep {
   readonly tool: string;
   readonly status: string;
   readonly decidedBy?: string;
-  readonly result: { readonly ok: boolean; readonly data: unknown };
+  readonly result: {
+    readonly ok: boolean;
+    readonly data: unknown;
+    readonly error?: { readonly code: string; readonly message: string } | null;
+  };
 }
 
 export interface StoredObservation {

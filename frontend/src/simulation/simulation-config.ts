@@ -29,6 +29,7 @@ export type ModelAvailability =
 /** One `prompt` call: an action to return as JSON, or an error to reject with. */
 export type ScriptedResponse =
   | { readonly action: unknown; readonly delayMs?: number }
+  | { readonly rawText: string; readonly delayMs?: number }
   | { readonly error: string; readonly message?: string; readonly delayMs?: number };
 
 export interface ModelScript {

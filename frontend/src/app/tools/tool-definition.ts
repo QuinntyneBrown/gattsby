@@ -41,6 +41,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   /** Physical prompts and other rule-owned operations may be withheld from the model. */
   readonly modelSelectable?: boolean;
   readonly preconditions: readonly Precondition[];
+  /** A precondition that depends on the selected input as well as the investigation state. */
+  readonly inputPrecondition?: (input: I, state: DecisionState) => string | null;
   readonly stages: readonly Stage[];
   readonly requiredCapabilities: readonly string[];
   readonly phase: 'MVP' | 'P2';

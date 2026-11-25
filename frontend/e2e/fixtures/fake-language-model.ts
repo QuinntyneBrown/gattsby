@@ -9,6 +9,12 @@ export class FakeModel {
     return this.recorder.prompts();
   }
 
+  constraints(): unknown[] {
+    return this.recorder.events.flatMap(({ event }) =>
+      event.kind === 'model-prompt' ? [event.constraint] : [],
+    );
+  }
+
   /** Every call on `LanguageModel` or a session, by method name. */
   calls(): string[] {
     return this.recorder.events.flatMap(({ event }) =>
