@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Prepare the model
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Readiness page, model readiness service, model adapter loaded on demand")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API; model files kept by Chrome")
+
+Rel(person, spa, "Starts or retries the download", "Touch or keyboard")
+Rel(spa, nano, "availability(options); create(options) with a progress monitor", "Prompt API")
+@enduml

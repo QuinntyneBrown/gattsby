@@ -1,0 +1,67 @@
+@startuml
+title UML sequence behaviour — Resume after the tab was closed or crashed
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+  participant "InvestigationPage" as inv
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ResumeService" as resume
+  participant "ModeController" as mode
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+
+person -> home : Reopen Gattsby
+home -> resume : listResumable()
+resume -> store : listResumable(): no verdict, status running or paused
+store --> resume : spin bike, Identify, running -> interrupted
+home --> person : "Resume: spin bike, Basic-Fit Roubaix" (FR-009)
+person -> home : Tap Resume
+home -> inv : Navigate; "Reconnecting to SB-7731" (investigation/loading.html)
+inv -> resume : resume(id)
+resume -> store : loadInvestigation(id)
+store --> resume : Steps 1..7; partial step 8 discarded (NFR-007)
+resume -> mode : chooseMode(recorded mode); never upgrades
+resume -> ble : getPermittedDevices()
+alt getDevices available (PD-GETDEVICES)
+  ble -> chrome : navigator.bluetooth.getDevices()
+  chrome --> ble : [SB-7731]
+  ble --> resume : device
+  resume -> ble : reconnect(deviceId) (TOOL-007)
+  ble -> chrome : gatt.connect(); restore subscriptions
+  chrome --> ble : connected
+else getDevices absent (MVP default)
+  ble --> resume : UNSUPPORTED (TOOL-032)
+  resume -> inv : Prompt "Find the device"
+  person -> inv : Tap "Find the device"
+  inv -> ble : requestDevice(filters with the recorded name)
+  ble -> chrome : Chrome's chooser; person picks SB-7731
+  chrome --> ble : device
+  ble -> chrome : gatt.connect(); restore subscriptions
+end
+ble --> resume : connected
+resume -> store : setStatus(running, identify)
+resume -> orch : continueFrom(step 7)
+orch --> inv : Next step decided afresh; no write is replayed
+@enduml

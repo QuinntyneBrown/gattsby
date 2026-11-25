@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Download the on-device model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ModelDownloadPanel" as panel
+  participant "ReadinessPage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelReadiness" as readiness
+  participant "PromptApiModelAdapter" as adapter
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome Prompt API" as api
+end box
+
+person -> panel : Tap "Download the on-device model"
+panel --> page : download
+page -> readiness : download() inside the tap (user activation)
+readiness -> adapter : download(onProgress, signal)
+adapter -> api : LanguageModel.create({ ...MODEL_SESSION_OPTIONS, monitor })
+loop Each downloadprogress event
+  api --> adapter : e.loaded (fraction 0 to 1)
+  adapter --> readiness : onProgress(round(e.loaded x 100))
+  readiness --> panel : state downloading, percent (downloading.html)
+end
+note over person, panel : "Start with the checklist" stays available;\nthe download continues while the person investigates (FR-004)
+alt Download completes
+  api --> adapter : session
+  adapter -> adapter : session.destroy() (release; Chrome keeps the model)
+  adapter --> readiness : done
+  readiness --> page : state available
+  page --> person : "Gemini Nano ready"; next investigation runs in full agent mode
+else Download fails
+  api --> adapter : create() rejects
+  adapter -> adapter : Remove monitor listener
+  adapter --> readiness : DOWNLOAD_FAILED
+  readiness --> panel : failed at 38% (download-failed.html)
+  panel --> person : "Retry the download"; checklist still usable (FR-004)
+  person -> panel : Tap Retry
+  panel --> page : retry
+  page -> readiness : download()
+end
+@enduml

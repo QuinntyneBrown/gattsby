@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Choose the mode at the start of an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+  participant "InvestigationPage" as inv
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "InvestigationLauncher" as launcher
+  participant "ModeController" as mode
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelReadiness" as readiness
+  participant "PromptApiModelAdapter" as model
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+opt The person prefers the checklist
+  person -> page : Tap "Use checklist mode instead"
+  page -> mode : preferChecklist() for this page load
+end
+person -> launcher : Tap "Identify a device"
+launcher -> mode : chooseMode()
+mode -> store : getSettings()
+store --> mode : useAgentWhenAvailable
+mode -> readiness : state
+alt Checklist preferred or setting off
+  mode --> launcher : checklist, personChoseChecklist; no model call (FR-005)
+else Model not available or still downloading
+  readiness --> mode : unavailable or downloading
+  mode --> launcher : checklist, modelUnavailable; no model call (FR-005)
+else Model available
+  readiness --> mode : available
+  mode -> model : createSession(MODEL_SESSION_OPTIONS, signal)
+  alt Session created
+    model --> mode : ModelSession
+    mode --> launcher : fullAgent, modelReady (FR-005)
+  else Creation fails
+    model --> mode : SESSION_FAILED
+    mode --> launcher : checklist, sessionFailed
+  end
+end
+launcher -> store : createInvestigation({ mode, ... }) (FR-005 recorded)
+launcher -> inv : Open /investigations/:id
+inv --> person : App bar "Agent · Prepare" or "Checklist · Prepare"
+opt Checklist mode
+  inv --> person : ModeBanner info "Running as a checklist." with the reason
+end
+@enduml

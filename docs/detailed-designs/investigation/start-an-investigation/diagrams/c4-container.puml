@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Start an investigation
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Home page, launcher, orchestrator, Prepare stage prompts")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "The new investigation, its Prepare steps and answers")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Knowledge-base version; brands for suggestions")
+}
+
+Rel(person, spa, "Starts; answers; taps Done", "Touch or keyboard")
+Rel(spa, idb, "Creates the investigation; commits each step")
+Rel(spa, kb, "Reads the version and brand suggestions")
+@enduml

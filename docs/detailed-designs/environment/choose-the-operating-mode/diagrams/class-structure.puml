@@ -1,0 +1,111 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Choose the operating mode
+
+enum OperatingMode {
+  fullAgent
+  checklist
+}
+
+enum ModeReason {
+  modelReady
+  personChoseChecklist
+  settingChecklist
+  modelUnavailable
+  modelDownloading
+  sessionFailed
+}
+
+enum FallbackTrigger {
+  sessionFailed
+  twoTimeoutsInARow
+  contextExhausted
+  threeInvalidActionsInARow
+}
+
+enum ModelOutcome {
+  answered
+  timedOut
+  invalidAction
+  contextExhausted
+  sessionFailed
+}
+
+class ModeDecision {
+  +mode: OperatingMode
+  +reason: ModeReason
+  +session: ModelSession | null
+}
+
+class ModeChange {
+  +from: OperatingMode
+  +to: OperatingMode
+  +trigger: FallbackTrigger
+  +stage: PlaybookStage
+  +afterStep: number
+  +at: number
+}
+
+class AppSettings {
+  +useAgentWhenAvailable: boolean
+}
+
+class ModeController {
+  +mode: Signal<OperatingMode>
+  -preferChecklistThisLoad: boolean
+  -timeoutsInARow: number
+  -invalidActionsInARow: number
+  +preferChecklist(): void
+  +chooseMode(): Promise<ModeDecision>
+  +recordModelOutcome(outcome: ModelOutcome): FallbackTrigger | null
+  +fallBack(trigger: FallbackTrigger): ModeChange
+}
+
+class AgentOrchestrator {
+  +start(investigationId: string): Promise<void>
+  -runStep(): Promise<void>
+  -switchToChecklist(trigger: FallbackTrigger): Promise<void>
+}
+
+class ChecklistRunner {
+  +continueAt(stage: PlaybookStage): Promise<void>
+}
+
+class InvestigationStep {
+  +index: number
+  +stage: PlaybookStage
+  +mode: OperatingMode
+  +action: AgentAction | ChecklistChoice
+  +result: ToolResult
+}
+
+class ModeBanner <<component>> {
+  +mode: input<OperatingMode>
+  +reason: input<ModeReason | FallbackTrigger>
+  +dismissed: output<void>
+}
+
+ModeController ..> ModeDecision : returns
+ModeController ..> ModeChange : returns
+ModeController ..> AppSettings : reads
+ModeController --> OperatingMode
+ModeDecision --> ModeReason
+ModeChange --> FallbackTrigger
+ModeController ..> ModelOutcome : counts
+AgentOrchestrator --> ModeController
+AgentOrchestrator --> ChecklistRunner : hands over
+AgentOrchestrator ..> InvestigationStep : commits
+InvestigationStep --> OperatingMode
+ModeBanner ..> OperatingMode
+@enduml

@@ -1,0 +1,43 @@
+@startuml
+title UML sequence behaviour — Copy the location label into the device profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "DeviceProfilePage" as profilePage
+  participant "HistoryPage" as history
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "VerdictService" as verdict
+  participant "DeviceProfileBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+orch -> verdict : issue(reason)
+verdict -> builder : build(investigationId)
+builder -> store : loadInvestigation(id)
+store --> builder : record with locationLabel "Decathlon, Lille"
+builder -> builder : profile.location = investigation.locationLabel (FR-010, FR-055)
+builder --> verdict : DeviceProfile
+verdict -> store : saveProfile(profile)
+profilePage -> store : load profile
+profilePage -> profilePage : Footer "Decathlon, Lille · Wed 25 Nov 2026", rendered as text
+history -> store : listInvestigations()
+history -> history : Row "Today, 14:26 · Decathlon, Lille"
+@enduml

@@ -1,0 +1,65 @@
+@startuml
+title UML sequence behaviour — Check capabilities when the app opens
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+  participant "CapabilityList" as list
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityService" as svc
+  participant "WebBluetoothBleLayer" as ble
+  participant "PromptApiModelAdapter" as model
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+
+person -> page : Open Gattsby (route /start)
+page -> list : Six rows "Checking" (loading.html)
+page -> svc : check()
+svc -> svc : Start 1 s deadline (FR-001)
+par Every probe at once; none prompts (NFR-016)
+  svc -> chrome : isSecureContext, userAgentData
+  svc -> ble : availability()
+  ble -> chrome : 'bluetooth' in navigator; getAvailability()
+  chrome --> ble : true or false
+  ble --> svc : { api, adapterAvailable, permission }
+  svc -> model : availability(MODEL_SESSION_OPTIONS)
+  model -> chrome : LanguageModel.availability(options)
+  chrome --> model : "available"
+  model --> svc : available
+  svc -> store : storageStatus()
+  store -> chrome : open database; storage.estimate(); persisted()
+  chrome --> store : opened; quota and usage
+  store --> svc : { available, persisted, quotaBytes, usageBytes }
+end
+svc -> svc : Late or failed probe -> not available (TOOL-001)
+svc --> page : CapabilityReport
+page -> page : toReadiness(report, modelState)
+alt Bluetooth adapter off (bluetooth-off.html)
+  page -> list : Bluetooth "Needs action: Turn on Bluetooth"
+  page --> person : Start disabled; Check again
+  person -> page : Tap Check again
+  page -> svc : check()
+  svc --> page : adapterAvailable true
+  page --> person : Start enabled (FR-001)
+else Every blocking item passes (default.html)
+  page -> list : Five Available, Advertisement scanning Not available
+  page --> person : "Ready to investigate." Start
+end
+@enduml

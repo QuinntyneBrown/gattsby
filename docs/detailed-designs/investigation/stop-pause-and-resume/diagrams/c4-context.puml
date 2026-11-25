@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Stop, pause and resume an investigation
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth, device chooser, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor (Bluetooth LE)")
+
+Rel(person, gattsby, "Pauses, resumes, stops; reopens after closing the tab")
+Rel(gattsby, chrome, "Disconnects on stop; reconnects on resume", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE")
+@enduml

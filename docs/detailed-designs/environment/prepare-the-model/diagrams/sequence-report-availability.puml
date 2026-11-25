@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Report model availability
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+  participant "ModelDownloadPanel" as panel
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelReadiness" as readiness
+  participant "PromptApiModelAdapter" as adapter
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome Prompt API" as api
+end box
+
+page -> readiness : refresh()
+readiness -> adapter : import on demand; availability(MODEL_SESSION_OPTIONS)
+adapter -> api : 'LanguageModel' in self
+alt No Prompt API (Chrome for Android)
+  api --> adapter : absent
+  adapter --> readiness : unavailable, noPromptApi
+  readiness --> page : state unavailable
+  page --> person : "Not available on Android yet"; investigation runs as a checklist (FR-004)
+else Prompt API present
+  adapter -> api : LanguageModel.availability(options) (FR-004 same options as create)
+  alt "available"
+    api --> adapter : available
+    adapter --> readiness : available
+    page --> person : "Gemini Nano ready · runs offline"
+  else "downloadable"
+    api --> adapter : downloadable
+    adapter --> readiness : downloadable
+    page -> panel : Size and disk-space warning; Download button
+    panel --> person : Nothing downloads until the person taps (FR-004)
+  else "downloading" (started earlier, for example in another tab)
+    api --> adapter : downloading
+    adapter --> readiness : downloading, percent unknown
+    page -> panel : Progress bar without a percentage yet
+  else "unavailable"
+    api --> adapter : unavailable
+    adapter --> readiness : unavailable, deviceNotSupported
+    page --> person : Says why; checklist mode will be used (FR-004)
+  end
+end
+@enduml

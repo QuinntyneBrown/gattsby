@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Start an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+  participant "InvestigationPage" as inv
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "InvestigationLauncher" as launcher
+  participant "ModeController" as mode
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityService" as caps
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+person -> home : Tap "Identify a device"
+home -> launcher : launch(); button busy, second tap ignored
+launcher -> caps : check() (FR-001 before every investigation)
+alt A blocking capability fails
+  caps --> launcher : e.g. Bluetooth off
+  launcher --> home : Navigate to /start with the readiness state
+else Check passes
+  caps --> launcher : CapabilityReport
+  launcher -> store : requestPersistence() on the first investigation (NFR-016)
+  launcher -> mode : chooseMode()
+  mode --> launcher : ModeDecision
+  launcher -> kb : version
+  kb --> launcher : 2026.11
+  launcher -> store : createInvestigation({ startedAt, mode, appVersion,\nknowledgeBaseVersion, status running, stage prepare }) (FR-007)
+  alt Stored
+    store --> launcher : Investigation id
+    launcher -> inv : Navigate to /investigations/:id
+    inv -> orch : start(id)
+    orch --> inv : First prompt appears only now (FR-007)
+  else Quota refused
+    store --> launcher : STORAGE_FULL (NFR-008)
+    launcher --> home : Plain message: export and delete old investigations
+  end
+end
+@enduml

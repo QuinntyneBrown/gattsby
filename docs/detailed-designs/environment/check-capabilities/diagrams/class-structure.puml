@@ -1,0 +1,155 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Check capabilities
+
+enum CapabilityStatus {
+  checking
+  available
+  needsAction
+  notAvailable
+}
+
+enum ReadinessState {
+  ready
+  readyChecklist
+  modelDownloadable
+  modelDownloading
+  modelDownloadFailed
+  bluetoothOff
+  bluetoothBlocked
+  storageBlocked
+  unsupported
+  insecure
+}
+
+class CapabilityReport {
+  +secureContext: boolean
+  +bluetooth: { api, adapterAvailable, permission }
+  +model: { api, availability, imageInput }
+  +watchAdvertisements: boolean
+  +requestLEScan: boolean
+  +getDevices: boolean
+  +camera: boolean
+  +storage: { available, persisted, quotaBytes, usageBytes }
+  +platform: { os, browser, version, mobile }
+  +checkedAt: number
+}
+
+class ReadinessItem {
+  +key: "browser" | "bluetooth" | "model" | "advertisements" | "camera" | "storage"
+  +label: string
+  +status: CapabilityStatus
+  +detail: string
+}
+
+class Readiness {
+  +state: ReadinessState
+  +items: ReadinessItem[6]
+  +canStart: boolean
+  +offersCheckAgain: boolean
+}
+
+abstract class CapabilityProbe<T> <<contract>> {
+  +probe(): Promise<T>
+  +fallback(): T
+}
+
+class CapabilityService {
+  +report: Signal<CapabilityReport | null>
+  +check(): Promise<CapabilityReport>
+}
+
+class CheckCapabilitiesTool {
+  +definition: ToolDefinition
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<CapabilityReport>>
+}
+
+class "toReadiness()" as ToReadiness <<pure helper>> {
+  +toReadiness(report: CapabilityReport, model: ModelReadinessState): Readiness
+}
+
+class "supportedAlternative()" as SupportedAlternative <<pure helper>> {
+  +supportedAlternative(platform): string
+}
+
+class ReadinessPage <<page>> {
+  +readiness: Signal<Readiness>
+  +checkAgain(): void
+  +start(): void
+}
+
+class CapabilityList <<component>> {
+  +items: input<ReadinessItem[]>
+}
+
+class SecureContextCapability {
+  +probe(): Promise<boolean>
+}
+class PlatformCapability {
+  +probe(): Promise<PlatformInfo>
+}
+class BluetoothCapability {
+  +probe(): Promise<BluetoothSupport>
+}
+class PromptApiCapability {
+  +probe(): Promise<ModelSupport>
+}
+class AdvertisementScanCapability {
+  +probe(): Promise<AdvertisementSupport>
+}
+class CameraCapability {
+  +probe(): Promise<boolean>
+}
+class StorageCapability {
+  +probe(): Promise<StorageStatus>
+}
+abstract class BleLayer <<contract>> {
+  +availability(): Promise<BluetoothSupport>
+  +advertisementSupport(): AdvertisementSupport
+}
+abstract class ModelAdapter <<contract>> {
+  +availability(options): Promise<ModelAvailability>
+}
+abstract class CameraAdapter <<contract>> {
+  +isAvailable(): boolean
+}
+abstract class InvestigationStore <<contract>> {
+  +storageStatus(): Promise<StorageStatus>
+}
+
+CapabilityProbe <|-- SecureContextCapability
+CapabilityProbe <|-- PlatformCapability
+CapabilityProbe <|-- BluetoothCapability
+CapabilityProbe <|-- PromptApiCapability
+CapabilityProbe <|-- AdvertisementScanCapability
+CapabilityProbe <|-- CameraCapability
+CapabilityProbe <|-- StorageCapability
+
+CapabilityService "1" o-- "7" CapabilityProbe
+CapabilityService ..> CapabilityReport : builds
+CheckCapabilitiesTool ..> CapabilityService : check()
+ReadinessPage ..> CapabilityService : check()
+ReadinessPage ..> ToReadiness
+ToReadiness ..> Readiness : returns
+ToReadiness ..> SupportedAlternative
+Readiness "1" *-- "6" ReadinessItem
+Readiness --> ReadinessState
+ReadinessItem --> CapabilityStatus
+ReadinessPage ..> CapabilityList : renders
+BluetoothCapability ..> BleLayer : delegates
+PromptApiCapability ..> ModelAdapter : delegates
+CameraCapability ..> CameraAdapter : delegates
+StorageCapability ..> InvestigationStore : delegates
+AdvertisementScanCapability ..> BleLayer : delegates
+@enduml

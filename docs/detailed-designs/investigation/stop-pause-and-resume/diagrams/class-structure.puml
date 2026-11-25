@@ -1,0 +1,120 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Stop, pause and resume an investigation
+
+enum InvestigationStatus {
+  running
+  paused
+  finished
+}
+
+enum StopReason {
+  finish
+  confidenceReached
+  stepBudget
+  noProgress
+  stoppedByPerson
+  emergencyStop
+}
+
+class Investigation {
+  +id: string
+  +status: InvestigationStatus
+  +stage: PlaybookStage
+  +lastCompletedStep: number
+  +deviceId: string | null
+  +deviceName: string | null
+  +pausedAt: number | null
+  +verdict: Verdict | null
+}
+
+class ResumableInvestigation {
+  +id: string
+  +title: string
+  +locationLabel: string | null
+  +stage: PlaybookStage
+  +interrupted: boolean
+  +since: number
+}
+
+class AgentOrchestrator {
+  -stepAbort: AbortController | null
+  +pause(): Promise<void>
+  +resume(): Promise<void>
+  +stop(reason: StopReason): Promise<Verdict>
+}
+
+class ResumeService {
+  +listResumable(): Promise<ResumableInvestigation[]>
+  +resume(id: string): Promise<void | ResumeError>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +setStatus(id: string, status: InvestigationStatus, stage: PlaybookStage): Promise<void>
+  +loadInvestigation(id: string): Promise<InvestigationRecord>
+  +listResumable(): Promise<ResumableInvestigation[]>
+}
+
+abstract class BleLayer <<contract>> {
+  +pauseSubscriptions(): Promise<string[]>
+  +restoreSubscriptions(uuids: string[]): Promise<void>
+  +disconnect(deviceId: string, deadlineMs: number): Promise<void>
+  +getPermittedDevices(): Promise<PermittedDevice[] | ToolError>
+  +reconnect(deviceId: string): Promise<ToolResult<ReconnectOutput>>
+}
+
+class ApprovalLedger {
+  +revokeAll(): void
+}
+
+class PromptChannel {
+  +cancelPending(reason: string): void
+}
+
+class VerdictService {
+  +issue(reason: StopReason): Promise<Verdict>
+}
+
+class DeviceProfileBuilder {
+  +build(investigationId: string): Promise<DeviceProfile>
+}
+
+class StopInvestigationDialog <<component>> {
+  +deviceName: input<string | null>
+  +busy: input<boolean>
+  +decided: output<"stop" | "keepGoing">
+}
+
+class StillThereDialog <<component>> {
+  +state: input<"stillThere" | "paused">
+  +picksUpAt: input<string>
+  +chosen: output<"resume" | "saveAndExit" | "stop">
+}
+
+AgentOrchestrator ..> ApprovalLedger : revokeAll on stop
+AgentOrchestrator ..> PromptChannel : cancelPending
+AgentOrchestrator ..> BleLayer : pause, disconnect
+AgentOrchestrator ..> VerdictService : issue(stoppedByPerson)
+VerdictService ..> DeviceProfileBuilder : partial profile
+AgentOrchestrator ..> InvestigationStore : setStatus
+ResumeService ..> InvestigationStore : load, listResumable
+ResumeService ..> BleLayer : getPermittedDevices, reconnect
+ResumeService ..> AgentOrchestrator : continues
+ResumeService ..> ResumableInvestigation : lists
+InvestigationStore ..> Investigation : stores
+Investigation --> InvestigationStatus
+AgentOrchestrator ..> StopReason
+StopInvestigationDialog ..> AgentOrchestrator : via InvestigationPage
+StillThereDialog ..> AgentOrchestrator : via InvestigationPage
+@enduml

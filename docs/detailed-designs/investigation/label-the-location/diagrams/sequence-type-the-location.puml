@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Type the location label
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationMenuDialog" as menu
+  participant "InvestigationPage" as inv
+  participant "AddNoteDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "InvestigationSession" as session
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+person -> menu : Tap "Add a note or the location"
+menu --> inv : addNote
+inv -> dialog : Open with the current label (add-note/default.html)
+dialog --> person : "Typed by you. Gattsby never looks up where you are."
+person -> dialog : Type "Decathlon, Lille"; tap Save
+alt Location, note and photo all empty
+  dialog -> dialog : isEmptyDraft(): true
+  dialog --> person : "Nothing to save yet" summary; focus moves to it;\ninputs kept (add-note/invalid.html)
+else Something to save
+  dialog --> inv : saved(AnnotationDraft)
+  inv -> inv : normalizeLocationLabel(text): trim; empty -> null
+  inv -> store : annotate(id, { locationLabel, note })
+  store --> inv : committed
+  inv -> session : locationLabel = "Decathlon, Lille"
+  inv --> person : Dialog closes; the label shows as text
+end
+note over person, store : No call to navigator.geolocation at any point (FR-010)
+@enduml

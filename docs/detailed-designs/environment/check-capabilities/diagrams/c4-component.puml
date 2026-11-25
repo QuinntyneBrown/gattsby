@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Check capabilities
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "ReadinessPage", "Angular page, /start", "Shows the six rows, the headline and Start, Check again or View saved devices")
+  Component(list, "CapabilityList", "Angular component", "Presentation: one row per capability, word plus icon")
+  Component(svc, "CapabilityService", "Service", "Runs every probe in parallel under a 1 s deadline; never throws")
+  Component(readiness, "toReadiness", "Pure helper", "Maps a CapabilityReport to a ReadinessState and six ReadinessItems")
+  Component(tool, "CheckCapabilitiesTool", "Tool, safety read", "check_capabilities: wraps CapabilityService for the playbook")
+  Component(probes, "Capability adapters", "capabilities/", "SecureContext, Platform, Bluetooth, PromptApi, AdvertisementScan, Camera, Storage")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Only code that touches navigator.bluetooth")
+  Component(model, "PromptApiModelAdapter", "Model adapter, loaded on demand", "Only code that touches LanguageModel")
+  Component(camera, "MediaDevicesCameraAdapter", "Camera adapter", "Only code that touches mediaDevices")
+  Component(store, "IndexedDbInvestigationStore", "Investigation store", "Only code that touches IndexedDB")
+}
+System_Ext(chrome, "Chrome", "Browser APIs")
+
+Rel(person, page, "Opens, taps Check again")
+Rel(page, svc, "check()")
+Rel(page, readiness, "toReadiness(report, model)")
+Rel(page, list, "Renders items")
+Rel(tool, svc, "check() before every investigation")
+Rel(svc, probes, "probe() each, in parallel")
+Rel(probes, ble, "availability(), advertisementSupport()")
+Rel(probes, model, "availability(options)")
+Rel(probes, camera, "isAvailable()")
+Rel(probes, store, "storageStatus()")
+Rel(ble, chrome, "getAvailability()", "Web Bluetooth")
+Rel(model, chrome, "LanguageModel.availability()", "Prompt API")
+@enduml

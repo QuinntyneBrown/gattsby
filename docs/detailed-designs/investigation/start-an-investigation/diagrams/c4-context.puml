@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Start an investigation
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Capability check, persistent storage, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor (Bluetooth LE)")
+
+Rel(person, gattsby, "Taps Identify a device; answers machine type and brand; taps Done")
+Rel(person, device, "Powers it on; disconnects other apps and watches")
+Rel(gattsby, chrome, "Re-checks capabilities; stores the new investigation")
+@enduml

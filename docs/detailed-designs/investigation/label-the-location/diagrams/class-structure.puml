@@ -1,0 +1,86 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Label the location
+
+class AnnotationDraft {
+  +locationLabel: string
+  +note: string
+  +photoRequested: boolean
+}
+
+class Annotation {
+  +locationLabel: string | null
+  +note: string | null
+  +at: number
+}
+
+class Investigation {
+  +id: string
+  +locationLabel: string | null
+  +notes: Annotation[]
+}
+
+class DeviceProfile {
+  +formatVersion: string
+  +knowledgeBaseVersion: string
+  +deviceName: string
+  +verdict: Verdict
+  +date: number
+  +location: string | null
+}
+
+class "normalizeLocationLabel()" as Normalize <<pure helper>> {
+  +normalizeLocationLabel(text: string): string | null
+}
+
+class "isEmptyDraft()" as IsEmpty <<pure helper>> {
+  +isEmptyDraft(draft: AnnotationDraft): boolean
+}
+
+class AddNoteDialog <<component>> {
+  +locationLabel: input<string | null>
+  +note: input<string | null>
+  +saved: output<AnnotationDraft>
+  +cancelled: output<void>
+  +addPhoto: output<void>
+}
+
+class InvestigationMenuDialog <<component>> {
+  +chosen: output<"pause" | "addNote" | "photo" | "evidence" | "stop">
+}
+
+class InvestigationPage <<page>> {
+  +onAddNoteSaved(draft: AnnotationDraft): Promise<void>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +annotate(id: string, annotation: Annotation): Promise<void>
+  +saveProfile(profile: DeviceProfile): Promise<void>
+}
+
+class DeviceProfileBuilder {
+  +build(investigationId: string): Promise<DeviceProfile>
+}
+
+InvestigationMenuDialog ..> InvestigationPage : addNote
+InvestigationPage ..> AddNoteDialog : opens
+AddNoteDialog ..> AnnotationDraft : emits
+AddNoteDialog ..> IsEmpty : validates
+InvestigationPage ..> Normalize
+InvestigationPage ..> InvestigationStore : annotate
+InvestigationStore ..> Investigation : updates
+Investigation "1" *-- "*" Annotation
+DeviceProfileBuilder ..> Investigation : reads locationLabel
+DeviceProfileBuilder ..> DeviceProfile : copies location (FR-055)
+@enduml

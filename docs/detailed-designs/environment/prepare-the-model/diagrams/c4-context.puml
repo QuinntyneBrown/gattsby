@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Prepare the model
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Prompt API; downloads and caches the model")
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+
+Rel(person, gattsby, "Reads the model row; taps Download, Retry or Start with the checklist")
+Rel(gattsby, chrome, "Asks availability; starts the download on a tap", "Prompt API")
+Rel(chrome, nano, "Downloads once, then runs on the device")
+@enduml

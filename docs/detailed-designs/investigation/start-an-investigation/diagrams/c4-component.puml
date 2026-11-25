@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Start an investigation
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(home, "HomePage", "Angular page, /", "Identify a device")
+  Component(invPage, "InvestigationPage", "Angular page, /investigations/:id", "Feed and prompt dock")
+  Component(card, "PromptCard", "Angular component", "Question, suggested answers, free text, Done")
+  Component(launcher, "InvestigationLauncher", "Service", "Re-checks, requests persistence, chooses the mode, creates the record")
+  Component(caps, "CapabilityService", "Service", "check()")
+  Component(mode, "ModeController", "Service", "chooseMode()")
+  Component(orch, "AgentOrchestrator", "Service", "start(id): runs the Prepare stage")
+  Component(heur, "PlaybookHeuristics", "Service", "Issues Prepare's fixed checks in both modes")
+  Component(tools, "Prepare tools", "Tools", "check_capabilities, ask_user, request_action")
+  Component(channel, "PromptChannel", "Service", "Posts one prompt; awaits the answer")
+  Component(kbc, "KnowledgeBase", "Knowledge base", "version; brandSuggestions(machineType)")
+  ComponentDb(store, "IndexedDbInvestigationStore", "Investigation store", "createInvestigation, commitStep, requestPersistence")
+}
+
+Rel(person, home, "Taps Identify a device")
+Rel(home, launcher, "launch()")
+Rel(launcher, caps, "check() (FR-001)")
+Rel(launcher, store, "requestPersistence(); createInvestigation()")
+Rel(launcher, mode, "chooseMode()")
+Rel(launcher, kbc, "Reads version")
+Rel(launcher, invPage, "Navigates")
+Rel(invPage, orch, "start(id)")
+Rel(orch, heur, "Next Prepare check")
+Rel(orch, tools, "Runs")
+Rel(tools, channel, "Posts question or action")
+Rel(tools, kbc, "Brand suggestions")
+Rel(channel, card, "Renders")
+Rel(person, card, "Answers; taps Done")
+Rel(orch, store, "commitStep()")
+@enduml

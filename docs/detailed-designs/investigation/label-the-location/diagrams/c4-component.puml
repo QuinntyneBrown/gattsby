@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Label the location
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(invPage, "InvestigationPage", "Angular page", "Opens the options sheet and the dialog; saves")
+  Component(menu, "InvestigationMenuDialog", "Angular dialog", "Add a note or the location")
+  Component(dialog, "AddNoteDialog", "Angular dialog", "Location (optional) and note; invalid when both are empty")
+  Component(label, "normalizeLocationLabel", "Pure helper", "Trims and limits the text; empty becomes null")
+  Component(session, "InvestigationSession", "Signals", "locationLabel")
+  Component(builder, "DeviceProfileBuilder", "Outcome", "Copies the label into the profile")
+  ComponentDb(store, "IndexedDbInvestigationStore", "Investigation store", "annotate(); saveProfile()")
+}
+
+Rel(person, menu, "Taps Add a note or the location")
+Rel(menu, invPage, "Emits addNote")
+Rel(invPage, dialog, "Opens with the current label")
+Rel(person, dialog, "Types Decathlon, Lille; taps Save")
+Rel(dialog, invPage, "Emits AnnotationDraft")
+Rel(invPage, label, "normalize")
+Rel(invPage, store, "annotate(id, { locationLabel, note })")
+Rel(invPage, session, "Updates locationLabel")
+Rel(builder, store, "loadInvestigation(): locationLabel")
+Rel(builder, store, "saveProfile(profile with location)")
+@enduml

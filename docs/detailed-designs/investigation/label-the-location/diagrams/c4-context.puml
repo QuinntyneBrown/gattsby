@@ -1,0 +1,12 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Label the location
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "IndexedDB; Geolocation API, never called and blocked by Permissions-Policy")
+
+Rel(person, gattsby, "Types an optional location label, for example a store name")
+Rel(gattsby, chrome, "Stores the label as text", "IndexedDB")
+@enduml

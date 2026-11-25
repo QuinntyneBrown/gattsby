@@ -1,0 +1,68 @@
+@startuml
+title UML sequence behaviour — Fall back to checklist mode during an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as inv
+  participant "ModeBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "ModeController" as mode
+  participant "ChecklistRunner" as runner
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+alt Two model calls time out in a row (Identify stage)
+  orch -> model : prompt(state, signal)
+  model --> orch : TIMEOUT after 10 s; call aborted (FR-047)
+  orch -> store : commitStep(timed out, mode fullAgent)
+  orch -> mode : recordModelOutcome(timedOut)
+  mode --> orch : null (1 in a row)
+  orch -> model : prompt(state, signal)
+  model --> orch : TIMEOUT
+  orch -> store : commitStep(timed out, mode fullAgent)
+  orch -> mode : recordModelOutcome(timedOut)
+  mode --> orch : twoTimeoutsInARow (FR-006)
+else Three actions in a row fail validation
+  loop 3 times
+    orch -> model : prompt(state, signal)
+    model --> orch : action
+    orch -> validator : validate(action)
+    validator --> orch : refused (FR-043)
+    orch -> store : commitStep(rejected action and reason)
+    orch -> mode : recordModelOutcome(invalidAction)
+  end
+  mode --> orch : threeInvalidActionsInARow (FR-006)
+else Context exhausted
+  model --> orch : CONTEXT_EXHAUSTED
+  orch -> mode : recordModelOutcome(contextExhausted)
+  mode --> orch : contextExhausted
+end
+orch -> model : abort pending call; session.destroy()
+orch -> mode : fallBack(trigger)
+mode --> orch : ModeChange fullAgent -> checklist at Identify
+orch -> store : commitStep(ModeChange) (FR-005 mode recorded)
+note over orch, store : Observations and hypothesis stay in InvestigationSession and the store
+orch -> runner : continueAt(identify)
+inv -> banner : warning "Continuing as a checklist." with the reason
+banner --> person : App bar now "Checklist · Identify"
+runner --> person : Next checklist step at Identify
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Stop, pause and resume an investigation
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(home, "HomePage and HistoryPage", "Angular pages", "Resume card; In progress row")
+  Component(invPage, "InvestigationPage", "Angular page", "Pause button; options menu")
+  Component(dialogs, "StopInvestigationDialog and StillThereDialog", "Angular dialogs", "Stop confirmation; Paused state")
+  Component(orch, "AgentOrchestrator", "Service", "pause(), resume(), stop(); owns the step's AbortController")
+  Component(resume, "ResumeService", "Service", "Finds interrupted investigations; rebuilds the session; reconnects")
+  Component(session, "InvestigationSession", "Signals", "Stage, device, hypothesis, mode, status")
+  Component(verdict, "VerdictService and DeviceProfileBuilder", "Outcome", "Stopped by the person; partial profile")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Pause and restore subscriptions; disconnect; reconnect")
+  Component(ledger, "ApprovalLedger", "BLE layer", "revokeAll() on stop")
+  ComponentDb(store, "IndexedDbInvestigationStore", "Investigation store", "setStatus, loadInvestigation, listResumable")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, invPage, "Taps Pause or Stop")
+Rel(invPage, dialogs, "Opens")
+Rel(dialogs, orch, "stop() / resume()")
+Rel(orch, ledger, "revokeAll()")
+Rel(orch, ble, "disconnect(); pauseSubscriptions()")
+Rel(orch, verdict, "Issue Stopped by the person")
+Rel(orch, store, "setStatus(); commit verdict")
+Rel(person, home, "Taps Resume")
+Rel(home, resume, "resume(id)")
+Rel(resume, store, "loadInvestigation()")
+Rel(resume, session, "Rebuilds")
+Rel(resume, ble, "Reconnect")
+Rel(resume, orch, "Continues the loop")
+Rel(ble, device, "GATT", "Web Bluetooth")
+@enduml

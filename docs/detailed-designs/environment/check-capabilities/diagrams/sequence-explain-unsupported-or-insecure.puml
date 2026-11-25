@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Explain an unsupported browser or an insecure address
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+  participant "ProfilesPage" as profiles
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityService" as svc
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome or other browser" as browser
+end box
+
+person -> page : Open Gattsby
+page -> svc : check()
+svc -> browser : isSecureContext
+alt Not a secure context (insecure.html)
+  browser --> svc : false
+  svc -> ble : availability()
+  ble --> svc : api false (hidden outside HTTPS)
+  svc --> page : secureContext false
+  page --> person : "Bluetooth needs a secure address." HTTPS link; no scan, no Start (FR-003)
+else Secure, but no Web Bluetooth (unsupported.html)
+  browser --> svc : true
+  svc -> ble : availability()
+  ble -> browser : 'bluetooth' in navigator
+  browser --> ble : false
+  ble --> svc : api false; no method called (FR-002)
+  svc --> page : bluetooth.api false; platform Safari on iOS
+  page -> page : supportedAlternative(platform) (NFR-026)
+  page --> person : "Gattsby can't run on iPhone." Names Chrome on a laptop,\na Chromebook Plus or an Android phone; no Start
+  person -> page : Tap View saved devices
+  page -> profiles : Navigate to /profiles
+  profiles --> person : Saved devices: view, import, export (FR-002)
+end
+@enduml

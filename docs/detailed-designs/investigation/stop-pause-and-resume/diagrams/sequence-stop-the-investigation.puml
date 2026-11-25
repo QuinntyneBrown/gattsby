@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Stop an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as inv
+  participant "StopInvestigationDialog" as dialog
+  participant "VerdictPage" as verdictPage
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "VerdictService" as verdict
+  participant "DeviceProfileBuilder" as profile
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "WebBluetoothBleLayer" as ble
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+person -> inv : Options, "Stop and get a verdict now"
+inv -> dialog : Open (stop-investigation/default.html)
+person -> dialog : Tap "Stop and get the verdict"
+dialog --> inv : stop
+inv -> dialog : busy "Disconnecting... this takes up to 2 seconds."
+inv -> orch : stop(stoppedByPerson)
+orch -> orch : stepAbort.abort(): pending model call or tool ends (FR-047)
+orch -> channel : cancelPending(): open prompt or approval closes unsent
+orch -> ledger : revokeAll(): no further command can be written (FR-009)
+note over orch : The in-progress step is not committed;\nsteps 1..n stay as committed (FR-060)
+orch -> ble : disconnect(deviceId, 2000 ms)
+ble -> device : stopNotifications() for each subscription
+ble -> device : gatt.disconnect() at the latest when 2 s pass (FR-009)
+ble --> orch : disconnected
+orch -> verdict : issue(stoppedByPerson)
+verdict -> profile : build(id) from observations so far
+profile --> verdict : partial DeviceProfile
+verdict -> store : commit verdict, profile, status finished
+store --> verdict : committed
+verdict --> orch : Verdict Stopped by the person
+orch --> inv : stopped
+inv -> verdictPage : Navigate to /investigations/:id/verdict
+verdictPage --> person : "Stopped by the person" with what was learned (verdict/stopped.html)
+@enduml

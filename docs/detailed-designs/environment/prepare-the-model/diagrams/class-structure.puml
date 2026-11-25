@@ -1,0 +1,97 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Prepare the model
+
+enum ModelAvailability {
+  unavailable
+  downloadable
+  downloading
+  available
+}
+
+enum UnavailableReason {
+  noPromptApi
+  deviceNotSupported
+  checkFailed
+}
+
+enum ModelErrorCode {
+  UNSUPPORTED
+  DOWNLOAD_FAILED
+  SESSION_FAILED
+  TIMEOUT
+  CONTEXT_EXHAUSTED
+  ABORTED
+}
+
+class ModelReadinessState {
+  +availability: ModelAvailability
+  +percent: number | null
+  +failed: boolean
+  +failedAtPercent: number | null
+  +unavailableReason: UnavailableReason | null
+}
+
+class ModelError {
+  +code: ModelErrorCode
+  +message: string
+}
+
+abstract class ModelAdapter <<contract>> {
+  +availability(options: ModelSessionOptions): Promise<ModelAvailability>
+  +download(onProgress: (percent: number) => void, signal: AbortSignal): Promise<void | ModelError>
+  +createSession(options: ModelSessionOptions, signal: AbortSignal): Promise<ModelSession | ModelError>
+}
+
+class PromptApiModelAdapter {
+  +availability(options): Promise<ModelAvailability>
+  +download(onProgress, signal): Promise<void | ModelError>
+  +createSession(options, signal): Promise<ModelSession | ModelError>
+}
+
+class ModelSessionOptions {
+  +expectedInputs: [{ type: "text", languages: ["en"] }]
+  +expectedOutputs: [{ type: "text", languages: ["en"] }]
+}
+
+class ModelReadiness {
+  +state: Signal<ModelReadinessState>
+  +refresh(): Promise<void>
+  +download(): Promise<void>
+}
+
+class ModelDownloadPanel <<component>> {
+  +state: input<ModelReadinessState>
+  +downloadSizeText: input<string>
+  +download: output<void>
+  +retry: output<void>
+  +startChecklist: output<void>
+}
+
+class ReadinessPage <<page>> {
+  +onDownload(): void
+  +onRetry(): void
+}
+
+ModelAdapter <|-- PromptApiModelAdapter
+PromptApiModelAdapter ..> ModelSessionOptions : same options for both calls
+PromptApiModelAdapter ..> ModelError : returns
+ModelError --> ModelErrorCode
+ModelReadiness --> ModelAdapter : availability, download
+ModelReadiness "1" *-- "1" ModelReadinessState
+ModelReadinessState --> ModelAvailability
+ModelReadinessState --> UnavailableReason
+ReadinessPage ..> ModelReadiness
+ReadinessPage ..> ModelDownloadPanel : renders
+@enduml

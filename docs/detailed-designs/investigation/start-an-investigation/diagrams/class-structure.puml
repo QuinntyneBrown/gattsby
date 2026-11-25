@@ -1,0 +1,116 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Start an investigation
+
+enum MachineType {
+  treadmill
+  bike
+  rower
+  crossTrainer
+  heartRateSensor
+  other
+  unknown
+}
+
+enum InvestigationStatus {
+  running
+  paused
+  finished
+}
+
+class Investigation {
+  +id: string
+  +startedAt: number
+  +mode: OperatingMode
+  +appVersion: string
+  +knowledgeBaseVersion: string
+  +status: InvestigationStatus
+  +stage: PlaybookStage
+  +lastCompletedStep: number
+  +locationLabel: string | null
+  +verdict: Verdict | null
+}
+
+class PrepareFacts {
+  +machineType: MachineType
+  +brand: string | "unknown"
+  +poweredOnAndFreed: boolean
+}
+
+class PersonAnswer {
+  +promptId: string
+  +question: string
+  +answer: string
+  +freeText: string | null
+  +skipped: boolean
+  +answeredAt: number
+}
+
+class InvestigationLauncher {
+  -launching: Signal<boolean>
+  +launch(): Promise<string | LaunchError>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +requestPersistence(): Promise<boolean>
+  +createInvestigation(draft: NewInvestigation): Promise<Investigation>
+  +commitStep(id: string, step: InvestigationStep): Promise<void>
+}
+
+class KnowledgeBase {
+  +version: KnowledgeBaseVersion
+  +brandSuggestions(type: MachineType): string[]
+}
+
+class PlaybookHeuristics {
+  +prepareChecks(facts: PrepareFacts): PlannedCall | null
+}
+
+class AskUserTool {
+  +run(input: { question, answers, allowFreeText }, ctx): Promise<ToolResult<AskUserOutput>>
+}
+
+class RequestActionTool {
+  +run(input: { instruction, needsReady }, ctx): Promise<ToolResult<RequestActionOutput>>
+}
+
+class CheckCapabilitiesTool {
+  +run(input: {}, ctx): Promise<ToolResult<CapabilityReport>>
+}
+
+class HomePage <<page>> {
+  +identifyDevice(): void
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+  +answered: output<PromptResponse>
+}
+
+HomePage ..> InvestigationLauncher : launch()
+InvestigationLauncher ..> CapabilityService : check()
+InvestigationLauncher ..> ModeController : chooseMode()
+InvestigationLauncher ..> InvestigationStore : createInvestigation()
+InvestigationLauncher ..> KnowledgeBase : version
+InvestigationStore ..> Investigation : stores
+Investigation --> InvestigationStatus
+PlaybookHeuristics ..> PrepareFacts : reads
+PlaybookHeuristics ..> CheckCapabilitiesTool : plans
+PlaybookHeuristics ..> AskUserTool : plans
+PlaybookHeuristics ..> RequestActionTool : plans
+AskUserTool ..> KnowledgeBase : brand suggestions
+AskUserTool ..> PersonAnswer : records
+PrepareFacts --> MachineType
+PromptCard ..> PersonAnswer : produces
+@enduml

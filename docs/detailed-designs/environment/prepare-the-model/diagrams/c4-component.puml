@@ -1,0 +1,25 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Prepare the model
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "ReadinessPage", "Angular page, /start", "Shows the model row and the download panel")
+  Component(panel, "ModelDownloadPanel", "Angular component", "Presentation: size and disk warning, progress bar, retry")
+  Component(readiness, "ModelReadiness", "Service, app-wide", "Holds the model's state; survives navigation")
+  Component(options, "MODEL_SESSION_OPTIONS", "Constant", "The one options object for availability and create")
+  Component(adapter, "PromptApiModelAdapter", "Model adapter, loaded on demand", "Only code that touches LanguageModel")
+  Component(mode, "ModeController", "Service", "Reads the model state when an investigation starts")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, panel, "Taps Download the on-device model")
+Rel(page, panel, "Renders state and progress")
+Rel(panel, page, "Emits download or retry")
+Rel(page, readiness, "refresh(), download()")
+Rel(readiness, adapter, "availability(), download(onProgress)")
+Rel(adapter, options, "Uses for both calls")
+Rel(adapter, nano, "LanguageModel.availability(), create({ monitor })", "Prompt API")
+Rel(mode, readiness, "Reads state")
+@enduml

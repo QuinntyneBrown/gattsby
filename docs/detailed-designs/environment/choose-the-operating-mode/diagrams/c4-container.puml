@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Choose the operating mode
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Mode controller, orchestrator, checklist runner, mode banner")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Settings; the mode on the investigation, on every step and on each mode change")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Chooses checklist mode; reads the mode", "Touch or keyboard")
+Rel(spa, nano, "Creates the session; prompts in full agent mode", "Prompt API")
+Rel(spa, idb, "Reads the mode setting; records the mode and each change")
+@enduml

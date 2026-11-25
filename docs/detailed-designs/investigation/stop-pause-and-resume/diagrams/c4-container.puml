@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Stop, pause and resume an investigation
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Investigation page and dialogs, orchestrator, BLE layer, verdict")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Status, committed steps, verdict and partial profile")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, spa, "Pause, Resume, Stop and get the verdict", "Touch or keyboard")
+Rel(spa, idb, "Saves status and verdict; loads the last completed step")
+Rel(spa, device, "Disconnects within 2 s; reconnects on resume", "Web Bluetooth")
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Choose the operating mode
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(readinessPage, "ReadinessPage and SettingsPage", "Angular pages", "Use checklist mode instead; Use the agent when it's available")
+  Component(banner, "ModeBanner", "Angular notification", "Running as a checklist (info); Continuing as a checklist (warning)")
+  Component(invPage, "InvestigationPage", "Angular page", "App bar reads Agent or Checklist with the stage")
+  Component(mode, "ModeController", "Service", "Chooses the mode at the start; counts model failures; falls back")
+  Component(orch, "AgentOrchestrator", "Service", "Runs each step with the model or hands over to the checklist")
+  Component(validator, "ActionValidator", "Service", "Refuses invalid actions")
+  Component(runner, "ChecklistRunner", "Service", "Runs the playbook without a model from any stage")
+  Component(session, "InvestigationSession", "Signals", "Stage, observations, hypothesis, mode")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "createSession, prompt, destroy")
+  ComponentDb(store, "IndexedDbInvestigationStore", "Investigation store", "Settings, steps and mode changes")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, readinessPage, "Chooses checklist mode")
+Rel(readinessPage, mode, "preferChecklist(); setting")
+Rel(orch, mode, "chooseMode(); recordModelOutcome()")
+Rel(mode, model, "createSession(MODEL_SESSION_OPTIONS)")
+Rel(mode, store, "Reads AppSettings")
+Rel(orch, validator, "Validates each action")
+Rel(orch, runner, "continueAt(stage) on fallback")
+Rel(mode, session, "Sets mode")
+Rel(invPage, session, "Reads mode and stage")
+Rel(invPage, banner, "Shows on checklist start or fallback")
+Rel(orch, store, "commitStep with mode; ModeChange")
+Rel(model, nano, "create, prompt, destroy", "Prompt API")
+@enduml

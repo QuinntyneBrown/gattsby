@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Label the location
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Options sheet, add-note dialog, profile builder")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Location label on the investigation and on its device profile")
+}
+System_Ext(host, "Static host", "Serves Permissions-Policy without geolocation (NFR-014)")
+
+Rel(person, spa, "Types the label; taps Save", "Touch or keyboard")
+Rel(spa, idb, "Saves the label; copies it into the profile")
+Rel(host, spa, "Serves the app and its headers", "HTTPS")
+@enduml
