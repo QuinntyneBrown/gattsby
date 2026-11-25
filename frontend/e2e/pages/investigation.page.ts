@@ -17,6 +17,7 @@ export class InvestigationPage {
   readonly emergencyStop: Locator;
   readonly connectionBanner: Locator;
   readonly freeText: Locator;
+  readonly leave: Locator;
 
   constructor(private readonly page: Page) {
     this.title = page.locator('.appbar__title');
@@ -35,6 +36,7 @@ export class InvestigationPage {
     this.emergencyStop = page.getByRole('button', { name: 'Emergency stop' });
     this.connectionBanner = page.locator('.conn-banner');
     this.freeText = this.dock.getByRole('textbox');
+    this.leave = page.getByRole('link', { name: 'Leave the investigation' });
   }
 
   id(): string {

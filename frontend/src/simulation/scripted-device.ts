@@ -9,4 +9,6 @@ export interface ScriptedDevice {
   readonly name: string | null;
   readonly advertisedServices: readonly (number | string)[];
   readonly services: readonly ScriptedService[];
+  /** How many connection attempts the device refuses before it accepts one. */
+  readonly refusedConnections?: number;
 }

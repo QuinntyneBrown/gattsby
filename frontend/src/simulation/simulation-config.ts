@@ -11,6 +11,8 @@ export interface BluetoothScript {
   readonly devices: readonly string[];
   /** One step per expected `requestDevice` call, in order. */
   readonly chooser: readonly ChooserStep[];
+  /** Milliseconds a read of a characteristic (canonical UUID) takes, on the page's clock. */
+  readonly readDelays?: Readonly<Record<string, number>>;
 }
 
 export type ModelAvailability =

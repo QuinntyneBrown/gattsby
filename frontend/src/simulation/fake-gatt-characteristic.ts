@@ -13,6 +13,7 @@ export interface CharacteristicContext {
   readonly serviceUuid: string;
   readonly isConnected: () => boolean;
   readonly onDisconnect: (stop: () => void) => void;
+  readonly readDelays: Readonly<Record<string, number>>;
 }
 
 // The parts of BluetoothRemoteGATTCharacteristic the BLE layer uses.
@@ -49,6 +50,12 @@ export class FakeGattCharacteristic extends EventTarget {
     this.requireConnection();
     if (!this.script.properties.read || !this.script.read) {
       throw new DOMException('GATT operation not permitted.', 'NotSupportedError');
+    }
+    const delay = this.context.readDelays[this.uuid];
+    if (delay) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      // Chrome rejects a read still pending when the connection closes.
+      this.requireConnection();
     }
     this.value = toDataView(this.script.read(this.context.state));
     return this.value;

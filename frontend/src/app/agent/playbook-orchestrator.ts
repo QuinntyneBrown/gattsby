@@ -45,6 +45,7 @@ interface PendingStep {
   readonly card: boolean;
 }
 
+const MAX_REFUSED_FINISHES = 2;
 const RUNNING_DETAIL = 'Read-only, takes about a second. Nothing for you to do.';
 
 // Runs the playbook: observe → decide → act, one step at a time (apply-heuristics-first,
@@ -75,6 +76,7 @@ export class PlaybookOrchestrator {
   private requestCounter = 0;
   private readonly observationKeys = new Set<string>();
   private noProgressRun = 0;
+  private refusedFinishes = 0;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -216,6 +218,9 @@ export class PlaybookOrchestrator {
     this.concludeNow = true;
     this.abort.abort();
     this.prompts.cancel();
+    // Journey 2 sends no command, so no stop sequence is known: the emergency stop disconnects
+    // at once and tells the person to use the machine's own stop (emergency-stop design, rule 5).
+    if (reason === 'emergencyStop') void this.ble.disconnect();
   }
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
@@ -247,6 +252,9 @@ export class PlaybookOrchestrator {
       }
       const done = await this.runStep(id, action);
       if (done) return;
+      if (action.tool === 'finish' && ++this.refusedFinishes >= MAX_REFUSED_FINISHES) {
+        throw new Error('The verdict was refused twice; no verdict is supported.');
+      }
       if (!this.concludeNow) {
         const reason = checkStop(
           { steps: this.steps().length, noProgressRun: this.noProgressRun },

@@ -31,9 +31,16 @@ export const CONCLUDE_RULES: readonly StageRule[] = [
     when: ({ state }) => !state.finished,
     then: ({ facts }) => {
       const kind = deriveVerdict(facts) ?? 'needsMissingTool';
+      const summary = verdictSummary(kind, facts);
       return decided('conclude.finish', 'conclude', 'finish', {
         verdict: kind,
-        summary: verdictSummary(kind, facts),
+        summary:
+          facts.stopReason === 'emergencyStop'
+            ? `Emergency stop used: Gattsby disconnected and sent nothing. If the machine is still moving, use its own stop. ${summary}`.slice(
+                0,
+                280,
+              )
+            : summary,
       });
     },
   },

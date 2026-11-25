@@ -21,7 +21,13 @@ export class FakeBluetoothApi extends EventTarget {
     super();
     this.chooser = [...script.chooser];
     this.devices = scripted.map(
-      (device) => new FakeBluetoothDevice(device, { effort: 0, ticks: 0, values: {} }, report),
+      (device) =>
+        new FakeBluetoothDevice(
+          device,
+          { effort: 0, ticks: 0, values: {} },
+          report,
+          script.readDelays,
+        ),
     );
   }
 
