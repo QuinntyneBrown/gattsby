@@ -14,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { PromptChannel } from '../../agent/prompt-channel';
+import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { confidenceWord } from '../../outcome/confidence-scorer';
@@ -39,6 +40,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     EmergencyStopButtonComponent,
     PromptCardComponent,
     StageTrackComponent,
+    StillThereDialog,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -227,6 +229,15 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </section>
         </aside>
       </main>
+      @if (prompts.idle()) {
+        <g-still-there-dialog
+          [instruction]="prompts.current()?.title ?? ''"
+          [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
+          (continued)="prompts.continueAfterIdle()"
+          (stop)="orchestrator.stop('personStop')"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      }
     </div>
   `,
 })

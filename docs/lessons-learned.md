@@ -155,3 +155,10 @@ None; this is the first entry.
   entry now carries its decoding or error before it is handed to the existing batch flush.
 - Keep the epoch timestamp and evidence ID assigned by the raw log. Confirmation uses that same
   timestamp, so a result and its evidence describe the same packet.
+
+## Journey 3, slice 8: Ask whether the person is still there
+
+- The fake clock exposes a missing two-minute transition without slowing the test. The two waits in
+  the new spec cover both reopening the original prompt and stopping without starting a recording.
+- Keep the original prompt pending while the modal is open. Closing it can return focus to the
+  original control, and continuing can restart the timer without duplicating a prompt or an answer.

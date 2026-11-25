@@ -62,7 +62,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - **`AnswerButtons`** (`ui/answer-buttons/answer-buttons.component.ts`) — presentation component that
   lays out the answers as buttons at least 48 × 48 px with at least 8 px between them (NFR-009).
 - **`StillThereDialog`** (`dialogs/still-there/still-there.dialog.ts`) — the `stillThere` variant:
-  "Nothing has happened for 2 minutes, so I've stopped listening. Everything so far is saved." with
+  "Nothing has happened for 2 minutes. Everything so far is saved." with
   "Continue" and "Stop". The `paused` variant belongs to the stop-pause-and-resume design.
 - **`InvestigationPage`** (`pages/investigation/investigation.page.ts`) — hosts the dock as a polite
   live region and passes the card's output to `PromptChannel.respond()`.
@@ -86,9 +86,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    `allowFreeText` is true. Each answer is committed with its question in the same step (FR-050).
 3. For an action with `needsReady`, the tool that records starts only after "Ready", and analysis
    starts only after "Done" or the end of the recording (FR-051).
-4. After 2 minutes without a response, the channel stops any recording in progress and opens
-   "Still there?". "Continue" shows the same prompt again and restarts the timer. "Stop" ends the
-   pending tool with `TIMEOUT` and stops the investigation (see the stop-pause-and-resume design).
+4. After 2 minutes without a response to a physical action, the channel opens "Still there?" and
+   suspends interpreting notifications while it waits. The connected device's traffic remains in
+   the raw log. "Continue" shows the same prompt again and restarts the timer. "Stop" withdraws the
+   prompt and stops the investigation (see the stop-pause-and-resume design).
 5. Every question and action offers "Skip". A skip returns `skipped: true`, is committed as an
    observation, and the agent continues with what it has; for example a skipped brand leaves the
    hypothesis's maker unknown (FR-052).
@@ -111,8 +112,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 | Code | Raised by | Meaning to the person |
 |---|---|---|
 | `INVALID_INPUT` | `ActionValidator` | Nothing shown; the step counts against the step budget (FR-043) |
-| `TIMEOUT` | `PromptChannel` after "Still there?" and "Stop" | The investigation stops with what is known |
-| `ABORTED` | `PromptChannel.cancel()` on stop or emergency stop | The prompt closes |
+| `ABORTED` | `PromptChannel.cancel()` on Stop, including from "Still there?", or emergency stop | The prompt closes and the investigation stops with what is known |
 
 ### Tests that prove it
 

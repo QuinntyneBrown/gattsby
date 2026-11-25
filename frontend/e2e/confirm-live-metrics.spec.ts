@@ -1,5 +1,5 @@
 // Acceptance Test
-// Traces to: FR-024, FR-025, FR-026, FR-027, FR-054, FR-057, FR-060, TOOL-013, TOOL-015, TOOL-026, TOOL-031
+// Traces to: FR-024, FR-025, FR-026, FR-027, FR-051, FR-054, FR-057, FR-060, TOOL-013, TOOL-015, TOOL-026, TOOL-031
 // Description: Show live standard data and confirm it only when it follows a physical action.
 
 import type { Page } from '@playwright/test';
@@ -9,6 +9,7 @@ import { devices, uuids } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { StillThereDialogPage } from './pages/still-there.dialog.page';
 import { VerdictPage } from './pages/verdict.page';
 
 test.use({
@@ -152,6 +153,25 @@ test('Given a timed recording, when the baseline finishes, then each Treadmill D
       ]),
     );
   }
+});
+
+test('Given Ready has not been tapped for two minutes, when the person continues and later stops from Still there, then the original prompt returns and no recording starts', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const investigation = await identifyMachine(page);
+  const dialog = new StillThereDialogPage(page);
+  await expect(investigation.answer('Ready')).toBeVisible();
+  await page.clock.runFor(120_100);
+  await expect(dialog.dialog()).toBeVisible();
+  await dialog.continue();
+  await expect(investigation.answer('Ready')).toBeVisible();
+  expect(fakeBluetooth.calls()).not.toContain('startNotifications');
+
+  await page.clock.runFor(120_100);
+  await dialog.stop();
+  await expect(new VerdictPage(page).title).toHaveText('Stopped by the person');
+  expect(fakeBluetooth.calls()).not.toContain('startNotifications');
 });
 
 test('Given a walking baseline, when the person speeds up during the prompt, then speed is confirmed with raw notification evidence', async ({
