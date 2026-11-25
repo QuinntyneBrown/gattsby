@@ -11,6 +11,7 @@
     {
       "uuid": "0x2acd",
       "name": "Treadmill Data",
+      "decoder": "treadmill-data",
       "properties": ["notify"],
       "deviceType": "treadmill"
     },

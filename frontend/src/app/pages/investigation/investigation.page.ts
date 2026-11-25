@@ -13,6 +13,8 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { PromptChannel } from '../../agent/prompt-channel';
+import { LiveMetrics } from '../../live/live-metrics';
+import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { confidenceWord } from '../../outcome/confidence-scorer';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { ActivityFeedComponent } from '../../ui/activity-feed/activity-feed.component';
@@ -37,7 +39,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     PromptCardComponent,
     StageTrackComponent,
   ],
-  providers: [PlaybookOrchestrator, PromptChannel],
+  providers: [PlaybookOrchestrator, PromptChannel, LiveMetrics, NotificationRecorder],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -120,6 +122,21 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
               </div>
             }
             @default {
+              @if (metrics().length > 0) {
+                <div class="dock__inner" aria-live="off">
+                  <div class="live-strip" aria-label="Live readings">
+                    @for (field of metrics(); track field.metric) {
+                      <div class="reading">
+                        <span class="reading__label">{{ field.label }}</span>
+                        <span class="reading__value">{{
+                          metricValue(field.value, field.scale)
+                        }}</span>
+                        <span class="reading__unit">{{ field.unit }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
               <g-prompt-card
                 [prompt]="prompts.current()"
                 [running]="orchestrator.running()"
@@ -155,9 +172,22 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </section>
           <section>
             <h2 class="section-title">Live readings</h2>
-            <p class="text-muted text-sm" style="margin-top: var(--space-2)">
-              Appear here once the machine is moving.
-            </p>
+            @if (metrics().length > 0) {
+              <dl class="readings">
+                @for (field of metrics(); track field.metric) {
+                  <div class="readings__row">
+                    <dt>{{ field.label }}</dt>
+                    <dd class="readings__value">
+                      {{ metricValue(field.value, field.scale) }} {{ field.unit }}
+                    </dd>
+                  </div>
+                }
+              </dl>
+            } @else {
+              <p class="text-muted text-sm" style="margin-top: var(--space-2)">
+                Appear here once the machine is moving.
+              </p>
+            }
           </section>
           <section>
             <h2 class="section-title">Device</h2>
@@ -191,6 +221,7 @@ export class InvestigationPage implements OnInit, OnDestroy {
   readonly id = input.required<string>();
   protected readonly orchestrator = inject(PlaybookOrchestrator);
   protected readonly prompts = inject(PromptChannel);
+  protected readonly metrics = inject(LiveMetrics).metrics;
   private readonly router = inject(Router);
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
 
@@ -255,5 +286,9 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   protected respond(response: PromptCardResponse): void {
     this.prompts.respond(response);
+  }
+
+  protected metricValue(value: number, scale: number): string {
+    return value.toFixed(scale < 1 ? 1 : 0);
   }
 }

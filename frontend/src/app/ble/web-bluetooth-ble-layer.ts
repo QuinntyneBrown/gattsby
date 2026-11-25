@@ -38,6 +38,7 @@ export class WebBluetoothBleLayer extends BleLayer {
   private readonly log = inject(RawTrafficLog);
   private readonly devices = new Map<string, BluetoothDevice>();
   private readonly services = new Map<string, BluetoothRemoteGATTService>();
+  private readonly subscriptions = new Set<() => Promise<void>>();
   private device: BluetoothDevice | null = null;
   private readonly state = signal<ConnectionState>(DISCONNECTED);
   private readonly disconnects = new Subject<DisconnectEvent>();
@@ -48,6 +49,7 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = event.target as BluetoothDevice;
     const intentional = this.state().status === 'releasing';
     this.log.append({ kind: 'disconnect', direction: 'in', hex: '', detail: device.id });
+    for (const stop of this.subscriptions) void stop();
     device.removeEventListener('gattserverdisconnected', this.onDisconnected);
     this.services.clear();
     if (this.device === device) {
@@ -223,10 +225,57 @@ export class WebBluetoothBleLayer extends BleLayer {
     }
   }
 
+  async subscribe(
+    service: string,
+    characteristic: string,
+    receive: (value: ReadResult) => void,
+  ): Promise<() => Promise<void>> {
+    this.requireConnected();
+    const serviceUuid = canonicalUuid(service);
+    const uuid = canonicalUuid(characteristic);
+    const handle = this.services.get(serviceUuid);
+    if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
+    try {
+      const c = await handle.getCharacteristic(uuid);
+      if (!c.properties.notify && !c.properties.indicate) {
+        throw new ToolError('PROPERTY_MISSING', 'This characteristic does not send updates.');
+      }
+      const listener = (): void => {
+        if (!c.value) return;
+        const bytes = bytesOf(c.value);
+        const entryId = this.log.append({
+          kind: c.properties.notify ? 'notification' : 'indication',
+          direction: 'in',
+          service: serviceUuid,
+          uuid,
+          hex: toHex(bytes),
+        });
+        receive({ bytes, entryId });
+      };
+      const stop = async (): Promise<void> => {
+        if (!this.subscriptions.delete(stop)) return;
+        c.removeEventListener('characteristicvaluechanged', listener);
+        if (this.device?.gatt?.connected) await c.stopNotifications().catch(() => undefined);
+      };
+      this.subscriptions.add(stop);
+      c.addEventListener('characteristicvaluechanged', listener);
+      try {
+        await c.startNotifications();
+      } catch (error) {
+        await stop();
+        throw error;
+      }
+      return stop;
+    } catch (error) {
+      throw this.gattError(error);
+    }
+  }
+
   async disconnect(): Promise<void> {
     const device = this.device;
     if (!device) return;
     this.state.update((s) => ({ ...s, status: 'releasing' }));
+    await Promise.all([...this.subscriptions].map((stop) => stop()));
     device.gatt?.disconnect();
     // Chrome fires `gattserverdisconnected`; the fake does too. Make sure the state settles.
     if (this.device === device) {

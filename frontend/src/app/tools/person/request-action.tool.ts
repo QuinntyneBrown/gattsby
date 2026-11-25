@@ -13,6 +13,7 @@ export interface RequestActionInput {
 }
 
 export interface RequestActionOutput {
+  readonly answer: string;
   readonly readyAt?: number;
   readonly doneAt: number;
   readonly skipped: boolean;
@@ -49,6 +50,7 @@ export const requestActionTool = entry<RequestActionInput, RequestActionOutput>(
     ) {
       return fail('INVALID_INPUT', 'The expected time must be 5 to 120 seconds.');
     }
+    const button = input.needsReady ? 'Ready' : 'Done';
     const response = await ctx.prompts.post(
       {
         kind: 'action',
@@ -56,8 +58,8 @@ export const requestActionTool = entry<RequestActionInput, RequestActionOutput>(
         detail: input.title ? null : null,
         why: input.why ?? null,
         sequence: input.sequence ?? null,
-        answers: ['Done'],
-        primary: 'Done',
+        answers: [button],
+        primary: button,
         steps: input.steps ?? [],
         allowFreeText: false,
         needsReady: input.needsReady,
@@ -69,15 +71,16 @@ export const requestActionTool = entry<RequestActionInput, RequestActionOutput>(
     const id = ctx.observe({
       kind: 'action',
       subject: input.instruction,
-      value: response.skipped ? 'skipped' : 'done',
-      text: response.skipped ? `Skipped: ${input.instruction}` : `Done: ${input.instruction}`,
+      value: response.skipped ? 'skipped' : button.toLowerCase(),
+      text: response.skipped ? `Skipped: ${input.instruction}` : `${button}: ${input.instruction}`,
       tag: 'confirmed',
       evidence: [],
     });
     return ok(
-      response.skipped ? 'The person skipped it.' : 'The person said it’s done.',
+      response.skipped ? 'The person skipped it.' : `The person said “${button}”.`,
       {
-        ...(response.readyAt !== null ? { readyAt: response.readyAt } : {}),
+        answer: button,
+        ...(input.needsReady && !response.skipped ? { readyAt: response.respondedAt } : {}),
         doneAt: response.doneAt ?? response.respondedAt,
         skipped: response.skipped,
       },

@@ -8,6 +8,7 @@ import type { Stage } from '../store/model/stage';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
 import type { VerdictFacts } from '../outcome/verdict-builder';
 import type { HypothesisProposer } from './meta/update-hypothesis.tool';
+import type { NotificationRecorder } from './listening/notification-recorder';
 
 export type NewMissingToolRequest = Pick<
   MissingToolRequest,
@@ -22,6 +23,7 @@ export interface ToolContext {
   readonly stepN: number;
   readonly state: DecisionState;
   readonly ble: BleLayer;
+  readonly notificationRecorder: NotificationRecorder;
   readonly kb: KnowledgeBaseIndex;
   readonly prompts: PromptChannel;
   readonly capabilities: CapabilityDetector;

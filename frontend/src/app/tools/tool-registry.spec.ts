@@ -3,7 +3,7 @@ import { TOOL_CATALOG } from './tool-catalog';
 import type { ToolDefinition } from './tool-definition';
 import { ToolRegistry } from './tool-registry';
 
-const MVP_TOOLS_IN_JOURNEY_2 = [
+const MVP_TOOLS = [
   'check_capabilities',
   'scan_devices',
   'scan_all_devices',
@@ -13,6 +13,7 @@ const MVP_TOOLS_IN_JOURNEY_2 = [
   'read_device_info',
   'read_characteristic',
   'match_known_profiles',
+  'subscribe_and_record',
   'ask_user',
   'request_action',
   'update_hypothesis',
@@ -22,7 +23,7 @@ const MVP_TOOLS_IN_JOURNEY_2 = [
 describe('ToolRegistry (FR-070)', () => {
   it('loads the real catalog with every field of FR-070', () => {
     const registry = new ToolRegistry(TOOL_CATALOG);
-    expect(registry.all().map((t) => t.name)).toEqual(MVP_TOOLS_IN_JOURNEY_2);
+    expect(registry.all().map((t) => t.name)).toEqual(MVP_TOOLS);
     for (const tool of registry.all()) {
       expect(tool.group).toBeTruthy();
       expect(tool.description).toBeTruthy();

@@ -18,6 +18,7 @@ import type { Step, StepPersonExchange } from '../store/model/step';
 import type { StopReason } from '../store/model/stop-reason';
 import type { Verdict, VerdictKind } from '../store/model/verdict';
 import { TOOL_CATALOG } from '../tools/tool-catalog';
+import { NotificationRecorder } from '../tools/listening/notification-recorder';
 import type { NewMissingToolRequest, ToolContext } from '../tools/tool-context';
 import { ToolRegistry } from '../tools/tool-registry';
 import { fail, type ToolResult } from '../tools/tool-result';
@@ -58,6 +59,7 @@ export class PlaybookOrchestrator {
   private readonly store = inject(InvestigationStore);
   private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly ble = inject(BleLayer);
+  private readonly notificationRecorder = inject(NotificationRecorder);
   private readonly log = inject(RawTrafficLog);
   private readonly capabilities = inject(CapabilityDetector);
   private readonly clock = inject(Clock);
@@ -295,6 +297,7 @@ export class PlaybookOrchestrator {
       stepN: n,
       state,
       ble: this.ble,
+      notificationRecorder: this.notificationRecorder,
       kb,
       prompts: this.prompts,
       capabilities: this.capabilities,

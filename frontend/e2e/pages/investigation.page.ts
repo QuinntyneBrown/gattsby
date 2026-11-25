@@ -80,6 +80,14 @@ export class InvestigationPage {
     return this.feed.locator('.msg__text');
   }
 
+  liveMetric(label: string): Locator {
+    return this.page
+      .locator('.reading, .readings__row')
+      .filter({ has: this.page.getByText(label, { exact: true }) })
+      .filter({ visible: true })
+      .first();
+  }
+
   feedTool(tool: string): Locator {
     return this.feed
       .locator('.probe')

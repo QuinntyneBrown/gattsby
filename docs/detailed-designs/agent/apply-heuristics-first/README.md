@@ -80,6 +80,10 @@ A stage ends when its last rule reports it done; the rules then move to the next
 - **Model consultations.** For an FTMS treadmill in full agent mode the model is consulted no more
   than 5 times (FR-046 AC1). With the mocks' Horizon T202, only the vendor service `0xFFF0` beside
   FTMS is ambiguous.
+- **Standard path before a decider is available.** In journey 3, when GATT enumeration exposes
+  `0xFFF0` alongside a decided FTMS match, keep the vendor service in the GATT observations and
+  continue with the standard subscription. The vendor service does not affect whether live FTMS
+  evidence supports the verdict. If Chrome hides that service, record the visibility limit.
 - **Same verdict in both modes.** Both deciders sit behind the same rules, validator, tools and
   verdict builder, so an FTMS treadmill reaches "Connected — FTMS" in either mode (FR-046 AC2).
 - **Time to verdict (NFR-001).** From opening the app to the verdict shall take under 3 minutes for

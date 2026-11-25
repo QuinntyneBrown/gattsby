@@ -24,6 +24,11 @@ export abstract class BleLayer {
   abstract connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }>;
   abstract primaryServices(): Promise<GattServiceInfo[]>;
   abstract read(service: string, characteristic: string): Promise<ReadResult>;
+  abstract subscribe(
+    service: string,
+    characteristic: string,
+    receive: (value: ReadResult) => void,
+  ): Promise<() => Promise<void>>;
   /** Stops every notification and disconnects; idempotent (TOOL-008). */
   abstract disconnect(): Promise<void>;
 }

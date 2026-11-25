@@ -95,3 +95,16 @@ None; this is the first entry.
 - Lesson 5 (design-system CSS from `docs/`): the pages use the design system's classes
   unchanged; the side-by-side screenshots differ only where a part is deferred.
 - Lesson 6 (pin Playwright): unchanged; no browser download was needed.
+
+## Journey 3, slice 1: Subscribe to Treadmill Data
+
+- The acceptance test failed on the old build because Identify went straight to Conclude. It
+  then caught a second problem: the saved action answer defaulted to "Done" after the person
+  tapped "Ready". The action result now carries the button the person used.
+- The scripted treadmill already produced FTMS notifications from the fixture’s effort setting.
+  Advancing the browser clock exercised the real subscription and decoder without adding fixed
+  waits or a second fake transport.
+- Journey 2’s verdict lesson still applies. Seeing a speed on the live tile does not yet make it
+  confirmed. The confirmation slice will supply the evidence the Connected verdict needs.
+- On Windows, the global Git configuration checks tracked files out with CRLF. Prettier passed
+  with the local end-of-line mode set to auto. The repository still stores LF.

@@ -33,6 +33,7 @@ export interface DecisionState {
   readonly candidates: readonly ProfileCandidate[] | null;
   readonly ambiguityResolved: boolean;
   readonly reads: readonly string[];
+  readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'attempted';
   readonly finished: boolean;
 }
 
@@ -56,6 +57,7 @@ export const INITIAL_STATE: DecisionState = {
   candidates: null,
   ambiguityResolved: false,
   reads: [],
+  standardRecording: 'pending',
   finished: false,
 };
 
@@ -87,6 +89,9 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       }
       return next;
     case 'request_action':
+      if (step.ruleId === 'standard.ready') {
+        return { ...next, standardRecording: answer === 'Ready' ? 'ready' : 'skipped' };
+      }
       if (step.ruleId === 'prepare.power-on') return { ...next, poweredOn: true };
       if (step.ruleId === 'identify.held-by-other') {
         return { ...next, heldPrompts: state.heldPrompts + 1 };
@@ -143,6 +148,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
     }
     case 'disconnect':
       return { ...next, connected: false };
+    case 'subscribe_and_record':
+      return { ...next, standardRecording: 'attempted' };
     case 'finish':
       return { ...next, finished: true, connected: false };
     default:

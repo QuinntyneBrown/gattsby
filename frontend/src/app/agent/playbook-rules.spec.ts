@@ -138,7 +138,7 @@ describe('PlaybookRules (FR-046)', () => {
     ).toBe('match_known_profiles');
   });
 
-  it('reads the decided protocol’s readable characteristics, then concludes (FR-021 AC1)', () => {
+  it('reads the decided protocol’s readable characteristics before offering to record live data (FR-021, FR-024)', () => {
     const matched: Partial<DecisionState> = {
       ...prepared,
       device: { deviceId: 'd', name: 'T', advertisedServices: [] },
@@ -161,7 +161,9 @@ describe('PlaybookRules (FR-046)', () => {
       service: FTMS,
       characteristic: '00002acc-0000-1000-8000-00805f9b34fb',
     });
-    expect(tool({ ...matched, reads: ['00002acc-0000-1000-8000-00805f9b34fb'] })).toBe('finish');
+    const identified = { ...matched, reads: ['00002acc-0000-1000-8000-00805f9b34fb'] };
+    expect(tool(identified)).toBe('request_action');
+    expect(tool({ ...identified, standardRecording: 'skipped' })).toBe('finish');
   });
 
   it('hands two protocols within 10 points to the decider', () => {
