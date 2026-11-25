@@ -24,16 +24,21 @@ export class NotificationRecorder {
     let count = 0;
     let decodeErrors = 0;
     let recording = true;
-    const stop = await ble.subscribe(service, characteristic, ({ bytes, entryId }) => {
-      if (signal.aborted) return;
+    const stop = await ble.subscribe(service, characteristic, ({ bytes, entryId, t }) => {
+      if (signal.aborted) return undefined;
       if (recording) count++;
       try {
         const { value } = decoder.decode(bytes);
         const fields = value as readonly DecodedMetric[];
         this.live.update(fields);
-        this.confirmation.sample(fields, entryId, recording);
-      } catch {
+        this.confirmation.sample(fields, entryId, t, recording);
+        return { decoded: fields };
+      } catch (error) {
         if (recording) decodeErrors++;
+        return {
+          decodeError:
+            error instanceof Error ? error.message : 'The notification could not be decoded.',
+        };
       }
     });
     try {

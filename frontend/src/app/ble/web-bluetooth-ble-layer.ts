@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import type { GattProperty } from '../knowledge-base/knowledge-base-data';
+import type { NotificationDecoding } from '../store/model/notification-decoding';
 import { canonicalUuid } from '../knowledge-base/uuid';
 import { Clock } from '../shared/clock';
 import { ToolError } from '../tools/tool-error';
@@ -228,7 +229,7 @@ export class WebBluetoothBleLayer extends BleLayer {
   async subscribe(
     service: string,
     characteristic: string,
-    receive: (value: ReadResult) => void,
+    receive: (value: ReadResult & { t: number }) => NotificationDecoding | undefined,
   ): Promise<() => Promise<void>> {
     this.requireConnected();
     const serviceUuid = canonicalUuid(service);
@@ -243,14 +244,16 @@ export class WebBluetoothBleLayer extends BleLayer {
       const listener = (): void => {
         if (!c.value) return;
         const bytes = bytesOf(c.value);
-        const entryId = this.log.append({
-          kind: c.properties.notify ? 'notification' : 'indication',
-          direction: 'in',
-          service: serviceUuid,
-          uuid,
-          hex: toHex(bytes),
-        });
-        receive({ bytes, entryId });
+        this.log.append(
+          {
+            kind: c.properties.notify ? 'notification' : 'indication',
+            direction: 'in',
+            service: serviceUuid,
+            uuid,
+            hex: toHex(bytes),
+          },
+          ({ id, t }) => receive({ bytes, entryId: id, t }),
+        );
       };
       const stop = async (): Promise<void> => {
         if (!this.subscriptions.delete(stop)) return;

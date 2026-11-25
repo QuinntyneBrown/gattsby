@@ -5,6 +5,7 @@ import type { ChosenDevice } from './chosen-device';
 import type { ConnectionState, DisconnectEvent } from './connection-state';
 import type { GattServiceInfo } from './gatt-layout';
 import type { ScanRequest } from './scan-request';
+import type { NotificationDecoding } from '../store/model/notification-decoding';
 
 export interface ReadResult {
   readonly bytes: Uint8Array;
@@ -27,7 +28,7 @@ export abstract class BleLayer {
   abstract subscribe(
     service: string,
     characteristic: string,
-    receive: (value: ReadResult) => void,
+    receive: (value: ReadResult & { t: number }) => NotificationDecoding | undefined,
   ): Promise<() => Promise<void>>;
   /** Stops every notification and disconnects; idempotent (TOOL-008). */
   abstract disconnect(): Promise<void>;

@@ -130,6 +130,30 @@ test('Given an identified FTMS treadmill, when the person starts walking, then n
   expect(fakeModel.calls()).not.toContain('create');
 });
 
+test('Given a timed recording, when the baseline finishes, then each Treadmill Data notification is stored with its decoded fields and raw bytes', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const investigation = await startRecording(page, fakeBluetooth);
+  await page.clock.runFor(10_500);
+  await investigation.waitForPrompt('Now speed up to about 6 km/h. Change only the speed.');
+  const rows = await new StoredRecords(page).rawLog(investigation.id());
+  const packets = rows.filter(
+    (row) => row.kind === 'notification' && row.uuid === uuids.treadmillData,
+  );
+  expect(packets.length).toBeGreaterThanOrEqual(10);
+  for (const packet of packets) {
+    expect(packet.hex).toMatch(/^0C 04 2C 01 /);
+    expect(packet.decoded).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metric: 'speed', value: 3, unit: 'km/h', offset: 2 }),
+        expect.objectContaining({ metric: 'distance', unit: 'm', flag: 2 }),
+        expect.objectContaining({ metric: 'elapsed', unit: 's', flag: 10 }),
+      ]),
+    );
+  }
+});
+
 test('Given a walking baseline, when the person speeds up during the prompt, then speed is confirmed with raw notification evidence', async ({
   page,
   fakeBluetooth,

@@ -1,3 +1,5 @@
+import type { DecodedMetric } from '../../knowledge-base/decoders/decoded-metric';
+
 export type RawLogKind =
   | 'scan'
   | 'advertisement'
@@ -23,4 +25,6 @@ export interface RawLogEntry {
   readonly hex: string;
   readonly approvalId?: string;
   readonly detail?: string;
+  readonly decoded?: readonly DecodedMetric[];
+  readonly decodeError?: string;
 }

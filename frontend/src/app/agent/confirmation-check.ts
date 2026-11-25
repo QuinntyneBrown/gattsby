@@ -34,10 +34,9 @@ export class ConfirmationCheck {
     this.openedAt = this.clock.now();
   }
 
-  sample(fields: readonly DecodedMetric[], rawLogId: string, recording: boolean): void {
+  sample(fields: readonly DecodedMetric[], rawLogId: string, t: number, recording: boolean): void {
     const current = fields.find((field) => field.metric === this.metric);
     const distance = fields.find((field) => field.metric === 'distance');
-    const t = this.clock.now();
     if (recording) {
       for (const metric of ['speed', 'heartRate'] as const) {
         const baseline = this.baseline[metric];

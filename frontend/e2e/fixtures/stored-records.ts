@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { DecodedMetric } from '../../src/app/knowledge-base/decoders/decoded-metric';
 
 // Reads what Gattsby committed to IndexedDB, as a spec's evidence that a step was saved (FR-007,
 // FR-060). It opens the database read-only from the page and never writes to it.
@@ -50,13 +51,15 @@ export class StoredRecords {
     return rows.filter((row) => row.investigationId === id);
   }
 
-  async rawLog(id: string): Promise<{ kind: string; t: number; uuid?: string; hex: string }[]> {
+  async rawLog(id: string) {
     const rows = await this.readAll<{
       investigationId: string;
       kind: string;
       t: number;
       uuid?: string;
       hex: string;
+      decoded?: readonly DecodedMetric[];
+      decodeError?: string;
     }>('rawLog');
     return rows.filter((row) => row.investigationId === id);
   }

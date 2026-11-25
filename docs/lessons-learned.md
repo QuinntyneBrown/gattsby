@@ -148,3 +148,10 @@ None; this is the first entry.
   It now checks a 95 to 120 BPM change, the 48 px live reading, and the Connected verdict.
 - Use one confirmation window for the treadmill, bike and strap. The device-specific metric and
   minimum rise determine what counts, and the tool records only a change it saw in a notification.
+
+## Journey 3, slice 7: Persist decoded notifications
+
+- The acceptance test found the baseline’s raw notifications but no decoded fields. A raw log
+  entry now carries its decoding or error before it is handed to the existing batch flush.
+- Keep the epoch timestamp and evidence ID assigned by the raw log. Confirmation uses that same
+  timestamp, so a result and its evidence describe the same packet.
