@@ -32,7 +32,8 @@
         "FR-003",
         "FR-004",
         "FR-005",
-        "NFR-016"
+        "NFR-016",
+        "NFR-025"
       ],
       "states": [
         "default",
@@ -83,6 +84,7 @@
         "FR-011",
         "FR-012",
         "FR-013",
+        "FR-014",
         "FR-015",
         "FR-017",
         "FR-024",
@@ -97,8 +99,11 @@
         "FR-051",
         "FR-052",
         "FR-053",
+        "NFR-005",
+        "NFR-008",
         "NFR-009",
-        "NFR-010"
+        "NFR-010",
+        "NFR-025"
       ],
       "states": [
         "default",
@@ -108,9 +113,14 @@
         "find",
         "find-candidates",
         "find-cancelled",
+        "cannot-find",
         "identify",
+        "not-confirmed",
         "proprietary",
+        "recording",
+        "storage-full",
         "control",
+        "control-check",
         "checklist",
         "held-by-other"
       ],
@@ -125,7 +135,9 @@
       "route": "/investigations/:id/verdict",
       "requirements": [
         "FR-009",
+        "FR-014",
         "FR-018",
+        "FR-033",
         "FR-054",
         "FR-056",
         "FR-057",
@@ -217,7 +229,8 @@
       "route": "/investigations",
       "requirements": [
         "FR-009",
-        "FR-061"
+        "FR-061",
+        "NFR-008"
       ],
       "states": [
         "default",
@@ -232,6 +245,7 @@
       "title": "Missing tools",
       "route": "/missing-tools",
       "requirements": [
+        "FR-033",
         "FR-058",
         "FR-059"
       ],
@@ -286,6 +300,8 @@
       "title": "Approve a command",
       "opens_from": "investigation",
       "requirements": [
+        "FR-032",
+        "FR-033",
         "FR-034",
         "FR-035",
         "FR-036",
@@ -299,7 +315,8 @@
         "busy",
         "confirmed",
         "failed",
-        "stop"
+        "stop",
+        "handshake"
       ],
       "not_applicable": {
         "invalid": "Send is disabled until the stand-clear box is ticked, so an invalid submission can’t happen."
