@@ -111,12 +111,12 @@ gattsby/
         │   ├── commands/           # Command definitions
         │   ├── limits/             # Safe speed, incline and resistance limits
         │   └── generated/          # Compiled knowledge-base.json (build output)
-        ├── schemas/                # Export schemas: investigation record, device profile, missing-tool requests
+        ├── schemas/                # JSON schemas for exported records and profiles
         ├── simulation/             # Simulated devices and model for demos (devices/*.device.ts)
         └── app/
             ├── app.routes.ts, app-shell.ts
-            ├── agent/              # Orchestrator: loop, playbook, rules/, validation, approvals, stop conditions
-            ├── model/              # Model adapter: the only code that touches LanguageModel
+            ├── agent/              # Orchestrator: loop, playbook, rules/, approvals, stops
+            ├── model/              # Model adapter: sole user of LanguageModel
             ├── tools/              # Tool registry and tools, one folder per tool group:
             │   ├── discovery/      #   scan, watch advertisements, permitted devices
             │   ├── connection/     #   connect, reconnect, disconnect
@@ -127,20 +127,20 @@ gattsby/
             │   ├── person/         #   ask, request an action, capture a photo
             │   ├── environment/    #   check capabilities
             │   └── meta/           #   update hypothesis, request missing tool, finish
-            ├── ble/                # BLE layer: the only code that touches navigator.bluetooth; raw traffic log
-            ├── knowledge-base/     # Loader, decoders/, profile and vendor matchers, safe limits
-            ├── store/              # Investigation store: the only code that touches IndexedDB; import, export; model/
-            ├── analysis/           # Pure byte-level helpers: framing, encodings, varying bytes, checksums
-            ├── outcome/            # Hypothesis tracker, confidence scorer, verdict, device profile, missing tools
+            ├── ble/                # BLE layer: sole user of navigator.bluetooth; traffic log
+            ├── knowledge-base/     # Loader, decoders/, matchers, safe limits
+            ├── store/              # Store: sole user of IndexedDB; import, export, model/
+            ├── analysis/           # Byte-level helpers: framing, encodings, checksums
+            ├── outcome/            # Hypothesis, confidence, verdict, profile, missing tools
             ├── environment/        # Capability detection and operating mode
             ├── live/               # Live metrics and formatting
             ├── photo/              # Camera adapter and photo sanitizer (imported dynamically)
             ├── security/           # Trusted Types policy, display-text rendering
             ├── shared/             # Cross-cutting helpers such as the clock
-            ├── pages/              # Routed, lazy-loaded pages; one folder per mock in docs/mocks/pages/
+            ├── pages/              # Lazy-loaded pages; one per mock in docs/mocks/pages/
             ├── dialogs/            # One folder per mock in docs/mocks/dialogs/
             ├── notifications/      # Connection banner, mode banner, toast
-            └── ui/                 # Presentation components: inputs and outputs, no app services
+            └── ui/                 # Presentation components; no app services
 ```
 
 ## Architecture
