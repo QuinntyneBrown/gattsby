@@ -318,7 +318,7 @@ export class PlaybookOrchestrator {
       confirmationCheck: this.confirmationCheck,
       kb,
       prompts: this.prompts,
-      capabilities: this.capabilities,
+      capabilities: { detect: () => this.capabilities.detect({ model: this.mode() === 'agent' }) },
       signal,
       hypotheses: {
         resolves: (evidenceId) => this.resolves(evidenceId),

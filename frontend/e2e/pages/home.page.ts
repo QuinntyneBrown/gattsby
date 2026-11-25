@@ -33,6 +33,10 @@ export class HomePage {
     return this.page.title();
   }
 
+  get settings() {
+    return this.page.getByRole('link', { name: 'Settings' });
+  }
+
   async identify(): Promise<void> {
     await this.identifyADevice.click();
   }

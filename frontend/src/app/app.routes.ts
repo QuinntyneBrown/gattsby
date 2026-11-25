@@ -37,6 +37,11 @@ export const routes: Routes = [
       import('./pages/device-profile/device-profile.page').then((m) => m.DeviceProfilePage),
   },
   {
+    path: 'settings',
+    title: 'Settings · Gattsby',
+    loadComponent: () => import('./pages/settings/settings.page').then((m) => m.SettingsPage),
+  },
+  {
     path: '**',
     title: 'Not found · Gattsby',
     loadComponent: () => import('./pages/not-found/not-found.page').then((m) => m.NotFoundPage),

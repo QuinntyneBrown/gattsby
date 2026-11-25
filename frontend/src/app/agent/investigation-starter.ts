@@ -18,13 +18,14 @@ export class InvestigationStarter {
   private readonly appVersion = inject(APP_VERSION);
 
   async start(): Promise<string | null> {
+    const prefersAgent = await this.modes.prefersAgent();
     const [capabilities, kb] = await Promise.all([
-      this.capabilities.detect(),
+      this.capabilities.detect({ model: prefersAgent }),
       this.knowledgeBase.load(),
     ]);
     if (!canStartInvestigation(capabilities)) return null;
     const investigation = await this.store.create({
-      mode: this.modes.select(capabilities),
+      mode: this.modes.select(capabilities, prefersAgent),
       appVersion: this.appVersion,
       kbVersion: kb.version,
     });

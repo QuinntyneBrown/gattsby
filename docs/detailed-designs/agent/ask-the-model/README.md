@@ -40,8 +40,9 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   design). A timeout or an abort rejects with a `ToolError` (`TIMEOUT` or `ABORTED`).
 - **`PromptApiModelAdapter`** (`model/prompt-api-model-adapter.ts`), behind the **`ModelAdapter`**
   contract — the only code that touches `LanguageModel`. `createSession()` calls
-  `LanguageModel.create()` with the system instructions as initial prompts. `contextWindow` and
-  `measureTokens()` serve the prompt budget.
+  `LanguageModel.create()` with the system instructions as initial prompts. Chrome's
+  `contextWindow`, `contextUsage` and `measureContextUsage()` serve the prompt budget.
+  [Chrome Prompt API](https://developer.chrome.com/docs/ai/prompt-api#pass-a-json-schema)
 - **`ModelSession`** (`model/model-session.ts`) — `promptAction(prompt, schema, signal)` clones the
   base session, calls `prompt()` on the clone with `{ responseConstraint: schema, signal }`, destroys
   the clone, and returns the raw text's parsed JSON. Each decision therefore starts from the system
