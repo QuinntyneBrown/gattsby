@@ -50,6 +50,15 @@ export class FakeBluetooth {
     );
   }
 
+  /** The options of every `requestDevice` call, in order. */
+  requestDeviceOptions(): RequestDeviceOptions[] {
+    return this.recorder.events.flatMap(({ event }) =>
+      event.kind === 'bluetooth-call' && event.method === 'requestDevice'
+        ? [JSON.parse(event.detail) as RequestDeviceOptions]
+        : [],
+    );
+  }
+
   calls(): string[] {
     return this.recorder.events.flatMap(({ event }) =>
       event.kind === 'bluetooth-call' ? [event.method] : [],

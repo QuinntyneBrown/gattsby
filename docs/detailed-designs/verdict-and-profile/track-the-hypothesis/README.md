@@ -83,6 +83,9 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 5. A proposal that changes no field and no score adds no version. The tool returns the current
    version, and the step adds no observation (the end-the-loop design counts it toward no progress).
 6. After every committed step that adds an observation, the tracker rescores the current protocol.
+   Before `match_known_profiles` has run, the current protocol is the first standard service in the
+   layout that the knowledge base gives profiles for (so the mocks' "Standard fitness machine (FTMS)"
+   appears after `enumerate_gatt`); afterwards it is the top candidate's protocol and device type.
    A changed score adds a version with source `rules`; this is how "Confidence 65% → 85%" appears
    after `decode_standard` without a model action.
 7. In checklist mode, `ChecklistDecider` issues the same `update_hypothesis` action from
@@ -145,6 +148,10 @@ An acceptance spec drives the fake `LanguageModel` (`e2e/fixtures/fake-language-
 three `update_hypothesis` actions against the scripted FTMS treadmill, exports the record, and checks
 three versions with their step numbers and evidence. Unit tests cover `ConfidenceScorer` for a
 proposal of 0.95 with no supporting observation (stored 0) and for each contribution row.
+
+### Built in journey 2
+
+`HypothesisTracker` and `ConfidenceScorer` are built; the rules' hypothesis is rescored after every step and committed with it. `update_hypothesis` is registered with its evidence check; proposals from the model arrive with journey 6.
 
 ## Requirements
 

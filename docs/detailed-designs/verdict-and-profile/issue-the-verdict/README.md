@@ -151,6 +151,29 @@ Heart Rate" with live BPM. A spec has the fake `LanguageModel` return `finish` w
 FTMS" before any confirmation and checks the refusal. Unit tests cover `VerdictBuilder.derive` for
 each stop reason and each evidence rule.
 
+### Built in journey 2
+
+`finish`, `VerdictBuilder` and the Verdict page are built as the open questions below describe. When the evidence supports no verdict, `finish` raises the request that blocked it (rule 5): one "Decode service *UUID*" per unknown service, or else "Identify this device’s protocol". The page is the error, default and loading states; the stopped, not-connectable and missing-tool states render through the same template.
+
+### Open questions
+
+1. **The verdict for an identified but unconfirmed protocol (journey 2).** Until live data can be
+   confirmed (journey 3), no investigation can earn "Connected — *protocol*": FR-054 and TOOL-030
+   need at least one metric confirmed by live data. Journey 2 therefore issues **"Partially
+   decoded"** for a device whose protocol the rules named. Its evidence rule holds, because the
+   Identify stage decodes fields with the knowledge base's decoders (Device Information strings, the
+   Fitness Machine Feature bits, the Body Sensor Location), and the summary says what is missing:
+   "Identified as FTMS from its services and Device Information. No metric has been confirmed with
+   live data yet." "Needs a missing tool" was rejected: confirming live data is a capability that is
+   being built, not one the agent lacks, and a request for it would mislead the missing-tool list.
+   Journey 3 adds the Standard path and with it "Connected — *protocol*"; the precedence above
+   then issues it ahead of "Partially decoded" without a change to `VerdictBuilder`.
+2. **Profile and export (journey 4).** Until the device profile exists, `commitVerdict` stores the
+   verdict and the final step without a profile, `profileId` stays `null`, and the Verdict page
+   shows the identity, the verdict, the protocol, what was observed and what couldn't be
+   determined, with "New investigation" as its only action. "Export profile", "Export full record"
+   and the "Saved to this device as a device profile" line arrive with journey 4.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

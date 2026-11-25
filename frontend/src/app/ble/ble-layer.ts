@@ -1,0 +1,29 @@
+import type { Signal } from '@angular/core';
+import type { Observable } from 'rxjs';
+import type { BleAvailability } from './ble-availability';
+import type { ChosenDevice } from './chosen-device';
+import type { ConnectionState, DisconnectEvent } from './connection-state';
+import type { GattServiceInfo } from './gatt-layout';
+import type { ScanRequest } from './scan-request';
+
+export interface ReadResult {
+  readonly bytes: Uint8Array;
+  /** The raw log entry's evidence ID. */
+  readonly entryId: string;
+}
+
+// The contract of the BLE layer, the only code that touches `navigator.bluetooth` (NFR-021). It
+// maps every Web Bluetooth exception to a shared error code by throwing a `ToolError`, and logs
+// every operation in the raw traffic log (FR-073).
+export abstract class BleLayer {
+  abstract readonly connection: Signal<ConnectionState>;
+  abstract readonly disconnected: Observable<DisconnectEvent>;
+  abstract availability(): Promise<BleAvailability>;
+  /** Opens Chrome's chooser; must run inside the person's tap. */
+  abstract requestDevice(request: ScanRequest): Promise<ChosenDevice>;
+  abstract connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }>;
+  abstract primaryServices(): Promise<GattServiceInfo[]>;
+  abstract read(service: string, characteristic: string): Promise<ReadResult>;
+  /** Stops every notification and disconnects; idempotent (TOOL-008). */
+  abstract disconnect(): Promise<void>;
+}

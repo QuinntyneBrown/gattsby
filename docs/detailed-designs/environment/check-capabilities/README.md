@@ -49,7 +49,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   (TOOL-001): `secureContext`, `bluetooth`, `model`, `watchAdvertisements`, `requestLEScan`,
   `getDevices`, `camera`, `storage` and `platform`. The design adds two fields that TOOL-001 does
   not list, `bluetooth.blocked` and `storage.open`, because the `permission-denied` and `error`
-  mocks need them; TOOL-001 should be brought in line with them.
+  mocks need them; TOOL-001 lists them too.
 - **`WebBluetoothBleLayer.availability()`** (`ble/web-bluetooth-ble-layer.ts`) — returns
   `BleAvailability`: `api` (`'bluetooth' in navigator` and `isSecureContext`), `adapterAvailable`
   (`navigator.bluetooth.getAvailability()`), `blocked`, and whether `watchAdvertisements`,
@@ -133,6 +133,10 @@ adapter-off and available forms, and drive the Readiness page through its page o
 `getUserMedia` and runs a full checklist investigation with no page error (NFR-021). Unit tests
 cover `BrowserCapabilityDetector` with a probe that rejects and one that never settles, on a fake
 clock, and `toCapabilityItems` for each row of the readiness rules.
+
+### Built in journey 2
+
+`CapabilityDetector`, `BrowserCapabilityDetector`, `check_capabilities` and `ModeSelector` (full agent mode when the model is available, checklist mode otherwise) are built; the model adapter and the camera adapter answer availability only. Not built yet: `toCapabilityItems`, `CapabilityList` and the Readiness page (journey 5).
 
 ## Requirements
 

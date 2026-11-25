@@ -123,6 +123,10 @@ device delays its Device Information read. One runs a simulated FTMS investigati
 The responsive and accessibility sweeps (every state at 360, 576, 768, 992 and 1280 px, and an axe
 scan) are written and kept current but run only when a person asks.
 
+### Built in journey 2
+
+`PlaybookOrchestrator` exposes the stage, stage states, running step, feed, prompt and mode; `buildFeed` (`agent/feed-builder.ts`) rebuilds the feed from the committed steps, so a reopened investigation shows what it showed while running. A tool card lists the step's observations with their badges (every service for `enumerate_gatt`, otherwise those tagged *likely* or *guess*) instead of the mock's row table. Not built yet: the agent composer (journey 6), the mode and connection banners (journeys 6, 7 and 10), the "Evidence" links (journey 14), Pause and the options sheet (journey 11). Before a step that waits for the person, the step's message and the question are shown in the feed at once, so the feed reads as the mocks do.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

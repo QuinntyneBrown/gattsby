@@ -123,6 +123,10 @@ unknown-services device for the invisibility note. The encrypted device scripts 
 insufficient-encryption read for `AUTH_REQUIRED`. Unit tests cover `CandidateDecodings` and the
 Battery Level decoding.
 
+### Built in journey 2
+
+`enumerate_gatt`, `read_characteristic` and `CandidateDecodings` are built. The Identify rules read each readable characteristic of the decided protocol's service that has a decoder (the Fitness Machine Feature and Supported Speed Range, the Body Sensor Location), so even a device without Device Information has a decoded field. The brand trigger of the hidden-service request is built; the advertised-UUID trigger waits for advertisement samples (P2).
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

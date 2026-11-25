@@ -214,6 +214,10 @@ folder and checks that its UUID is in the scan's `optionalServices` and its name
 Unit tests run each decoder on the specification's examples, and run the validation script on fixture
 folders with a fact missing its source, a bad decoder reference and a duplicate UUID.
 
+### Built in journey 2
+
+The manifest, the blocklist, the seven standard files, `suggestions/brands.json` (kind `brand-suggestions`, see the start-an-investigation design), the schema and `scripts/validate-knowledge-base.ts` are built; `npm run kb` runs the script and every build, serve, test and lint runs it first. Decoder IDs are listed in `decoders/decoder-ids.json`, which the script reads, because Node cannot load the TypeScript registry. The vendor kind adds `machineTypes` and an optional `prefix` beside each name pattern, so the scan can filter on it. Journey 2 ships the decoders the Identify stage reads (`utf8-string`, `hex`, `battery-level`, `body-sensor-location`, `fitness-machine-feature`, `supported-speed-range`); the data characteristics' decoders arrive with `decode_standard` (journey 3). No vendor file ships yet; the limits and commands files arrive with journey 8. The fixture-folder unit tests of the script are not written yet.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

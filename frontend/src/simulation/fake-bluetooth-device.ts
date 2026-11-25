@@ -15,11 +15,12 @@ export class FakeBluetoothDevice extends EventTarget {
     readonly script: ScriptedDevice,
     readonly state: SimulationState,
     report: Report,
+    readDelays: Readonly<Record<string, number>> = {},
   ) {
     super();
     this.id = `sim-${script.id}`;
     this.name = script.name ?? undefined;
-    this.gatt = new FakeGattServer(this, script, state, () => this.allowed, report);
+    this.gatt = new FakeGattServer(this, script, state, () => this.allowed, report, readDelays);
   }
 
   /** Called by requestDevice: the services this origin may reach from now on. */

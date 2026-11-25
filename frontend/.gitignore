@@ -47,3 +47,6 @@ Thumbs.db
 /test-results
 /playwright-report
 /blob-report
+
+# Knowledge base build output (scripts/validate-knowledge-base.ts)
+/src/knowledge-base/generated

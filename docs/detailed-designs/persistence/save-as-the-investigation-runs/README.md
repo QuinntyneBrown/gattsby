@@ -156,6 +156,10 @@ store's quota fail and checks that recording stops, the investigation stays read
 is told how to free space. Unit tests run 50 random interruptions over a fake IndexedDB
 (`fake-indexeddb`), then reopen each and validate it against the record schema (NFR-007 AC1).
 
+### Built in journey 2
+
+The database, `create`, `commitStep`, `flushRawLog`, `commitVerdict`, `recover`, `get`, `list`, `usage` and `requestPersistence` are built. Opening an investigation whose status is still `running` with committed steps (a tab closed or reloaded mid-step) recovers it as paused and shows its steps; resuming it is journey 11. Not built yet: the storage warning and the failed-save toast (journey 15, with the history), `delete` and `deleteAll`.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

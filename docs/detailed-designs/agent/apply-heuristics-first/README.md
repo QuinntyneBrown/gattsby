@@ -105,6 +105,10 @@ the same scripted device in checklist mode to the same verdict. The time-to-verd
 prompt after 5 seconds and checks the total is under 3 minutes; the hardware smoke test on a real
 treadmill is run by a person.
 
+### Built in journey 2
+
+`PlaybookRules` (`agent/playbook-rules.ts`) and the Prepare, Find, Identify and Conclude rule lists are built; the Standard path, Proprietary path and Control stages are skipped until journeys 3, 13 and 8 add their rules. The `Decider` seam is built with `ConcludeDecider` in place of `ModelDecider` and `ChecklistDecider`.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

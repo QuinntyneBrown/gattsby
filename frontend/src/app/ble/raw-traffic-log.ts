@@ -1,0 +1,93 @@
+import { inject, Injectable, signal } from '@angular/core';
+import { Clock } from '../shared/clock';
+import type { RawLogEntry } from '../store/model/raw-log-entry';
+import { InvestigationStore } from '../store/investigation-store';
+
+export const WINDOW = 2000;
+export const FLUSH_BATCH = 200;
+export const FLUSH_INTERVAL_MS = 500;
+export const QUEUE_LIMIT = 10_000;
+
+export type NewRawLogEntry = Omit<RawLogEntry, 'investigationId' | 'id' | 'seq' | 'stepN' | 't'>;
+
+// The raw traffic log of the investigation in progress (FR-073; log-raw-traffic design). It keeps
+// the last 2,000 entries in memory (NFR-005); entries of a long step are flushed to the store as
+// provisional rows, and the step commit takes the rest.
+@Injectable({ providedIn: 'root' })
+export class RawTrafficLog {
+  private readonly clock = inject(Clock);
+  private readonly store = inject(InvestigationStore);
+  private readonly window: RawLogEntry[] = [];
+  private pending: RawLogEntry[] = [];
+  private investigationId: string | null = null;
+  private stepN = 0;
+  private seq = 0;
+  private cancelFlush: (() => void) | null = null;
+  readonly count = signal(0);
+
+  /** Starts logging for an investigation, numbering after the entries it already has. */
+  begin(investigationId: string, nextSeq: number): void {
+    this.clear();
+    this.investigationId = investigationId;
+    this.seq = nextSeq;
+  }
+
+  /** The step that entries appended from now on belong to. */
+  setStep(stepN: number): void {
+    this.stepN = stepN;
+  }
+
+  /** Appends one entry and returns its evidence ID (`r-` and its sequence number). */
+  append(entry: NewRawLogEntry): string {
+    const id = `r-${this.seq}`;
+    const full: RawLogEntry = {
+      ...entry,
+      investigationId: this.investigationId ?? 'none',
+      id,
+      seq: this.seq++,
+      stepN: this.stepN,
+      t: this.clock.now(),
+    };
+    this.window.push(full);
+    if (this.window.length > WINDOW) this.window.splice(0, this.window.length - WINDOW);
+    if (this.investigationId) {
+      this.pending.push(full);
+      if (this.pending.length >= FLUSH_BATCH) void this.flush();
+      else this.cancelFlush ??= this.clock.setTimeout(() => void this.flush(), FLUSH_INTERVAL_MS);
+    }
+    this.count.set(this.seq);
+    return id;
+  }
+
+  latest(n: number): readonly RawLogEntry[] {
+    return this.window.slice(-n);
+  }
+
+  /** The entries not yet flushed; the step commit writes them with the step (FR-060). */
+  takePending(): RawLogEntry[] {
+    this.cancelFlush?.();
+    this.cancelFlush = null;
+    const taken = this.pending;
+    this.pending = [];
+    return taken;
+  }
+
+  /** Forgets the window and the queue, after a final flush, when the screen is left (NFR-005). */
+  clear(): void {
+    if (this.pending.length > 0) void this.flush();
+    this.cancelFlush?.();
+    this.cancelFlush = null;
+    this.window.length = 0;
+    this.investigationId = null;
+  }
+
+  private async flush(): Promise<void> {
+    this.cancelFlush?.();
+    this.cancelFlush = null;
+    const batch = this.pending.splice(0, Math.min(this.pending.length, QUEUE_LIMIT));
+    await this.store.flushRawLog(batch).catch(() => {
+      // Kept for the step commit, which reports STORAGE_FULL to the person.
+      this.pending = [...batch, ...this.pending];
+    });
+  }
+}

@@ -82,12 +82,13 @@ Web Bluetooth reports notifications and indications through the same event. The 
 2. The target is 50 notifications per second per characteristic on up to 4 characteristics, with no
    entry dropped and the UI delayed by at most one frame (NFR-003).
 3. Flushes run in batches, off the value handler's path. The batch size and interval are
-   `<TO SUPPLY>`, set from the NFR-003 and NFR-005 measurements.
+   proposed as 200 entries or 500 ms, whichever comes first (journey 2), to be tuned from the
+   NFR-003 and NFR-005 measurements.
 
 ### Staying bounded (NFR-005)
 
 - The window holds the last 2,000 entries; older entries leave memory once flushed.
-- The flush queue is bounded; its limit is `<TO SUPPLY>`. A queue that cannot drain because a write
+- The flush queue is bounded; its limit is 10,000 entries (proposed, journey 2). A queue that cannot drain because a write
   failed for quota stops recording (below).
 - Recordings longer than 120 seconds are refused with `INVALID_INPUT` (TOOL-013), and the model's
   history is capped (see the build-the-decision-state design).
@@ -117,6 +118,10 @@ characteristics for 60 seconds and asserts that all 12,000 entries are in the st
 timestamps (NFR-003). The approve-a-command specs assert `approvalId` on every write. The 30-minute
 heap spec of NFR-005 samples the JS heap every minute; it cannot fit CI's 5-minute budget and runs
 when a person asks. Unit tests cover `HexCodec`, the window's eviction and the flush on a fake clock.
+
+### Built in journey 2
+
+`RawTrafficLog` keeps the 2,000-entry window, flushes batches of 200 or every 500 ms as provisional rows, and hands the rest to the step commit. Scans, connects, disconnects and reads are logged; notifications arrive with journey 3. The 12,000-notification spec of NFR-003 waits for notifications (journey 3).
 
 ## Requirements
 

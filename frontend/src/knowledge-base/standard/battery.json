@@ -1,0 +1,18 @@
+{
+  "kind": "standard-service",
+  "id": "battery",
+  "name": "Battery",
+  "shortName": "Battery",
+  "uuid": "0x180f",
+  "scanFilter": false,
+  "source": { "type": "specification", "title": "Bluetooth SIG Battery Service 1.0" },
+  "characteristics": [
+    {
+      "uuid": "0x2a19",
+      "name": "Battery Level",
+      "properties": ["read", "notify"],
+      "decoder": "battery-level"
+    }
+  ],
+  "profiles": []
+}

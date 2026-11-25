@@ -195,6 +195,7 @@ npx playwright install chromium   # once, for the behaviour specs
 | `npm start` | Development server at `http://localhost:4200` (no security headers) |
 | `npm run build` | Production build in `dist/frontend/browser/` |
 | `npm run serve:dist` | Serves the production build at `http://localhost:4300` with the headers in `public/_headers` |
+| `npm run kb` | Validates the knowledge base in `src/knowledge-base/` and writes its generated file; build, serve, test and lint run it first |
 | `npm test` | Unit tests (Vitest), once |
 | `npm run e2e` | Production build, then every behaviour spec (Playwright, Chromium only) |
 | `npm run e2e:critical` | The critical behaviour specs CI runs, against an existing build |

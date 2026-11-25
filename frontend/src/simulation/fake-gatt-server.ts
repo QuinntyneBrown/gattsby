@@ -10,6 +10,7 @@ export class FakeGattServer {
   connected = false;
   private readonly services: FakeGattService[];
   private readonly stoppers: (() => void)[] = [];
+  private refusals: number;
 
   constructor(
     readonly device: EventTarget,
@@ -17,7 +18,9 @@ export class FakeGattServer {
     state: SimulationState,
     private readonly allowedServices: () => ReadonlySet<string> | 'all',
     private readonly report: Report,
+    readDelays: Readonly<Record<string, number>> = {},
   ) {
+    this.refusals = script.refusedConnections ?? 0;
     this.services = script.services.map(
       (service) =>
         new FakeGattService(
@@ -29,6 +32,7 @@ export class FakeGattServer {
             deviceName: script.name ?? script.id,
             isConnected: () => this.connected,
             onDisconnect: (stop) => this.stoppers.push(stop),
+            readDelays,
           },
           report,
         ),
@@ -37,6 +41,10 @@ export class FakeGattServer {
 
   async connect(): Promise<this> {
     this.report({ kind: 'bluetooth-call', method: 'connect', detail: '' });
+    if (this.refusals > 0) {
+      this.refusals -= 1;
+      throw new DOMException('Connection attempt failed.', 'NetworkError');
+    }
     this.connected = true;
     return this;
   }

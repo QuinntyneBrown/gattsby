@@ -1,0 +1,34 @@
+{
+  "kind": "standard-service",
+  "id": "heart-rate",
+  "name": "Heart Rate",
+  "shortName": "Heart Rate",
+  "hypothesisLabel": "Standard heart-rate sensor (Heart Rate)",
+  "uuid": "0x180d",
+  "scanFilter": true,
+  "source": { "type": "specification", "title": "Bluetooth SIG Heart Rate Service 1.0" },
+  "characteristics": [
+    {
+      "uuid": "0x2a37",
+      "name": "Heart Rate Measurement",
+      "properties": ["notify"],
+      "deviceType": "heart-rate-sensor"
+    },
+    {
+      "uuid": "0x2a38",
+      "name": "Body Sensor Location",
+      "properties": ["read"],
+      "decoder": "body-sensor-location"
+    },
+    { "uuid": "0x2a39", "name": "Heart Rate Control Point", "properties": ["write"] }
+  ],
+  "profiles": [
+    {
+      "id": "heart-rate-sensor",
+      "label": "Heart-rate sensor",
+      "deviceType": "heart-rate-sensor",
+      "requires": ["0x2a37"],
+      "expects": ["0x2a38"]
+    }
+  ]
+}

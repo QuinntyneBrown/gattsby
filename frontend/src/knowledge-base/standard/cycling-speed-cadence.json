@@ -1,0 +1,26 @@
+{
+  "kind": "standard-service",
+  "id": "cycling-speed-cadence",
+  "name": "Cycling Speed and Cadence",
+  "shortName": "Cycling Speed and Cadence",
+  "hypothesisLabel": "Standard speed and cadence sensor (Cycling Speed and Cadence)",
+  "uuid": "0x1816",
+  "scanFilter": true,
+  "source": {
+    "type": "specification",
+    "title": "Bluetooth SIG Cycling Speed and Cadence Service 1.0"
+  },
+  "characteristics": [
+    { "uuid": "0x2a5b", "name": "CSC Measurement", "properties": ["notify"], "deviceType": "bike" },
+    { "uuid": "0x2a5c", "name": "CSC Feature", "properties": ["read"] }
+  ],
+  "profiles": [
+    {
+      "id": "csc-sensor",
+      "label": "Speed and cadence sensor",
+      "deviceType": "bike",
+      "requires": ["0x2a5b"],
+      "expects": ["0x2a5c"]
+    }
+  ]
+}

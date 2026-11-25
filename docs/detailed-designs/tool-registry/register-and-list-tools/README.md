@@ -134,6 +134,10 @@ advertisement watching is unavailable, that no `control` tool is listed at `iden
 fixture `read` tool added through a test catalog appears at its stages. An acceptance spec checks
 the tool names the fake `LanguageModel` receives at Identify.
 
+### Built in journey 2
+
+`ToolDefinition`, `TOOL_CATALOG` and `ToolRegistry` are built with the invariants above and a `labels` field (follow-the-investigation design). The thirteen tools journey 2 needs are registered. Not built yet: `compile-schemas.ts`, the precompiled `SchemaValidator` and `ToolListGenerator`, which first matter when untrusted model actions arrive (journey 6). Until then each tool checks its own input limits, as `ask_user` and `request_action` do.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

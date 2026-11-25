@@ -1,0 +1,42 @@
+import { decided, type StageRule } from '../stage-rule';
+
+const MAX_SCANS = 4;
+
+// Find: the filtered scan first, then the open scan after a cancel (FR-011, FR-012).
+export const FIND_RULES: readonly StageRule[] = [
+  {
+    id: 'find.scan',
+    stage: 'find',
+    when: ({ state }) => !state.device && state.scans.length === 0,
+    then: ({ state }) =>
+      decided(
+        'find.scan',
+        'find',
+        'scan_devices',
+        { machineType: state.machineType ?? null, brand: state.brand ?? null },
+        {
+          text: 'Tap Find the device. Chrome will list nearby fitness machines — pick yours, or close the list if you’re not sure.',
+          why: 'Chrome only lets a page see a device you choose yourself.',
+        },
+      ),
+  },
+  {
+    id: 'find.widen',
+    stage: 'find',
+    when: ({ state }) =>
+      !state.device &&
+      state.scans.length < MAX_SCANS &&
+      state.scans[state.scans.length - 1]?.outcome === 'cancelled',
+    then: () =>
+      decided(
+        'find.widen',
+        'find',
+        'scan_all_devices',
+        {},
+        {
+          text: 'It may not advertise as a fitness machine. I can ask Chrome for every Bluetooth device nearby instead — names in that list can look unfamiliar.',
+          why: 'Some machines only show up when the list isn’t filtered.',
+        },
+      ),
+  },
+];

@@ -110,6 +110,7 @@ gattsby/
         │   ├── vendors/            # Vendor signatures, name patterns, manufacturer IDs
         │   ├── commands/           # Command definitions
         │   ├── limits/             # Safe speed, incline and resistance limits
+        │   ├── suggestions/        # Brand suggestions for the Prepare questions
         │   └── generated/          # Compiled knowledge-base.json (build output)
         ├── schemas/                # JSON schemas for exported records and profiles
         ├── simulation/             # Fake Bluetooth API and model; devices/*.device.ts
