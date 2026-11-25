@@ -1,0 +1,118 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Match known profiles
+
+enum FactKind {
+  service
+  characteristic
+  namePattern
+  manufacturerName
+  manufacturerId
+}
+
+enum EvidenceGrade {
+  confirmed
+  likely
+  guess
+}
+
+class DeviceFacts {
+  +name?: string
+  +serviceUuids: string[]
+  +characteristicUuids: string[]
+  +manufacturerName?: string
+  +modelNumber?: string
+  +manufacturerId?: number
+}
+
+class KnownProfile {
+  +profileId: string
+  +protocol: string
+  +deviceType: string
+  +facts: ProfileFact[]
+  +nextStage: PlaybookStage
+}
+
+class ProfileFact {
+  +kind: FactKind
+  +value: string
+  +weight: number
+  +label: string
+  +grade: EvidenceGrade
+}
+
+class ProfileCandidate {
+  +profileId: string
+  +protocol: string
+  +deviceType: string
+  +score: number
+  +matched: ProfileFact[]
+  +missing: ProfileFact[]
+}
+
+class VendorMatch {
+  +vendor: string
+  +matchedOn: ("name" | "uuid" | "manufacturerId")[]
+  +score: number
+  +hasDecoder: boolean
+  +hasHandshake: boolean
+  +source: SourceRef
+}
+
+class MatchKnownProfilesTool {
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<{ candidates: ProfileCandidate[] }>>
+}
+
+class VendorSignatureLookupTool {
+  +run(input: VendorQuery, ctx: ToolContext): Promise<ToolResult<{ matches: VendorMatch[] }>>
+}
+
+class "profile-matcher" as PM <<pure helper>> {
+  +scoreProfiles(facts: DeviceFacts, profiles: KnownProfile[]): ProfileCandidate[]
+}
+
+class "vendor-matcher" as VM <<pure helper>> {
+  +matchVendors(query: VendorQuery, vendors: VendorSignature[]): VendorMatch[]
+}
+
+class PlaybookHeuristics {
+  +afterMatch(candidates: ProfileCandidate[], config: AgentConfig): IdentifyDecision
+}
+
+class IdentifyDecision {
+  +kind: "decided" | "ambiguous"
+  +candidate?: ProfileCandidate
+  +nextStage?: PlaybookStage
+  +reason: string
+}
+
+class AgentConfig {
+  +identifyThreshold: number
+  +identifyMargin: number = 10
+}
+
+MatchKnownProfilesTool ..> DeviceFacts : assembles from session
+MatchKnownProfilesTool ..> PM : scores
+VendorSignatureLookupTool ..> VM : matches
+PM ..> KnownProfile : reads
+PM ..> ProfileCandidate : returns best first
+KnownProfile "1" *-- "*" ProfileFact
+ProfileFact --> FactKind
+ProfileFact --> EvidenceGrade
+ProfileCandidate o-- ProfileFact
+VM ..> VendorMatch : returns
+PlaybookHeuristics ..> ProfileCandidate : reads
+PlaybookHeuristics ..> AgentConfig : threshold and margin
+PlaybookHeuristics ..> IdentifyDecision : returns
+@enduml

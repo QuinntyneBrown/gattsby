@@ -1,0 +1,44 @@
+@startuml
+title UML sequence behaviour — Look up a vendor signature
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "VendorSignatureLookupTool" as tool
+  participant "matchVendors" as vm
+  participant "KnowledgeBase" as kb
+end box
+
+alt A name matches an Echelon name pattern
+  executor -> tool : run({ name: "<advertised name>" })
+  tool -> kb : vendors()
+  kb --> tool : VendorSignature[] with compiled name patterns
+  tool -> vm : matchVendors(query, vendors)
+  vm -> vm : Test name patterns, UUIDs and manufacturer ID; score 0-100
+  vm --> tool : Echelon, matchedOn [name], hasDecoder false, hasHandshake false, source
+  tool --> executor : ok, matches [Echelon] with the pattern as evidence (TOOL-020)
+else Nothing matches
+  executor -> tool : run({ name: "Treadmill 42" })
+  tool -> vm : matchVendors(query, vendors)
+  vm --> tool : []
+  tool --> executor : ok true, matches []
+else No field given
+  executor -> validator : validate(call_tool vendor_signature_lookup {})
+  validator --> executor : INVALID_INPUT; counted against the step budget
+end
+@enduml

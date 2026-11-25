@@ -1,0 +1,35 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Read a photo
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(menu, "InvestigationMenuDialog", "Angular component", "Photo of the model plate or console")
+  Component(executor, "ToolExecutor", "Service", "Runs capture_photo")
+  Component(tool, "CapturePhotoTool", "Tool (n/a)", "Drives capture, strip, store, read and confirm")
+  Component(channel, "PromptChannel", "Service", "Posts the photo prompt; relays the person's choices")
+  Component(dialog, "PhotoReadDialog", "Angular component", "Capture, reading, check, invalid and typed states")
+  Component(camera, "MediaDevicesCameraAdapter", "Camera adapter", "The only code that touches getUserMedia")
+  Component(strip, "stripImageMetadata", "Pure helper", "Re-encodes the image without EXIF")
+  Component(caps, "CapabilityService", "Service", "Camera and model image input availability")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "The only code that touches LanguageModel")
+  Component(tracker, "HypothesisTracker", "Service", "Takes the confirmed text as evidence")
+  ComponentDb(store, "IndexedDbInvestigationStore", "Store", "savePhoto, commitStep")
+}
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(person, menu, "Chooses the photo step")
+Rel(menu, executor, "Person's request")
+Rel(executor, tool, "run({subject})")
+Rel(tool, caps, "Camera? image input?")
+Rel(tool, camera, "open, takePhoto, close")
+Rel(tool, channel, "Updates the photo prompt")
+Rel(channel, dialog, "Renders")
+Rel(person, dialog, "Shutter, Use this, Retake, Skip")
+Rel(tool, strip, "Strips EXIF before storage")
+Rel(tool, store, "savePhoto, commitStep")
+Rel(tool, model, "promptWithImage(image, schema)")
+Rel(model, nano, "prompt with image input", "Prompt API")
+Rel(executor, tracker, "Confirmed text as evidence")
+@enduml

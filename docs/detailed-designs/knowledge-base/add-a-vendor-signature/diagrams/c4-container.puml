@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Add a vendor signature
+
+Person(contributor, "Contributor", "Adds vendor data")
+Person(person, "Person", "Beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(kb, "Knowledge base data", "Versioned JSON files", "One vendor signature per file in vendors/")
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Scan, vendor lookup, matching, safety limits, handshakes")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Vendor matches as observations")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(contributor, kb, "Adds a sourced vendor file")
+Rel(spa, kb, "Reads signatures from the validated bundle")
+Rel(spa, device, "Requests the vendor's services at scan time", "Web Bluetooth")
+Rel(spa, idb, "Commits vendor matches with their source")
+Rel(person, spa, "Reads the brand and its evidence", "Touch or keyboard")
+@enduml

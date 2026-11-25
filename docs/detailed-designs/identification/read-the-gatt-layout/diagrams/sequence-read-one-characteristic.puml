@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Read one characteristic
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "MissingToolRequests" as missing
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReadCharacteristicTool" as readTool
+  participant "candidateDecodings" as candidates
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> readTool : run({ service: 0x180F, characteristic: 0x2A19 })
+readTool -> readTool : Check the layout: characteristic has read
+alt Read succeeds
+  readTool -> ble : read(0x180F, 0x2A19)
+  ble -> device : readValue()
+  device --> ble : 5A
+  ble --> readTool : bytes 5A (logged)
+  readTool -> candidates : candidateDecodings(5A)
+  candidates --> readTool : uint8 90, sint8 90, … (no UTF-8: not printable)
+  readTool -> kb : decoderFor(0x2A19)
+  kb --> readTool : battery decoder
+  readTool --> executor : ok, { hex "5A", length 1, candidates, knownDecoding 90 % } (TOOL-011)
+else Characteristic has no read property
+  readTool --> executor : PROPERTY_MISSING; nothing sent to the device
+else Device refuses for insufficient authentication or encryption
+  readTool -> ble : read(service, characteristic)
+  ble -> device : readValue()
+  device --> ble : ATT error: insufficient authentication
+  ble --> readTool : AUTH_REQUIRED (error mapped in the BLE layer)
+  readTool --> executor : AUTH_REQUIRED
+  executor -> missing : record(capability, reason, evidence: the failed read) (FR-033)
+  executor -> executor : Mark the characteristic auth-blocked; no further attempt
+end
+executor -> store : commitStep(result and evidence)
+@enduml

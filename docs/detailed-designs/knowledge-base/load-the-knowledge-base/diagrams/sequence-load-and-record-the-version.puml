@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Load the knowledge base and record its version
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as start
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "BundledKnowledgeBase" as kb
+  participant "DecoderRegistry" as decoders
+  participant "DeviceProfileBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome (service worker cache)" as chrome
+end box
+
+person -> home : Start an investigation
+home -> start : start()
+start -> kb : load()
+alt Not loaded yet
+  kb -> chrome : import("generated/knowledge-base.json")
+  chrome --> kb : Bundle (from cache when offline)
+  kb -> kb : Index UUIDs, profiles, vendors; compile name patterns once
+  kb -> decoders : Resolve each decoderId
+  decoders --> kb : Decoders for FTMS, CPS, CSC, HRS, RSC, Battery (FR-066)
+else Already loaded
+  kb -> kb : Return the same promise
+end
+kb --> start : version { format, release "2026.11" }
+start -> store : createInvestigation(mode, knowledgeBaseVersion) (FR-069)
+store --> start : investigation id
+start --> home : Navigate to the investigation
+note over home, store : Loaded before Find, so the scan's requestDevice runs inside the person's tap
+... Conclude stage ...
+builder -> kb : version
+builder -> store : saveProfile(profile with knowledgeBaseVersion) (FR-069)
+@enduml

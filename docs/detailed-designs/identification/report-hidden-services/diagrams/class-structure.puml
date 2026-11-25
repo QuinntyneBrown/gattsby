@@ -1,0 +1,83 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Report hidden services
+
+enum HiddenServiceReason {
+  advertisedNotKnown
+  advertisedBlocklisted
+  knownButBlocklisted
+  brandWithoutKnownUuids
+}
+
+class HiddenServiceInput {
+  +layout: GattLayout
+  +advertisedUuids: string[]
+  +advertisementEvidence: string[]
+  +brand?: BrandClaim
+}
+
+class BrandClaim {
+  +name: string
+  +from: "answer" | "deviceInformation" | "namePattern" | "photo"
+  +evidence: string[]
+}
+
+class HiddenServiceFinding {
+  +reason: HiddenServiceReason
+  +uuid?: string
+  +brand?: string
+  +evidence: string[]
+}
+
+class VisibilityNotice {
+  +text: string
+  +knowledgeBaseVersion: string
+}
+
+class "hidden-service-assessor" as A <<pure helper>> {
+  +assessHiddenServices(input: HiddenServiceInput, kb: KnowledgeBase): HiddenServiceFinding[]
+}
+
+class MissingToolRequest {
+  +capability: string
+  +reason: string
+  +evidence: string[]
+  +stage: PlaybookStage
+}
+
+class MissingToolRequests {
+  +record(request: MissingToolRequest): { requestId: string, merged: boolean }
+}
+
+class DeviceProfile {
+  +advertisedUuids: string[]
+  +discoveredUuids: string[]
+  +unreachableServices: UnreachableService[]
+  +visibilityNotice: string
+}
+
+class UnreachableService {
+  +uuid: string
+  +reason: HiddenServiceReason
+}
+
+A ..> HiddenServiceInput : reads
+A ..> HiddenServiceFinding : returns
+HiddenServiceInput --> BrandClaim
+HiddenServiceFinding --> HiddenServiceReason
+MissingToolRequests "1" *-- "*" MissingToolRequest
+HiddenServiceFinding ..> MissingToolRequest : becomes
+DeviceProfile "1" *-- "*" UnreachableService
+DeviceProfile ..> VisibilityNotice : states
+@enduml

@@ -1,0 +1,39 @@
+@startuml
+title UML sequence behaviour — Add a vendor file
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Contributor" as contributor
+box "Build — knowledge-base build step (Node, build time)" #F4F3FF
+  participant "build-knowledge-base.mjs" as script
+  participant "JSON Schema validator" as ajv
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "vendors/echelon.json" as file
+  participant "knowledge-base/generated/" as generated
+end box
+
+contributor -> file : Brand, service and characteristic UUIDs, name patterns, manufacturer ID, each with a source (A-11)
+contributor -> script : npm run build
+script -> file : Discover vendors/*.json (no index edited)
+script -> ajv : Validate against vendor-signature.schema.json
+ajv --> script : Result
+script -> script : Every fact has a source; UUIDs canonical and unique; patterns compile; manufacturer ID 0x0000-0xFFFF
+alt Valid
+  script -> generated : Bundle with Echelon; its service UUIDs in the scannable list (FR-067)
+  script --> contributor : exit 0
+else A fact has no source
+  script --> contributor : exit 1: "vendors/echelon.json /namePatterns/0: no source" (FR-068)
+end
+@enduml

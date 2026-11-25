@@ -1,0 +1,121 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Read the GATT layout
+
+enum CharacteristicProperty {
+  read
+  write
+  writeWithoutResponse
+  notify
+  indicate
+}
+
+class GattLayout {
+  +services: GattService[]
+  +requestedButUnreachable: string[]
+  +enumeratedAt: number
+}
+
+class GattService {
+  +uuid: string
+  +name?: string
+  +characteristics: GattCharacteristic[]
+}
+
+class GattCharacteristic {
+  +uuid: string
+  +name?: string
+  +properties: CharacteristicProperty[]
+}
+
+class DeviceInformation {
+  +manufacturer?: string
+  +model?: string
+  +serial?: string
+  +hardware?: string
+  +firmware?: string
+  +software?: string
+  +systemId?: string
+  +pnpId?: string
+}
+
+class CharacteristicReading {
+  +hex: string
+  +length: number
+  +candidates: CandidateDecoding[]
+  +knownDecoding?: DecodedValue[]
+}
+
+class CandidateDecoding {
+  +encoding: string
+  +value: string | number
+}
+
+interface "Tool<I, O>" as Tool {
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class EnumerateGattTool {
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<GattLayout>>
+}
+
+class ReadDeviceInfoTool {
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<DeviceInformation>>
+}
+
+class ReadCharacteristicTool {
+  +run(input: ReadCharacteristicInput, ctx: ToolContext): Promise<ToolResult<CharacteristicReading>>
+}
+
+class "candidateDecodings" as Candidates <<pure helper>> {
+  +candidateDecodings(bytes: Uint8Array): CandidateDecoding[]
+}
+
+abstract class BleLayer <<contract>> {
+  +enumerate(): Promise<ToolResult<RawGattTree>>
+  +read(service: string, characteristic: string): Promise<ToolResult<Uint8Array>>
+}
+
+abstract class KnowledgeBase <<contract>> {
+  +nameOf(uuid: string): string | undefined
+  +decoderFor(characteristic: string): Decoder | undefined
+  +isBlocklisted(uuid: string): boolean
+}
+
+class InvestigationSession {
+  +gattLayout: Signal<GattLayout | null>
+  +deviceInformation: Signal<DeviceInformation | null>
+  +requestedServices: string[]
+  +authBlocked: Set<string>
+}
+
+Tool <|.. EnumerateGattTool
+Tool <|.. ReadDeviceInfoTool
+Tool <|.. ReadCharacteristicTool
+EnumerateGattTool ..> BleLayer : enumerate
+EnumerateGattTool ..> KnowledgeBase : names UUIDs
+EnumerateGattTool ..> GattLayout : builds
+ReadDeviceInfoTool ..> BleLayer : reads 0x2A29…0x2A50
+ReadDeviceInfoTool ..> DeviceInformation : builds
+ReadCharacteristicTool ..> BleLayer : read
+ReadCharacteristicTool ..> Candidates : decodes candidates
+ReadCharacteristicTool ..> KnowledgeBase : decoderFor
+ReadCharacteristicTool ..> CharacteristicReading : builds
+GattLayout "1" *-- "*" GattService
+GattService "1" *-- "*" GattCharacteristic
+GattCharacteristic --> CharacteristicProperty
+CharacteristicReading "1" *-- "*" CandidateDecoding
+InvestigationSession --> GattLayout
+InvestigationSession --> DeviceInformation
+@enduml

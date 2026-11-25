@@ -1,0 +1,105 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Read a photo
+
+enum PhotoSubject {
+  modelPlate
+  console
+}
+
+class PlateRead {
+  +maker?: string
+  +model?: string
+  +serial?: string
+  +confidence: number
+}
+
+class PlateFields {
+  +maker: string
+  +model: string
+  +serial?: string
+}
+
+class Photo {
+  +id: string
+  +investigationId: string
+  +subject: PhotoSubject
+  +mimeType: string
+  +width: number
+  +height: number
+  +createdAt: number
+  +image: Blob
+}
+
+class PlateReadObservation {
+  +photoId?: string
+  +source: "photo" | "typed"
+  +read?: PlateRead
+  +fields: PlateFields
+  +corrected: boolean
+  +confirmedByPerson: boolean
+}
+
+class PhotoReadState <<view model>> {
+  +kind: "capture" | "reading" | "check" | "typed"
+  +stream?: MediaStream
+  +thumbnailUrl?: string
+  +read?: PlateRead
+  +error?: "modelRequired"
+}
+
+class CapturePhotoTool {
+  +run(input: { subject: PhotoSubject }, ctx: ToolContext): Promise<ToolResult<CapturePhotoOutput>>
+}
+
+abstract class CameraAdapter <<contract>> {
+  +available(): boolean
+  +open(): Promise<MediaStream>
+  +takePhoto(): Promise<Blob>
+  +close(): void
+}
+
+class MediaDevicesCameraAdapter
+
+class "strip-image-metadata" as Strip <<pure helper>> {
+  +stripImageMetadata(image: Blob): Promise<StrippedImage>
+}
+
+abstract class ModelAdapter <<contract>> {
+  +supportsImageInput(): Promise<boolean>
+  +promptWithImage<T>(instruction: string, image: Blob, schema: JsonSchema, signal: AbortSignal): Promise<T>
+}
+
+class PhotoReadDialog <<component>> {
+  +state: input<PhotoReadState>
+  +captured: output<Blob>
+  +retake: output<void>
+  +confirmed: output<PlateFields>
+  +skipped: output<void>
+  +cancelled: output<void>
+}
+
+CameraAdapter <|-- MediaDevicesCameraAdapter
+CapturePhotoTool ..> CameraAdapter : opens and releases
+CapturePhotoTool ..> Strip : strips before storage
+CapturePhotoTool ..> ModelAdapter : reads text
+CapturePhotoTool ..> PhotoReadState : drives
+CapturePhotoTool ..> Photo : saves
+CapturePhotoTool ..> PlateReadObservation : commits
+PhotoReadDialog ..> PhotoReadState : renders
+PhotoReadDialog ..> PlateFields : emits
+PlateReadObservation --> PlateRead
+PlateReadObservation --> PlateFields
+Photo --> PhotoSubject
+@enduml

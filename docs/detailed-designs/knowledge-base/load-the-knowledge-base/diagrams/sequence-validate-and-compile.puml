@@ -1,0 +1,45 @@
+@startuml
+title UML sequence behaviour — Validate and compile the knowledge base at build time
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Contributor" as contributor
+box "Build — knowledge-base build step (Node, build time)" #F4F3FF
+  participant "npm run build" as npm
+  participant "build-knowledge-base.mjs" as script
+  participant "JSON Schema validator" as ajv
+  participant "Angular CLI build" as ng
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "knowledge-base/data/" as data
+  participant "knowledge-base/generated/" as generated
+end box
+
+contributor -> data : Adds or edits a data file, e.g. vendors/<vendor>.json
+contributor -> npm : Build (locally or in CI)
+npm -> script : prebuild
+script -> data : Read every file, including new ones in vendors/
+script -> ajv : Validate each file against knowledge-base/schema/ (FR-069)
+ajv --> script : Issues, with file and JSON pointer
+script -> script : Cross-file checks: unique UUIDs, canonical form, decoder IDs, sources, patterns compile
+alt No issues
+  script -> generated : Write knowledge-base.json with version and content hash
+  script --> npm : exit 0
+  npm -> ng : ng build
+  ng --> npm : Bundle with a lazy knowledge-base chunk
+else Any issue
+  script --> npm : exit 1, one line per issue
+  npm --> contributor : Build fails; CI is red; nothing is published
+end
+@enduml

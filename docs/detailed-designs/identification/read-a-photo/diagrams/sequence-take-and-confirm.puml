@@ -1,0 +1,64 @@
+@startuml
+title UML sequence behaviour — Take a photo, read it on the device and confirm
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PhotoReadDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "HypothesisTracker" as tracker
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "CapturePhotoTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "MediaDevicesCameraAdapter" as camera
+  participant "stripImageMetadata" as strip
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+executor -> tool : run({ subject: modelPlate }) (maker or model unknown, or the person chose it)
+tool -> model : supportsImageInput()
+model --> tool : true (detected, not assumed)
+tool -> camera : open() after the person's tap (NFR-016)
+camera --> tool : MediaStream (rear camera)
+tool -> dialog : state capture, viewfinder
+person -> dialog : Shutter
+dialog --> tool : captured
+tool -> camera : takePhoto(), then close(): every track stopped
+camera --> tool : image Blob
+tool -> strip : stripImageMetadata(image)
+strip --> tool : re-encoded JPEG with no EXIF, orientation applied (NFR-017)
+tool -> store : savePhoto(investigationId, photo)
+store --> tool : photoId
+tool -> dialog : state reading: "Reading the plate on this device…"
+tool -> model : promptWithImage(instruction, image, PlateRead schema, signal)
+model -> nano : prompt([text, image], responseConstraint)
+nano --> model : { maker, model, serial, confidence }
+model --> tool : PlateRead, validated against the schema
+tool -> dialog : state check: "Check what I read", fields prefilled as text
+dialog -> person : Maker "Johnson Health Tech", Model "T202-04", Serial "TM2023-118477"
+person -> dialog : Corrects a field if wrong; taps Use this (FR-022)
+dialog --> tool : confirmed(PlateFields)
+tool -> store : commitStep(PlateReadObservation, corrected flag, confirmedByPerson true)
+tool --> executor : ok, { photoId, read, confirmedByPerson: true } (TOOL-027)
+executor -> tracker : Evidence with a confidence, never fact
+@enduml

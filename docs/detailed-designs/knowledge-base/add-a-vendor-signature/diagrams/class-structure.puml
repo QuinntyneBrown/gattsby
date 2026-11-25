@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Add a vendor signature
+
+enum SourceKind {
+  vendorDocumentation
+  openSourceProject
+  ownRecording
+}
+
+class SourceRef {
+  +kind: SourceKind
+  +citation: string
+  +retrievedOn: string
+}
+
+class "SourcedFact<T>" as SourcedFact {
+  +value: T
+  +source: SourceRef
+}
+
+class VendorSignature {
+  +vendorId: string
+  +brand: SourcedFact<string>
+  +aliases: SourcedFact<string>[]
+  +serviceUuids: SourcedFact<string>[]
+  +characteristicUuids: SourcedFact<VendorCharacteristic>[]
+  +namePatterns: SourcedFact<NamePattern>[]
+  +manufacturerId?: SourcedFact<number>
+  +decoders: SourcedFact<FieldLayout>[]
+  +limits: SourcedFact<VendorLimit>[]
+  +handshakes: SourcedFact<HandshakeEntry>[]
+  +encrypted?: SourcedFact<boolean>
+}
+
+class VendorCharacteristic {
+  +uuid: string
+  +service: string
+  +role: "data" | "control" | "other"
+}
+
+class NamePattern {
+  +kind: "prefix" | "exact" | "regex"
+  +pattern: string
+}
+
+class FieldLayout {
+  +characteristic: string
+  +fields: LayoutField[]
+}
+
+class LayoutField {
+  +name: string
+  +offset: number
+  +type: "uint8" | "uint16" | "uint24" | "uint32" | "sint8" | "sint16" | "sint32"
+  +endianness: "little" | "big"
+  +scale: number
+  +unit: string
+}
+
+class VendorLimit {
+  +deviceType: string
+  +quantity: string
+  +max: number
+  +unit: string
+}
+
+class HandshakeEntry {
+  +id: string
+  +characteristic: string
+  +steps: HandshakeStep[]
+}
+
+class HandshakeStep {
+  +writeHex: string
+  +awaitNotification?: string
+}
+
+VendorSignature "1" *-- "*" SourcedFact
+SourcedFact --> SourceRef
+SourceRef --> SourceKind
+VendorSignature ..> VendorCharacteristic
+VendorSignature ..> NamePattern
+VendorSignature ..> FieldLayout
+VendorSignature ..> VendorLimit
+VendorSignature ..> HandshakeEntry
+FieldLayout "1" *-- "*" LayoutField
+HandshakeEntry "1" *-- "*" HandshakeStep
+@enduml

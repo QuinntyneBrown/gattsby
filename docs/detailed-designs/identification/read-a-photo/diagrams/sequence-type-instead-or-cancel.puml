@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Type the model instead, or cancel
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PhotoReadDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "CapturePhotoTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "MediaDevicesCameraAdapter" as camera
+  participant "PromptApiModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+
+alt Image input not available, or checklist mode
+  executor -> tool : run({ subject: modelPlate })
+  tool -> model : supportsImageInput()
+  model --> tool : false
+  tool -> dialog : state typed: "Type the model instead"
+  person -> dialog : Types maker and model; taps Use this (FR-022)
+  dialog --> tool : confirmed(PlateFields)
+  tool -> store : commitStep(PlateReadObservation source typed)
+  tool --> executor : ok, { confirmedByPerson: true }; no photo taken
+else The read leaves the model empty
+  tool -> dialog : state check with model empty
+  person -> dialog : Taps Use this
+  dialog -> dialog : "Enter the model, or tap Skip." (invalid)
+else The person skips or closes the dialog
+  person -> dialog : Skip, Close or Escape
+  dialog --> tool : skipped or cancelled
+  tool -> camera : close() if open: every track stopped
+  tool -> tool : Abort a model read in progress; revoke the thumbnail URL
+  tool --> executor : USER_CANCELLED; nothing recorded as fact
+end
+@enduml

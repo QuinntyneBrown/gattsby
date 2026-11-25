@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Load the knowledge base
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(kb, "Knowledge base data", "Versioned JSON files", "UUIDs, profiles, vendors, commands, limits, name patterns, manufacturer IDs, blocklist copy")
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "KnowledgeBase service, decoders, investigation and profile")
+  Container(sw, "Service worker", "Angular service worker", "Caches the app and the knowledge-base chunk for offline use")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations and profiles with the knowledge-base version")
+}
+
+Rel(spa, kb, "Loads the compiled, validated bundle", "Dynamic import")
+Rel(sw, kb, "Precaches the bundle")
+Rel(spa, idb, "Records the version on each investigation and profile")
+Rel(person, spa, "Starts an investigation; reads the version", "Touch or keyboard")
+@enduml

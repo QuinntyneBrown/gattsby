@@ -1,0 +1,38 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Read the GATT layout
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs a validated read call")
+  Component(enumTool, "EnumerateGattTool", "Tool (read)", "Lists reachable services and characteristics with properties")
+  Component(disTool, "ReadDeviceInfoTool", "Tool (read)", "Reads the Device Information strings")
+  Component(readTool, "ReadCharacteristicTool", "Tool (read)", "Reads one value; hex and candidate decodings")
+  Component(candidates, "candidateDecodings", "Pure helper", "UTF-8 and integer readings of the bytes")
+  Component(kb, "KnowledgeBase", "Service", "Names UUIDs, lists blocklisted UUIDs, returns decoders")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only code that touches navigator.bluetooth")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs every read with a timestamp")
+  Component(tracker, "HypothesisTracker", "Service", "Takes maker and model as evidence")
+  Component(feed, "ActivityFeedList", "Angular component", "Shows the service list and the reads")
+  Component(panel, "DeviceFactsPanel", "Angular component", "Maker, model, firmware and services")
+  ComponentDb(store, "InvestigationStore", "Store contract", "Commits the step and its observations")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, enumTool, "run({})")
+Rel(executor, disTool, "run({})")
+Rel(executor, readTool, "run({service, characteristic})")
+Rel(enumTool, ble, "enumerate()")
+Rel(disTool, ble, "read(0x180A, …)")
+Rel(readTool, ble, "read(service, characteristic)")
+Rel(readTool, candidates, "Decodes candidates")
+Rel(enumTool, kb, "nameOf(uuid)")
+Rel(readTool, kb, "decoderFor(uuid)")
+Rel(ble, device, "getPrimaryServices, readValue", "Web Bluetooth")
+Rel(ble, log, "Appends read entries")
+Rel(executor, store, "commitStep(observations)")
+Rel(executor, tracker, "Maker and model observations")
+Rel(feed, person, "Shows")
+Rel(panel, person, "Shows")
+@enduml

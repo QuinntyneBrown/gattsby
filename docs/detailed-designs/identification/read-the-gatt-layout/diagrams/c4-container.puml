@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Read the GATT layout
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Inspection tools, BLE layer, activity feed and device panel")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Service and characteristic names, standard decoders")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "GATT layout, Device Information observations and raw reads")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Reads the layout, maker and model", "Touch or keyboard")
+Rel(spa, kb, "Names UUIDs and picks a decoder")
+Rel(spa, device, "Enumerates services and reads characteristics", "Web Bluetooth")
+Rel(spa, idb, "Commits the layout, observations and raw reads")
+@enduml

@@ -1,0 +1,70 @@
+@startuml
+title UML sequence behaviour — Enumerate the GATT layout and read Device Information
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList and DeviceFactsPanel" as ui
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "HypothesisTracker" as tracker
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "EnumerateGattTool" as enumTool
+  participant "ReadDeviceInfoTool" as disTool
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> enumTool : run({}) at stage identify
+enumTool -> ble : enumerate()
+ble -> device : getPrimaryServices(), then getCharacteristics() per service
+device --> ble : 0x1826, 0x180A, 0x180D, 0xFFF0 and their characteristics
+ble --> enumTool : raw tree with properties
+enumTool -> kb : nameOf(uuid) for each service and characteristic
+kb --> enumTool : "Fitness Machine", "Treadmill Data", … (unknown ones stay unnamed)
+enumTool -> enumTool : requestedButUnreachable = blocklisted or advertised UUIDs left out of optionalServices (FR-023)
+enumTool --> executor : ok, GattLayout, "4 services, 3 of them standard" (TOOL-009)
+executor -> store : commitStep(GattLayout observation) (FR-019)
+executor -> ui : Service list with badges
+ui --> person : "Connected. 4 services, 3 of them standard."
+executor -> disTool : run({})
+alt 0x180A is reachable
+  loop each Device Information characteristic the device has
+    disTool -> ble : read(0x180A, 0x2A29 / 0x2A24 / 0x2A25 / 0x2A27 / 0x2A26 / 0x2A28 / 0x2A23 / 0x2A50)
+    ble -> device : readValue()
+    device --> ble : bytes
+    ble -> log : Append read entry with hex and timestamp (FR-073)
+    ble --> disTool : bytes, or BLOCKLISTED for the serial number
+  end
+  disTool -> disTool : Decode strings as UTF-8 text; IDs as hex
+  disTool --> executor : ok, { manufacturer, model, firmware, … }; serial BLOCKLISTED in summary (TOOL-010)
+  executor -> store : commitStep(one observation per field) (FR-020)
+  executor -> tracker : Maker and model observations as evidence
+  tracker --> executor : Hypothesis version with maker and model
+  executor -> ui : Maker, model and firmware in the device panel
+else No Device Information Service
+  disTool --> executor : PRECONDITION_FAILED (no 0x180A)
+  executor -> store : commitStep("Device Information absent" observation) (FR-020)
+end
+@enduml

@@ -1,0 +1,39 @@
+@startuml
+title UML sequence behaviour — List unreachable services in the profile
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage and DeviceProfilePage" as pages
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "VerdictService" as verdict
+  participant "DeviceProfileBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+verdict -> builder : build(investigation, verdict) for any verdict
+builder -> store : Read the layout's requestedButUnreachable and the findings
+store --> builder : Blocklisted known UUIDs, advertised UUIDs not reachable
+builder -> builder : unreachableServices = union, each with its reason (FR-023)
+builder -> builder : visibilityNotice: anything outside the known list is invisible
+builder -> store : saveProfile(profile) (FR-055)
+pages -> store : Load verdict and profile
+store --> pages : Profile
+pages --> person : Verdict "Couldn't determine: Services Chrome hides"
+pages --> person : Profile Identity "Not reachable: <UUIDs>", or "none known"
+@enduml

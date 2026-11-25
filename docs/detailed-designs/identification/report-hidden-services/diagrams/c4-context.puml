@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Report hidden services
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth: optionalServices rule and GATT blocklist")
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Reads what the browser could not see, in the investigation and the profile")
+Rel(gattsby, chrome, "Requests the known services; is refused the rest", "Web Bluetooth")
+Rel(chrome, device, "Advertisements and GATT over Bluetooth LE")
+@enduml

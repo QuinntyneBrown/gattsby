@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Report hidden services
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Hidden-service assessment, missing-tool requests, verdict and profile pages")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Known UUIDs, vendor signatures, copy of Chrome's GATT blocklist")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Visibility notice, findings, missing-tool requests, profile")
+}
+
+Rel(person, spa, "Reads the notice, the requests and the profile", "Touch or keyboard")
+Rel(spa, kb, "Checks UUIDs against the known list and the blocklist")
+Rel(spa, idb, "Commits findings and requests; saves the profile")
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Match known profiles
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Observe, decide, act; one step at a time")
+  Component(heur, "PlaybookHeuristics", "Service", "Identify rule: decide from candidates or defer")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated call")
+  Component(matchTool, "MatchKnownProfilesTool", "Tool (read)", "match_known_profiles")
+  Component(vendorTool, "VendorSignatureLookupTool", "Tool (read)", "vendor_signature_lookup")
+  Component(scorer, "scoreProfiles", "Pure helper", "Deterministic weighted score 0-100")
+  Component(vmatch, "matchVendors", "Pure helper", "Name patterns, UUIDs, manufacturer ID")
+  Component(kb, "KnowledgeBase", "Service", "Known profiles and vendor signatures")
+  Component(session, "InvestigationSession", "Service", "Layout, name, Device Information, manufacturer data")
+  Component(tracker, "HypothesisTracker", "Service", "Deterministic hypothesis scoring")
+  Component(builder, "DecisionStateBuilder", "Service", "Compact state for the model")
+  Component(checklist, "ChecklistRunner", "Service", "Asks the person instead of the model")
+  Component(model, "ModelAdapter", "Contract", "The only path to LanguageModel")
+}
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(orch, executor, "Runs match_known_profiles")
+Rel(executor, matchTool, "run({})")
+Rel(executor, vendorTool, "run({name, uuids, manufacturerId})")
+Rel(matchTool, session, "Reads device facts")
+Rel(matchTool, scorer, "scoreProfiles(facts, profiles)")
+Rel(vendorTool, vmatch, "matchVendors(query, vendors)")
+Rel(scorer, kb, "Profiles")
+Rel(vmatch, kb, "Vendor signatures")
+Rel(orch, heur, "Candidates")
+Rel(heur, tracker, "Proposes hypothesis")
+Rel(orch, builder, "Only when ambiguous")
+Rel(builder, model, "prompt(state)")
+Rel(model, nano, "prompt with responseConstraint", "Prompt API")
+Rel(orch, checklist, "Ambiguous, checklist mode")
+@enduml

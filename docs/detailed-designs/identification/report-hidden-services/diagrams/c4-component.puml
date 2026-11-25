@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Report hidden services
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "AgentOrchestrator", "Service", "Runs the Identify stage")
+  Component(heur, "PlaybookHeuristics", "Service", "Runs the hidden-service check after enumeration")
+  Component(assessor, "assessHiddenServices", "Pure helper", "Findings from layout, advertisement, brand and knowledge base")
+  Component(kb, "KnowledgeBase", "Service", "isKnown, isBlocklisted, vendor for brand")
+  Component(session, "InvestigationSession", "Service", "Layout, advertised UUIDs, brand answer, vendor match")
+  Component(missing, "MissingToolRequests", "Service", "Records and merges requests")
+  Component(builder, "DeviceProfileBuilder", "Service", "Writes unreachableServices and the notice")
+  Component(feed, "ActivityFeedList", "Angular component", "Shows the guess row")
+  Component(pages, "VerdictPage and DeviceProfilePage", "Angular pages", "Couldn't determine and Not reachable rows")
+  ComponentDb(store, "InvestigationStore", "Store contract", "commitStep, saveProfile")
+}
+
+Rel(orch, heur, "After enumerate_gatt")
+Rel(heur, assessor, "assessHiddenServices(input)")
+Rel(assessor, kb, "Known and blocklisted UUIDs, brands")
+Rel(heur, session, "Reads facts")
+Rel(heur, missing, "record(request) per finding")
+Rel(orch, store, "commitStep(notice and findings)")
+Rel(orch, feed, "Some services may be invisible")
+Rel(builder, store, "saveProfile")
+Rel(pages, person, "Shows")
+@enduml

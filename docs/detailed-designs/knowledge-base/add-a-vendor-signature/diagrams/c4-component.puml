@@ -1,0 +1,24 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Add a vendor signature
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(file, "vendors/<vendor>.json", "Data file", "Brand, UUIDs, name patterns, manufacturer ID, decoders, limits, handshakes, sources")
+  Component(kb, "BundledKnowledgeBase", "KnowledgeBase contract", "vendors(), knownServiceUuids(), profiles()")
+  Component(scan, "ScanDevicesTool", "Tool (read)", "Puts vendor UUIDs in optionalServices")
+  Component(lookup, "VendorSignatureLookupTool", "Tool (read)", "Names the brand from name, UUIDs or manufacturer ID")
+  Component(match, "MatchKnownProfilesTool", "Tool (read)", "Scores a profile derived from the signature")
+  Component(layout, "LayoutDecoder", "Pure helper", "Decodes a vendor's declarative field layout (P2)")
+  Component(limits, "SafetyLimits", "Service", "Merges vendor limits; may only narrow")
+  Component(handshake, "ReplayKnownHandshakeTool", "Tool (write)", "Replays a sourced handshake after approval (P2)")
+}
+
+Rel(kb, file, "Compiled into the bundle at build time")
+Rel(scan, kb, "knownServiceUuids()")
+Rel(lookup, kb, "vendors()")
+Rel(match, kb, "profiles()")
+Rel(layout, kb, "Field layouts")
+Rel(limits, kb, "Vendor limits")
+Rel(handshake, kb, "Handshake entries")
+@enduml

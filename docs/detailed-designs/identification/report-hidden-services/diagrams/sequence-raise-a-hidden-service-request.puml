@@ -1,0 +1,53 @@
+@startuml
+title UML sequence behaviour — Raise a hidden-service request
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "assessHiddenServices" as assessor
+  participant "KnowledgeBase" as kb
+  participant "MissingToolRequests" as missing
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "InvestigationStore" as store
+end box
+
+orch -> store : commitStep(visibility notice: services outside the known list and blocklisted services are invisible) (FR-023)
+orch -> heur : After enumerate_gatt: layout, advertised UUIDs, brand claim
+heur -> assessor : assessHiddenServices(input, kb)
+assessor -> kb : isKnown(uuid), isBlocklisted(uuid), vendorFor(brand)
+kb --> assessor : answers
+alt An advertised 128-bit UUID is not in the knowledge base
+  assessor --> heur : advertisedNotKnown, uuid, evidence: the advertisement entry
+  heur -> missing : record("Known-UUID entry for <uuid>", reason, evidence, stage identify)
+else A brand has no known UUIDs
+  assessor --> heur : brandWithoutKnownUuids, "Horizon", evidence: the person's answer
+  heur -> missing : record("Known-UUID entry for brand Horizon", reason, evidence, stage identify)
+else Nothing suggests hidden services
+  assessor --> heur : []
+end
+missing --> heur : requestId, merged true when the same request exists (FR-058)
+heur --> orch : Findings and requests
+orch -> store : commitStep(findings, requests)
+orch -> feed : guess row "Some services may be invisible to the browser"
+feed --> person : Shown with its evidence link
+@enduml

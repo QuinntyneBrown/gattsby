@@ -1,0 +1,24 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Load the knowledge base
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(home, "HomePage and SettingsPage", "Angular pages", "Start an investigation; show the version")
+  Component(start, "AgentOrchestrator", "Service", "Starts an investigation once the knowledge base is ready")
+  Component(kb, "BundledKnowledgeBase", "KnowledgeBase contract", "Loads and indexes the bundle; answers lookups")
+  Component(decoders, "DecoderRegistry", "Pure helpers", "ftms, cps, csc, hrs, rsc, battery decoders by ID")
+  Component(bundle, "knowledge-base.json", "Generated JSON chunk", "Validated data and its version")
+  Component(builder, "DeviceProfileBuilder", "Service", "Copies the version into the profile")
+  ComponentDb(store, "InvestigationStore", "Store contract", "createInvestigation, saveProfile")
+}
+
+Rel(home, start, "Start")
+Rel(start, kb, "load()")
+Rel(kb, bundle, "import()")
+Rel(kb, decoders, "Resolves decoder IDs")
+Rel(start, store, "createInvestigation(knowledgeBaseVersion)")
+Rel(builder, kb, "version")
+Rel(builder, store, "saveProfile")
+Rel(home, kb, "version and protocol count")
+@enduml

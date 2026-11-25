@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Load the knowledge base
+
+class KnowledgeBaseVersion {
+  +format: string
+  +release: string
+  +contentHash: string
+}
+
+class KnowledgeBaseBundle <<generated JSON>> {
+  +version: KnowledgeBaseVersion
+  +uuids: UuidEntry[]
+  +profiles: KnownProfile[]
+  +vendors: VendorSignature[]
+  +commands: CommandEntry[]
+  +limits: LimitEntry[]
+  +namePatterns: NamePatternEntry[]
+  +manufacturerIds: ManufacturerIdEntry[]
+  +blocklist: BlocklistEntry[]
+}
+
+class UuidEntry {
+  +uuid: string
+  +name: string
+  +kind: "service" | "characteristic"
+  +protocol: string
+  +standard: boolean
+  +decoderId?: string
+  +source: SourceRef
+}
+
+class BlocklistEntry {
+  +uuid: string
+  +exclusion: "all" | "reads" | "writes"
+}
+
+abstract class KnowledgeBase <<contract>> {
+  +load(): Promise<KnowledgeBaseVersion>
+  +version: Signal<KnowledgeBaseVersion | null>
+  +knownServiceUuids(): string[]
+  +isKnown(uuid: string): boolean
+  +isBlocklisted(uuid: string): boolean
+  +nameOf(uuid: string): string | undefined
+  +decoderFor(characteristic: string): Decoder | undefined
+  +profiles(): KnownProfile[]
+  +vendors(): VendorSignature[]
+  +standardProtocolCount(): number
+}
+
+class BundledKnowledgeBase {
+  -byUuid: Map<string, UuidEntry>
+  -loading: Promise<KnowledgeBaseVersion> | null
+  +load(): Promise<KnowledgeBaseVersion>
+}
+
+class DecoderRegistry {
+  +get(decoderId: string): Decoder | undefined
+}
+
+interface Decoder {
+  +decode(bytes: Uint8Array): DecodedValue[]
+}
+
+class "build-knowledge-base.mjs" as Build <<build script>> {
+  +validate(dataDir): ValidationIssue[]
+  +compile(dataDir): KnowledgeBaseBundle
+}
+
+class Investigation {
+  +id: string
+  +knowledgeBaseVersion: KnowledgeBaseVersion
+}
+
+class DeviceProfile {
+  +knowledgeBaseVersion: KnowledgeBaseVersion
+}
+
+KnowledgeBase <|-- BundledKnowledgeBase
+BundledKnowledgeBase ..> KnowledgeBaseBundle : imports
+BundledKnowledgeBase --> DecoderRegistry : resolves decoderId
+DecoderRegistry ..> Decoder
+KnowledgeBaseBundle *-- KnowledgeBaseVersion
+KnowledgeBaseBundle "1" *-- "*" UuidEntry
+KnowledgeBaseBundle "1" *-- "*" BlocklistEntry
+Build ..> KnowledgeBaseBundle : writes after validation
+Investigation --> KnowledgeBaseVersion
+DeviceProfile --> KnowledgeBaseVersion
+@enduml

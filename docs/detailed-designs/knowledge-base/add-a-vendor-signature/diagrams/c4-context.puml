@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Add a vendor signature
+
+Person(contributor, "Contributor", "Developer who researches a brand and adds its signature, with sources")
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(ci, "CI build", "GitHub Actions: lint and build")
+System_Ext(chrome, "Chrome", "Web Bluetooth device chooser; exposes only requested services")
+System_Ext(device, "Device", "The brand's machine (Bluetooth LE)")
+
+Rel(contributor, gattsby, "Adds vendors/<vendor>.json, each fact with a source")
+Rel(ci, gattsby, "Refuses a signature with an unsourced fact")
+Rel(person, gattsby, "Sees the brand named, with the matching fact as evidence")
+Rel(gattsby, chrome, "Passes the vendor's service UUIDs as optionalServices", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE")
+@enduml

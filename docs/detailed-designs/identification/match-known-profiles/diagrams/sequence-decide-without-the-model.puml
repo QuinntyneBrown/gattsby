@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Match an FTMS treadmill and decide without the model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+  participant "HypothesisTracker" as tracker
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "MatchKnownProfilesTool" as tool
+  participant "scoreProfiles" as scorer
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelAdapter" as model
+  database "InvestigationStore" as store
+end box
+
+orch -> tool : run({}) after enumerate_gatt and read_device_info
+tool -> tool : Assemble DeviceFacts: 0x1826, 0x2ACD, 0x2AD9, name, maker
+tool -> kb : profiles() (standard profiles and vendor signatures)
+kb --> tool : KnownProfile[]
+tool -> scorer : scoreProfiles(facts, profiles)
+scorer -> scorer : Weighted share of matched facts, 0-100; ties by profileId
+scorer --> tool : FTMS treadmill 90 or more, then others, best first (TOOL-012)
+tool --> orch : ok, candidates, evidence
+orch -> store : commitStep(candidates observation)
+orch -> heur : afterMatch(candidates)
+heur -> heur : Top above threshold and more than 10 points ahead (FR-021)
+heur --> orch : decided: FTMS treadmill; next stage standard ("FTMS present, decode FTMS first")
+orch -> tracker : propose(FTMS treadmill, evidence: match)
+tracker --> orch : Version with deterministic confidence (FR-053)
+orch -> feed : "Matches … FTMS treadmill"; confirmed, likely and guess facts
+feed --> person : Match and hypothesis shown
+note over orch, model : No model call for this decision (FR-021)
+orch -> orch : Move to the Standard path
+@enduml

@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Load the knowledge base
+
+Person(contributor, "Contributor", "Developer who adds or corrects knowledge-base data files")
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(ci, "CI build", "GitHub Actions: lint and build")
+System_Ext(host, "Static host", "Serves the built files over HTTPS")
+
+Rel(contributor, gattsby, "Adds JSON data files; no code change")
+Rel(ci, gattsby, "Validates the knowledge base against its schema, then builds")
+Rel(host, person, "Delivers the app and its knowledge-base chunk", "HTTPS")
+Rel(person, gattsby, "Sees the knowledge-base version in Settings and in each record")
+@enduml

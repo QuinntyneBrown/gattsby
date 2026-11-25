@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Read a photo
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Photo dialog, capture tool, camera and model adapters, metadata stripping")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Photos without EXIF, read text as observations")
+}
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(person, spa, "Takes the photo; taps Use this, Retake or Skip", "Touch or keyboard")
+Rel(spa, nano, "Stripped image and a JSON schema for the read", "Prompt API")
+Rel(spa, idb, "Stores the photo and the confirmed text")
+@enduml

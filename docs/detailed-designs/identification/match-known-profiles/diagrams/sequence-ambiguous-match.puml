@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Ambiguous match: the model or the checklist chooses
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "PlaybookHeuristics" as heur
+  participant "DecisionStateBuilder" as builder
+  participant "ActionValidator" as validator
+  participant "ChecklistRunner" as checklist
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "MatchKnownProfilesTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelAdapter" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+orch -> tool : run({}) for a device with only unknown services
+tool --> orch : ok, candidates [] or top two within 10 points
+orch -> heur : afterMatch(candidates)
+heur --> orch : ambiguous: no candidate above threshold (FR-021)
+alt Full agent mode
+  orch -> builder : build(state with candidates as one-line summaries)
+  builder --> orch : DecisionState (FR-041)
+  orch -> model : prompt(state, responseConstraint: AgentAction schema)
+  model -> nano : prompt()
+  nano --> model : one JSON action
+  model --> orch : action, e.g. call_tool subscribe_and_record
+  orch -> validator : validate(action) (FR-043)
+  validator --> orch : valid; runs as the next step
+else Checklist mode
+  orch -> checklist : nextStep(identify, ambiguous)
+  checklist -> card : Question with the playbook's options
+  card -> person : "No standard protocol found. Record the data next?"
+  person -> card : Taps an answer
+  card --> checklist : PromptResponse
+  checklist --> orch : Next step chosen by the person (FR-049)
+end
+@enduml

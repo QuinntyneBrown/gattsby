@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Use a vendor signature during an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeedList" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ScanDevicesTool" as scan
+  participant "VendorSignatureLookupTool" as lookup
+  participant "BundledKnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+
+person -> executor : Tap "Find the device"
+executor -> scan : run({ machineType, brand }) inside the tap
+scan -> kb : knownServiceUuids()
+kb --> scan : Standard UUIDs and Echelon's service UUIDs, blocklisted ones left out
+scan -> ble : requestDevice(filters, optionalServices)
+ble -> chrome : requestDevice()
+chrome --> ble : Chosen device; Echelon's services now visible
+ble --> scan : deviceId, name
+scan --> executor : ok
+executor -> lookup : run({ name })
+lookup -> kb : vendors()
+kb --> lookup : Signatures with compiled name patterns
+lookup -> lookup : Name matches an Echelon pattern
+lookup --> executor : Echelon, matchedOn [name], source, hasDecoder false (FR-068)
+executor -> store : commitStep(vendor match with the pattern and its source as evidence)
+executor -> feed : Brand named, with the matching pattern as evidence
+feed --> person : Shown
+@enduml
