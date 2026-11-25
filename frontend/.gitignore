@@ -50,3 +50,4 @@ Thumbs.db
 
 # Knowledge base build output (scripts/validate-knowledge-base.ts)
 /src/knowledge-base/generated
+/src/schemas/generated

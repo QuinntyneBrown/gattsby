@@ -1,4 +1,5 @@
 import type { Investigation, NewInvestigation } from './model/investigation';
+import type { InvestigationNote } from './model/investigation-note';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { StepCommit } from './model/step-commit';
@@ -18,8 +19,17 @@ export abstract class InvestigationStore {
   /** Drops what an interrupted step left and marks the investigation paused (NFR-007). */
   abstract recover(id: string): Promise<Investigation>;
   abstract get(id: string): Promise<InvestigationRecord>;
+  abstract getInvestigation(id: string): Promise<Investigation>;
+  abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
   abstract list(): Promise<Investigation[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
+  abstract rawLogPages(id: string): AsyncIterable<RawLogEntry[]>;
+  abstract rawLogSizeEstimate(id: string): Promise<number>;
+  abstract recordings(id: string): Promise<import('./model/recording').Recording[]>;
+  abstract photos(id: string): Promise<import('./model/investigation-photo').InvestigationPhoto[]>;
+  abstract photoCount(id: string): Promise<number>;
+  abstract rawEvidence(id: string, ids: readonly string[]): Promise<RawLogEntry[]>;
+  abstract getProfile(id: string): Promise<import('./model/device-profile').DeviceProfile>;
   /** Returns the packets linked to one recording, or null if the recording does not exist. */
   abstract recordedPackets(
     investigationId: string,

@@ -221,3 +221,27 @@ None; this is the first entry.
 - A single pace change can supply separate evidence for distance, elapsed time, bike cadence and
   bike power. Each confirmed field links to its own before and after packets. Other claimed
   readings retain their decoding rules and the status supported by the investigation.
+
+## Journey 4, slice 1 — Save the profile with the verdict
+
+- The finished treadmill test first found an empty profiles store. The verdict transaction now
+  saves the profile and the investigation’s link together.
+- Resolve packet evidence by IndexedDB key. This applies journey 3’s bounded-memory lesson
+  when an investigation outlasts the live packet window.
+- Compile schema validators before bundling so the production Content Security Policy can
+  remain in force while profiles are checked.
+
+## Journey 4, slices 2–6 — Open, export and label the result
+
+- The Device profile route and both export triggers were absent in the first acceptance runs.
+  The same Export dialog now handles both entry points and waits for a person's choice.
+- Building the record exposed a missing evidence field in the schema. Validate the serialized
+  JSON in the browser and check the downloaded file independently in Playwright.
+- Export uses the bounded batches established in journey 3. It checks each page of up to 2,000
+  raw packets and stores serialized pages as Blob parts.
+- Location goes through the same IndexedDB transaction boundary as the verdict link. This
+  preserves the person's edit if the investigation concludes while the Add note dialog is open.
+- Simulating a quota refusal showed that the finish step must stay available after the
+  investigation route closes. The Verdict page can export that commit from memory or retry it.
+- The phone comparison exposed a crowded action bar and checkbox. Moving the profile link to
+  the app bar and reusing the design system's choice control resolved both.

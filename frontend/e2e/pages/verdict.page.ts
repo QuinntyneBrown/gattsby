@@ -27,4 +27,24 @@ export class VerdictPage {
       .locator('li')
       .filter({ has: this.page.locator('.group__k', { hasText: key }) });
   }
+
+  get deviceProfile(): Locator {
+    return this.page.getByRole('link', { name: 'Open device profile' });
+  }
+
+  get exportProfile(): Locator {
+    return this.page.getByRole('button', { name: 'Export profile' });
+  }
+
+  get exportRecord(): Locator {
+    return this.page.getByRole('button', { name: 'Export full record' });
+  }
+
+  get saveError(): Locator {
+    return this.page.getByRole('alert');
+  }
+
+  get retrySave(): Locator {
+    return this.page.getByRole('button', { name: 'Try saving again' });
+  }
 }

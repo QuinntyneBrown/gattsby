@@ -1,0 +1,133 @@
+<dialog
+  #dialog
+  class="dialog"
+  aria-labelledby="export-title"
+  aria-describedby="export-description"
+  (cancel)="close($event)"
+>
+  <div class="dialog__panel">
+    <div class="dialog__grabber" aria-hidden="true"></div>
+    <div class="dialog__header">
+      <div>
+        <h2 class="dialog__title" id="export-title">Export</h2>
+        <p class="dialog__lead" id="export-description">
+          Saved as a file on this device. Nothing is sent anywhere.
+        </p>
+      </div>
+      <button
+        class="btn btn--ghost btn--icon"
+        type="button"
+        aria-label="Close"
+        [disabled]="busy()"
+        (click)="close()"
+      >
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="dialog__body stack">
+      @if (saved(); as name) {
+        <div class="alert alert--success" role="status">
+          <div class="alert__body">
+            <p class="alert__title">
+              Saved <bdi>{{ name }}</bdi>.
+            </p>
+            <p>Check your downloads. Nothing was sent anywhere.</p>
+          </div>
+        </div>
+      } @else if (busy()) {
+        <p role="status">
+          Preparing <bdi>{{ preparing() ?? 'the export' }}</bdi>…
+        </p>
+      } @else if (profile.isLoading()) {
+        <p role="status">Loading the device profile…</p>
+      } @else if (profile.error()) {
+        <p role="alert">This profile couldn’t be opened. Close this dialog and try again.</p>
+      } @else {
+        @if (failed()) {
+          <p role="alert">The export couldn’t be completed. Try again.</p>
+        }
+        @if (copied()) {
+          <p role="status">Summary copied. Paste it into a chat or an issue.</p>
+        }
+        <ul class="sheet-menu">
+          @if (!pendingVerdict()) {
+            <li>
+              <button class="sheet-menu__item" type="button" (click)="run('profile')">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M10 12l-2 3 2 3m4-6 2 3-2 3"
+                  />
+                </svg>
+                <span class="sheet-menu__text"
+                  ><span class="sheet-menu__title">Device profile</span
+                  ><span class="sheet-menu__detail"
+                    >Identity, protocol, metrics, controls</span
+                  ></span
+                >
+                @if (sizes.hasValue()) {
+                  <span class="sheet-menu__size">{{ sizeLabel(sizes.value().profile) }}</span>
+                }
+              </button>
+            </li>
+          }
+          <li>
+            <button
+              class="sheet-menu__item"
+              type="button"
+              [disabled]="!sizes.hasValue() || sizes.value().record === null"
+              (click)="run('record')"
+            >
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4M19 17V5a2 2 0 0 0-2-2H4M15 8h-5M15 12h-5"
+                />
+              </svg>
+              <span class="sheet-menu__text">
+                <span class="sheet-menu__title">Full investigation record</span>
+                <span class="sheet-menu__detail">Every step, packet and answer</span>
+              </span>
+              @if (sizes.hasValue() && sizes.value().record !== null) {
+                <span class="sheet-menu__size">{{ sizeLabel(sizes.value()!.record!) }}</span>
+              }
+            </button>
+          </li>
+          <li>
+            <button class="sheet-menu__item" type="button" (click)="run('summary')">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 5H5v16h14V5h-4M9 3h6v5H9zM8 12h8m-8 4h8" />
+              </svg>
+              <span class="sheet-menu__text"
+                ><span class="sheet-menu__title">Copy summary</span
+                ><span class="sheet-menu__detail">Plain text for a chat or an issue</span></span
+              >
+            </button>
+          </li>
+        </ul>
+        @if (sizes.hasValue() && (sizes.value().record ?? 0) > 20000000) {
+          <p class="fine-print">
+            You can save this record. It may be too large to import into Gattsby.
+          </p>
+        }
+        <div class="sheet-menu__divider" role="presentation"></div>
+        <label class="choice">
+          <input
+            #include
+            type="checkbox"
+            [checked]="includeNotesAndPhotos()"
+            (change)="includeNotesAndPhotos.set(include.checked)"
+          />
+          <span class="choice__text"
+            >Include notes and photos<small>Left out unless you tick this.</small></span
+          >
+        </label>
+      }
+    </div>
+    @if (saved()) {
+      <div class="dialog__footer">
+        <button class="btn btn--primary btn--lg" type="button" (click)="close()">Done</button>
+      </div>
+    }
+  </div>
+</dialog>

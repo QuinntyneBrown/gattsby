@@ -3,6 +3,9 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // The Investigation page at `/investigations/:id` (docs/mocks/pages/investigation/*.html): the app
 // bar, the stage track, the activity feed, the prompt dock and the side panel.
 export class InvestigationPage {
+  get options() {
+    return this.page.getByRole('button', { name: 'Investigation options' });
+  }
   readonly title: Locator;
   readonly subtitle: Locator;
   readonly stageTrack: Locator;

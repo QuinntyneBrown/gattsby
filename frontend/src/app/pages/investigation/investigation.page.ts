@@ -1,22 +1,30 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   OnDestroy,
   OnInit,
+  signal,
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { PromptChannel } from '../../agent/prompt-channel';
+import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
+import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
 import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
+import { InvestigationStore } from '../../store/investigation-store';
+import type { InvestigationNote } from '../../store/model/investigation-note';
+import { StoreError } from '../../store/store-error';
 import { confidenceWord } from '../../outcome/confidence-scorer';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { ActivityFeedComponent } from '../../ui/activity-feed/activity-feed.component';
@@ -41,6 +49,8 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     PromptCardComponent,
     StageTrackComponent,
     StillThereDialog,
+    AddNoteDialog,
+    InvestigationMenuDialog,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -77,6 +87,19 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           @if (connected()) {
             <g-emergency-stop-button (pressed)="orchestrator.stop('emergencyStop')" />
           }
+          <button
+            class="btn btn--ghost btn--icon"
+            type="button"
+            aria-label="Investigation options"
+            [disabled]="!orchestrator.investigation()"
+            (click)="optionsOpen.set(true)"
+          >
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="5" cy="12" r="1" />
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="19" cy="12" r="1" />
+            </svg>
+          </button>
         </div>
       </header>
       <g-stage-track [stages]="orchestrator.stageStates()" />
@@ -252,6 +275,38 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </section>
         </aside>
       </main>
+      @if (optionsOpen()) {
+        <g-investigation-menu-dialog
+          [connected]="connected()"
+          (closed)="optionsOpen.set(false)"
+          (noteRequested)="openNote()"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      }
+      @if (noteOpen()) {
+        <g-add-note-dialog
+          [connected]="connected()"
+          [initial]="savedNote()"
+          [busy]="savingNote()"
+          [error]="noteError()"
+          (closed)="noteOpen.set(false)"
+          (saveRequested)="saveNote($event)"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      }
+      @if (noteSaved()) {
+        <div class="toast" role="status">
+          <div class="toast__text">Saved to this investigation.</div>
+          <button
+            class="btn btn--ghost btn--icon"
+            type="button"
+            aria-label="Dismiss notification"
+            (click)="noteSaved.set(false)"
+          >
+            ×
+          </button>
+        </div>
+      }
       @if (prompts.idle()) {
         <g-still-there-dialog
           [instruction]="prompts.current()?.title ?? ''"
@@ -275,7 +330,16 @@ export class InvestigationPage implements OnInit, OnDestroy {
     return rate === null ? null : Math.round(rate * 10) / 10;
   });
   private readonly router = inject(Router);
+  private readonly store = inject(InvestigationStore);
+  private readonly injector = inject(Injector);
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
+  private readonly noteDialog = viewChild(AddNoteDialog);
+  protected readonly optionsOpen = signal(false);
+  protected readonly noteOpen = signal(false);
+  protected readonly savingNote = signal(false);
+  protected readonly noteSaved = signal(false);
+  protected readonly savedNote = signal<InvestigationNote>({ location: '', note: '' });
+  protected readonly noteError = signal<{ title: string; message: string } | null>(null);
 
   protected readonly loading = computed(() => this.orchestrator.status() === 'loading');
   protected readonly connected = computed(
@@ -320,6 +384,10 @@ export class InvestigationPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.orchestrator.open(this.id()).then(() => {
       const investigation = this.orchestrator.investigation();
+      this.savedNote.set({
+        location: investigation?.location ?? '',
+        note: investigation?.note ?? '',
+      });
       if (
         this.orchestrator.status() === 'concluded' &&
         investigation?.verdict &&
@@ -338,6 +406,35 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   protected respond(response: PromptCardResponse): void {
     this.prompts.respond(response);
+  }
+
+  protected openNote(): void {
+    this.noteError.set(null);
+    this.noteSaved.set(false);
+    this.optionsOpen.set(false);
+    this.noteOpen.set(true);
+  }
+
+  protected async saveNote(note: InvestigationNote): Promise<void> {
+    this.savingNote.set(true);
+    this.noteError.set(null);
+    try {
+      this.savedNote.set(await this.store.saveNote(this.id(), note));
+      this.noteDialog()?.dismiss();
+      this.noteSaved.set(true);
+    } catch (error) {
+      const code = error instanceof StoreError ? error.code : null;
+      this.noteError.set({
+        title: code === 'EMPTY_NOTE' ? 'Nothing to save yet' : 'Couldn’t save this note',
+        message:
+          code === 'EMPTY_NOTE' || code === 'INVALID_NOTE'
+            ? (error as StoreError).message
+            : 'Your entry is still here. Try saving again.',
+      });
+      afterNextRender(() => this.noteDialog()?.focusError(), { injector: this.injector });
+    } finally {
+      this.savingNote.set(false);
+    }
   }
 
   protected metricValue(value: number, scale: number): string {

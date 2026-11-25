@@ -46,13 +46,13 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   the raw log entry, step, observation, hypothesis version, recording or photo an evidence ID names;
   `exists(investigationId, ids)` checks a list. `ProfileBuilder` uses it to prove each entry's
   evidence before the profile is committed.
-- **`SchemaValidator`** (`tools/schema-validator.ts`) — validates the built profile against the
+- **Schema validator** (`schemas/generated/device-profile-1.js`) — validates the built profile against the
   precompiled profile schema before `commitVerdict` stores it (FR-055 AC1). No `eval` or
   `new Function` runs at run time (NFR-013).
 - **Profile JSON Schema** (`frontend/src/schemas/device-profile-1.schema.json`) — the published
   schema, copied to the build output as `schemas/device-profile-1.schema.json` so other apps can
   read it from Gattsby's own origin. The build script `frontend/scripts/compile-schemas.ts`
-  precompiles it into a standalone validator module under `frontend/src/app/schemas/generated/`.
+  precompiles it into a standalone validator module under `frontend/src/schemas/generated/`.
 - **`DeviceProfilePage`** (`pages/device-profile/device-profile.page.ts`) — lazy route. It loads the
   profile and its investigation's notes through the store and renders the readable data,
   controllable, identity, evidence and notes sections. "Reconnect" and "Investigate again" start a
@@ -89,8 +89,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 7. UUIDs are stored in canonical 128-bit lowercase form. The UI shortens Bluetooth SIG base UUIDs to
    the `0x2ACD` form.
 8. A built profile that fails its schema is a defect. The commit is refused, and the failure is
-   recorded with the tool and stage (NFR-025). How the verdict is then stored is `<TO SUPPLY>`: the
-   requirements name no fallback.
+   recorded with the tool and stage (NFR-025). The investigation remains recoverable at the last
+   committed step. The verdict and profile are committed together.
+
+For OQ-09, format 1.0 follows the FR-055 field list. The published schema is the interchange
+contract for consumers of the profile.
 
 ### Profile format 1.0
 

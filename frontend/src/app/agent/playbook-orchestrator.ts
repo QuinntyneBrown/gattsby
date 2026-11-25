@@ -6,9 +6,12 @@ import { CapabilityDetector } from '../environment/capability-detector';
 import { KnowledgeBase } from '../knowledge-base/knowledge-base';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
 import { HypothesisTracker } from '../outcome/hypothesis-tracker';
+import { buildProfile } from '../outcome/profile-builder';
 import { verdictLabel, type VerdictFacts } from '../outcome/verdict-builder';
 import { Clock } from '../shared/clock';
 import { InvestigationStore } from '../store/investigation-store';
+import { PendingVerdict } from '../store/pending-verdict';
+import { StoreError } from '../store/store-error';
 import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
@@ -18,6 +21,7 @@ import { STAGES, type Stage } from '../store/model/stage';
 import type { Step, StepPersonExchange } from '../store/model/step';
 import type { StopReason } from '../store/model/stop-reason';
 import type { Verdict, VerdictKind } from '../store/model/verdict';
+import type { VerdictCommit } from '../store/model/verdict-commit';
 import { TOOL_CATALOG } from '../tools/tool-catalog';
 import { NotificationRecorder } from '../tools/listening/notification-recorder';
 import type { NewMissingToolRequest, ToolContext } from '../tools/tool-context';
@@ -59,6 +63,7 @@ const RUNNING_DETAIL = 'Read-only, takes about a second. Nothing for you to do.'
 @Injectable()
 export class PlaybookOrchestrator {
   private readonly store = inject(InvestigationStore);
+  private readonly pendingVerdict = inject(PendingVerdict);
   private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly ble = inject(BleLayer);
   private readonly notificationRecorder = inject(NotificationRecorder);
@@ -421,7 +426,25 @@ export class PlaybookOrchestrator {
         evidence: result.evidence,
       };
       this.statusSignal.set('concluding');
-      await this.store.commitVerdict({
+      await this.ble.disconnect();
+      rawLog.push(...this.log.takePending());
+      const referenced = [
+        ...new Set(newState.readableMetrics.flatMap((metric) => metric.evidence)),
+      ];
+      const storedEvidence = await this.store.rawEvidence(id, referenced);
+      const profile = buildProfile(
+        this.investigationSignal()!,
+        verdict,
+        newState,
+        kb,
+        hypothesis ?? facts.hypothesis,
+        allObservations,
+        [...this.steps(), step],
+        facts.missingToolRequests,
+        [...storedEvidence, ...rawLog],
+        this.log.count(),
+      );
+      const commit: VerdictCommit = {
         investigationId: id,
         step,
         rawLog,
@@ -429,14 +452,20 @@ export class PlaybookOrchestrator {
         hypothesis,
         missingToolRequests: requests,
         verdict,
+        profile,
         investigationPatch: {
           status: verdict.kind === 'stoppedByPerson' ? 'stopped' : 'concluded',
           endedAt: Date.now(),
           stage: 'conclude',
         },
-      });
+      };
+      try {
+        await this.store.commitVerdict(commit);
+      } catch (error) {
+        if (!(error instanceof StoreError) || error.code !== 'STORAGE_FULL') throw error;
+        this.pendingVerdict.commit.set(commit);
+      }
       this.pending.set(null);
-      await this.ble.disconnect();
       this.log.clear();
       this.statusSignal.set('concluded');
       await this.router.navigate(['/investigations', id, 'verdict'], { replaceUrl: true });

@@ -8,14 +8,19 @@ import {
   upgrade,
 } from './database-schema';
 import type { Investigation, NewInvestigation } from './model/investigation';
+import type { InvestigationPhoto } from './model/investigation-photo';
+import type { InvestigationNote } from './model/investigation-note';
+import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
+import { validateNote } from './validate-note';
 
 const RECORD_FORMAT = 1;
+const EXPORT_PAGE_SIZE = 2000;
 
 // The investigation store on IndexedDB (save-as-the-investigation-runs design). Every write
 // resolves on the transaction's `complete` event, never on a request's `success`.
@@ -86,6 +91,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       'observations',
       'hypotheses',
       'missingToolRequests',
+      'profiles',
     ];
     await this.write(stores, 'strict', (tx) => {
       const store = tx.objectStore('investigations');
@@ -109,10 +115,15 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
         commit.observations.forEach((o) => tx.objectStore('observations').put(o));
         if (commit.hypothesis) tx.objectStore('hypotheses').put(commit.hypothesis);
         commit.missingToolRequests.forEach((r) => tx.objectStore('missingToolRequests').put(r));
+        const profile = current.location
+          ? { ...commit.profile, location: current.location }
+          : commit.profile;
+        tx.objectStore('profiles').add(profile);
         store.put({
           ...current,
           ...commit.investigationPatch,
           verdict: commit.verdict,
+          profileId: commit.profile.id,
           lastCommittedStep: commit.step.n,
         });
       };
@@ -175,12 +186,123 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return (all as Investigation[]).reverse();
   }
 
+  async getInvestigation(id: string): Promise<Investigation> {
+    const db = await this.open();
+    const row = await request(
+      db.transaction('investigations').objectStore('investigations').get(id),
+    );
+    if (!row) throw new StoreError('NOT_FOUND', 'No investigation with that id.');
+    return row as Investigation;
+  }
+
+  async saveNote(id: string, input: InvestigationNote): Promise<InvestigationNote> {
+    const details = validateNote(input);
+    await this.write(['investigations', 'profiles'], 'strict', (tx) => {
+      const store = tx.objectStore('investigations');
+      const lookup = store.get(id);
+      lookup.onsuccess = () => {
+        const current = lookup.result as Investigation | undefined;
+        if (!current) {
+          refuse(tx, new StoreError('NOT_FOUND', 'No investigation with that id.'));
+          return;
+        }
+        if (!details.location && !details.note && !current.location && !current.note) {
+          refuse(tx, new StoreError('EMPTY_NOTE', 'Add a location or a note before saving.'));
+          return;
+        }
+        // Keep these fields independent of step data so a concurrent step commit preserves them.
+        const location = details.location || undefined;
+        store.put({ ...current, location, note: details.note || undefined });
+        if (current.profileId) {
+          const profiles = tx.objectStore('profiles');
+          const lookup = profiles.get(current.profileId);
+          lookup.onsuccess = () => {
+            const profile = lookup.result as DeviceProfile | undefined;
+            if (profile) profiles.put({ ...profile, location });
+          };
+        }
+      };
+    });
+    return details;
+  }
+
   async rawLog(id: string): Promise<RawLogEntry[]> {
     const db = await this.open();
     const tx = db.transaction('rawLog', 'readonly');
     return (await request(
       tx.objectStore('rawLog').getAll(investigationRange(id)),
     )) as RawLogEntry[];
+  }
+
+  async rawEvidence(id: string, ids: readonly string[]): Promise<RawLogEntry[]> {
+    const db = await this.open();
+    const store = db.transaction('rawLog').objectStore('rawLog');
+    const rows = await Promise.all(
+      ids
+        .filter((evidence) => /^r-\d+$/.test(evidence))
+        .map(
+          (evidence) =>
+            request(store.get([id, Number(evidence.slice(2))])) as Promise<RawLogEntry | undefined>,
+        ),
+    );
+    return rows.filter((row) => row !== undefined);
+  }
+
+  async *rawLogPages(id: string): AsyncIterable<RawLogEntry[]> {
+    const db = await this.open();
+    let lower: IDBValidKey = [id];
+    let lowerOpen = false;
+    for (;;) {
+      const range = IDBKeyRange.bound(lower, [id, []], lowerOpen);
+      const store = db.transaction('rawLog').objectStore('rawLog');
+      const rows = (await request(store.getAll(range, EXPORT_PAGE_SIZE))) as RawLogEntry[];
+      if (rows.length === 0) return;
+      yield rows;
+      if (rows.length < EXPORT_PAGE_SIZE) return;
+      lower = [id, rows[rows.length - 1].seq];
+      lowerOpen = true;
+    }
+  }
+
+  async recordings(id: string): Promise<Recording[]> {
+    const db = await this.open();
+    const store = db.transaction('recordings').objectStore('recordings');
+    return (await request(store.getAll(investigationRange(id)))) as Recording[];
+  }
+
+  async rawLogSizeEstimate(id: string): Promise<number> {
+    const db = await this.open();
+    const store = db.transaction('rawLog').objectStore('rawLog');
+    const range = investigationRange(id);
+    const [count, sample] = await Promise.all([
+      request(store.count(range)),
+      request(store.getAll(range, 32)) as Promise<RawLogEntry[]>,
+    ]);
+    if (!sample.length) return 0;
+    return Math.round((new Blob([JSON.stringify(sample)]).size / sample.length) * count);
+  }
+
+  async photos(id: string): Promise<InvestigationPhoto[]> {
+    const db = await this.open();
+    const store = db.transaction('photos').objectStore('photos');
+    return (await request(store.getAll(investigationRange(id)))) as InvestigationPhoto[];
+  }
+
+  async photoCount(id: string): Promise<number> {
+    const db = await this.open();
+    const store = db.transaction('photos').objectStore('photos');
+    return request(store.count(investigationRange(id)));
+  }
+
+  async getProfile(id: string): Promise<DeviceProfile> {
+    const db = await this.open();
+    const row = await request(db.transaction('profiles').objectStore('profiles').get(id));
+    if (!row) throw new StoreError('NOT_FOUND', 'No device profile with that id.');
+    const { default: validate } = await import('../../schemas/generated/device-profile-1.js');
+    if (!validate(row)) {
+      throw new StoreError('UNREADABLE_PROFILE', 'This profile couldn’t be opened.');
+    }
+    return row as DeviceProfile;
   }
 
   async recordedPackets(
@@ -256,7 +378,6 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       const tx = db.transaction(stores, 'readwrite', { durability });
       tx.oncomplete = () => resolve();
       tx.onabort = () => reject(toStoreError(tx));
-      tx.onerror = (event) => event.preventDefault();
       work(tx);
     });
   }
@@ -303,4 +424,9 @@ function toStoreError(tx: IDBTransaction): StoreError {
     return new StoreError('STORAGE_FULL', 'Storage is full.');
   }
   return new StoreError('STORAGE_UNAVAILABLE', tx.error?.message ?? 'The transaction failed.');
+}
+
+function refuse(tx: IDBTransaction, error: StoreError): void {
+  (tx as IDBTransaction & { gattsbyRefusal?: StoreError }).gattsbyRefusal = error;
+  tx.abort();
 }
