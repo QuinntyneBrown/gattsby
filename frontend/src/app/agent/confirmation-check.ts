@@ -1,4 +1,5 @@
 import { inject, Injectable } from '@angular/core';
+import type { ConfirmationMetric } from '../analysis/confirmation-metric';
 import { baselineMedian } from '../analysis/metric-confirmer';
 import type { MetricSample } from '../analysis/metric-sample';
 import type { BleLayer } from '../ble/ble-layer';
@@ -8,12 +9,16 @@ import { ToolError } from '../tools/tool-error';
 
 const BASELINE_LIMIT = 500;
 const WINDOW_MS = 15_000;
-const MIN_SPEED_CHANGE = 0.5;
+const MIN_CHANGE = { speed: 0.5, heartRate: 5 } as const;
 
 @Injectable()
 export class ConfirmationCheck {
   private readonly clock = inject(Clock);
-  private readonly baseline: MetricSample[] = [];
+  private readonly baseline: Record<ConfirmationMetric, MetricSample[]> = {
+    speed: [],
+    heartRate: [],
+  };
+  private metric: ConfirmationMetric = 'speed';
   private reference: MetricSample | null = null;
   private qualifying: MetricSample | null = null;
   private baselineDistance: MetricSample | null = null;
@@ -21,32 +26,37 @@ export class ConfirmationCheck {
   private openedAt: number | null = null;
   private wake: (() => void) | null = null;
 
-  begin(): void {
-    this.reference = baselineMedian(this.baseline);
+  begin(metric: ConfirmationMetric): void {
+    this.metric = metric;
+    this.reference = baselineMedian(this.baseline[metric]);
     this.qualifying = null;
     this.qualifyingDistance = null;
     this.openedAt = this.clock.now();
   }
 
   sample(fields: readonly DecodedMetric[], rawLogId: string, recording: boolean): void {
-    const speed = fields.find((field) => field.metric === 'speed');
+    const current = fields.find((field) => field.metric === this.metric);
     const distance = fields.find((field) => field.metric === 'distance');
     const t = this.clock.now();
     if (recording) {
-      if (speed && this.baseline.length < BASELINE_LIMIT) {
-        this.baseline.push({ value: speed.value, t, rawLogId });
+      for (const metric of ['speed', 'heartRate'] as const) {
+        const baseline = this.baseline[metric];
+        const field = fields.find((candidate) => candidate.metric === metric);
+        if (field && baseline.length < BASELINE_LIMIT)
+          baseline.push({ value: field.value, t, rawLogId });
       }
       if (distance) this.baselineDistance = { value: distance.value, t, rawLogId };
       return;
     }
-    if (this.openedAt === null || !this.reference || !speed) return;
+    if (this.openedAt === null || !this.reference || !current) return;
     this.qualifying ??=
-      speed.value - this.reference.value >= MIN_SPEED_CHANGE
-        ? { value: speed.value, t, rawLogId }
+      current.value - this.reference.value >= MIN_CHANGE[this.metric]
+        ? { value: current.value, t, rawLogId }
         : null;
     if (
       this.qualifying &&
-      speed.value > 0 &&
+      this.metric === 'speed' &&
+      current.value > 0 &&
       distance &&
       this.baselineDistance &&
       distance.value > this.baselineDistance.value
@@ -87,6 +97,7 @@ export class ConfirmationCheck {
     this.openedAt = null;
     return {
       baseline: this.reference,
+      metric: this.metric,
       qualifying,
       startedAt,
       baselineDistance: this.baselineDistance,
@@ -95,6 +106,9 @@ export class ConfirmationCheck {
   }
 
   private hasResult(): boolean {
-    return !!this.qualifying && (!this.baselineDistance || !!this.qualifyingDistance);
+    return (
+      !!this.qualifying &&
+      (this.metric !== 'speed' || !this.baselineDistance || !!this.qualifyingDistance)
+    );
   }
 }

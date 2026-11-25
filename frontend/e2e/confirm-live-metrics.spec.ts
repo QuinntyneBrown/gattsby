@@ -80,6 +80,38 @@ test.describe('FTMS indoor bike', () => {
   });
 });
 
+test.describe('Heart-rate strap', () => {
+  test.use({
+    bluetooth: { devices: [devices.strap.id], chooser: [{ pick: devices.strap.id }] },
+    viewport: { width: 390, height: 844 },
+  });
+
+  test('Given a heart-rate strap is subscribed, when BPM rises during light activity, then live BPM updates and the verdict is Connected — Heart Rate', async ({
+    page,
+    fakeBluetooth,
+    fakeModel,
+  }) => {
+    const investigation = await startRecording(page, fakeBluetooth, 'Heart-rate sensor');
+    await page.clock.runFor(1100);
+    const bpm = investigation.liveMetric('Heart rate');
+    await expect(bpm).toContainText(/95\s*BPM/);
+    expect((await bpm.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    await page.clock.runFor(10_000);
+    await investigation.waitForPrompt('Walk briefly at an easy pace.');
+
+    await fakeBluetooth.setEffort(2);
+    await page.clock.runFor(1100);
+    await expect(bpm).toContainText(/120\s*BPM/);
+    await investigation.choose('Done');
+
+    const verdict = new VerdictPage(page);
+    await expect(verdict.title).toHaveText('Connected — Heart Rate');
+    await expect(verdict.item('Can read', 'Heart rate')).toContainText('120 BPM');
+    expect(fakeBluetooth.writes()).toEqual([]);
+    expect(fakeModel.prompts()).toEqual([]);
+  });
+});
+
 test('Given an identified FTMS treadmill, when the person starts walking, then notifications update the live speed without a model or write', async ({
   page,
   fakeBluetooth,

@@ -6,5 +6,6 @@
   "fitness-machine-feature",
   "supported-speed-range",
   "treadmill-data",
-  "indoor-bike-data"
+  "indoor-bike-data",
+  "heart-rate-measurement"
 ]

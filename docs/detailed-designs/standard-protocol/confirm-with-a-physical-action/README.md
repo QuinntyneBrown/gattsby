@@ -71,7 +71,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 | Total distance | Keep the belt moving during the speed check | The counter increases from its last baseline reading during the window while decoded speed is above 0 and the speed change is confirmed | A-12 |
 | Elapsed time | None; read while recording | The value increases during the recording | `<TO SUPPLY>` minimum (the mock marks it confirmed from "0:52 → 1:02") |
 | Inclination | "Raise the incline to 2%" | `<TO SUPPLY>` minimum change | Mock prompt |
-| Cadence, power, resistance level, heart rate | `<TO SUPPLY>` | `<TO SUPPLY>` | FR-025 names only speed |
+| Heart rate (strap) | "Walk briefly at an easy pace." | A value in the window is at least 5 BPM above the baseline median | FR-025, FR-054 AC2 |
+| Cadence, power, resistance level | `<TO SUPPLY>` | `<TO SUPPLY>` | FR-025 names only speed |
 
 The speed action asks for a change of only one value, so the summary can also say which other
 fields moved ("Incline did not move"). That note is evidence for the person and the agent; it is not

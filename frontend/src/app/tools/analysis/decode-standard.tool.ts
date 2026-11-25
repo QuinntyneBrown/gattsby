@@ -7,7 +7,7 @@ export const decodeStandardTool = entry<
 >({
   name: 'decode_standard',
   group: 'Analysis',
-  description: 'Compare standard speed notifications before and after the person changes speed.',
+  description: 'Compare standard notifications before and after the person takes an action.',
   inputSchema: {
     type: 'object',
     required: ['doneAt'],
@@ -20,24 +20,27 @@ export const decodeStandardTool = entry<
   requiredCapabilities: [],
   phase: 'MVP',
   labels: {
-    running: () => 'Checking whether speed changed',
-    purpose: () => 'Compare speed before and after your change',
+    running: () => 'Checking whether the reading changed',
+    purpose: () => 'Compare the readings before and after your change',
     detail: 'Gattsby checks the readings for up to 15 seconds.',
     card: true,
   },
   async run(input, ctx) {
     if (!Number.isFinite(input.doneAt)) return fail('INVALID_INPUT', 'The action time is missing.');
-    const { baseline, qualifying, startedAt, baselineDistance, distance } =
+    const { metric, baseline, qualifying, startedAt, baselineDistance, distance } =
       await ctx.confirmationCheck.finish(input.doneAt, ctx.ble, ctx.signal);
     const confirmed = !!(baseline && qualifying && startedAt !== null);
+    const label = metric === 'speed' ? 'Speed' : 'Heart rate';
+    const unit = metric === 'speed' ? 'km/h' : 'BPM';
+    const precision = metric === 'speed' ? 1 : 0;
     const summary = confirmed
-      ? `Speed went from ${baseline.value.toFixed(1)} to ${qualifying.value.toFixed(1)} km/h within ${Math.ceil((qualifying.t - startedAt) / 1000)} s.`
-      : 'Speed did not move enough to confirm it.';
+      ? `${label} went from ${baseline.value.toFixed(precision)} to ${qualifying.value.toFixed(precision)} ${unit} within ${Math.ceil((qualifying.t - startedAt) / 1000)} s.`
+      : `${label} did not move enough to confirm it.`;
     const observation = ctx.observe({
       kind: confirmed ? 'metric-confirmed' : 'metricConfirmation',
-      subject: 'speed',
+      subject: metric,
       value: confirmed ? 'confirmed' : 'notConfirmed',
-      text: confirmed ? `Speed: ${qualifying.value.toFixed(1)} km/h` : summary,
+      text: confirmed ? `${label}: ${qualifying.value.toFixed(precision)} ${unit}` : summary,
       tag: confirmed ? 'confirmed' : 'likely',
       evidence: [baseline?.rawLogId, qualifying?.rawLogId].filter((id) => id !== undefined),
     });

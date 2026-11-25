@@ -11,6 +11,7 @@
     {
       "uuid": "0x2a37",
       "name": "Heart Rate Measurement",
+      "decoder": "heart-rate-measurement",
       "properties": ["notify"],
       "deviceType": "heart-rate-sensor"
     },

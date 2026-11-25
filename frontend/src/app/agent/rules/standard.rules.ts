@@ -8,22 +8,31 @@ const STANDARD_PATHS = {
     ready: 'Step on, press Start and walk slowly — around 3 km/h. Tap Ready when you’re walking.',
     action: 'Now speed up to about 6 km/h. Change only the speed.',
     followUp: 'Did the belt speed up?',
+    metric: 'speed',
   },
   bike: {
     characteristic: canonicalUuid(0x2ad2),
     ready: 'Start pedalling at an easy pace. Tap Ready when you’re pedalling.',
     action: 'Now pedal faster.',
     followUp: 'Did you pedal faster?',
+    metric: 'speed',
+  },
+  'heart-rate-sensor': {
+    characteristic: canonicalUuid(0x2a37),
+    ready: 'Put on the heart-rate strap. Tap Ready when it is fitted.',
+    action: 'Walk briefly at an easy pace.',
+    followUp: 'Were you able to walk?',
+    metric: 'heartRate',
   },
 } as const;
 
 function standardPath(ctx: RuleContext) {
   if (!ctx.state.connected) return undefined;
   const profile = decidedCandidate(ctx);
-  if (!profile || (profile.deviceType !== 'treadmill' && profile.deviceType !== 'bike')) {
+  if (!profile || !profile.deviceType || !(profile.deviceType in STANDARD_PATHS)) {
     return undefined;
   }
-  const path = STANDARD_PATHS[profile.deviceType];
+  const path = STANDARD_PATHS[profile.deviceType as keyof typeof STANDARD_PATHS];
   const service = ctx.state.layout?.find(
     (service) =>
       service.uuid === profile.serviceUuid &&
@@ -72,8 +81,8 @@ export const STANDARD_RULES: readonly StageRule[] = [
       decided('standard.speed-action', 'standard', 'request_action', {
         instruction: standardPath(ctx)!.action,
         needsReady: false,
-        confirmSpeed: true,
-        why: 'If the speed field rises when you change the speed, the decoding is right.',
+        confirmMetric: standardPath(ctx)!.metric,
+        why: 'A rise in the live reading helps confirm the decoding.',
       }),
   },
   {

@@ -52,6 +52,12 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     :host {
       display: contents;
     }
+    .reading {
+      min-height: 48px;
+    }
+    .reading__label {
+      display: block;
+    }
   `,
   template: `
     <div class="app app--fixed">

@@ -141,3 +141,10 @@ None; this is the first entry.
   subscription and speed threshold as the treadmill but has its own data layout and prompts.
 - Cadence has half-RPM precision, while power is an integer in watts. Checking both values with the
   simulator proves that the optional cadence field does not throw off the power offset.
+
+## Journey 3, slice 6: Confirm a heart-rate strap
+
+- The phone-width acceptance test failed first because Identify did not enter the Standard path.
+  It now checks a 95 to 120 BPM change, the 48 px live reading, and the Connected verdict.
+- Use one confirmation window for the treadmill, bike and strap. The device-specific metric and
+  minimum rise determine what counts, and the tool records only a change it saw in a notification.

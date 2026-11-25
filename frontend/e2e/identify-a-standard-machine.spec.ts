@@ -276,6 +276,7 @@ test.describe('Identify a standard machine', () => {
       const investigation = await startAndPrepare(page, 'Heart-rate sensor');
 
       await investigation.choose('Find the device');
+      await investigation.choose('Skip');
 
       const verdict = new VerdictPage(page);
       await expect(verdict.title).toHaveText('Partially decoded');
