@@ -114,6 +114,10 @@ answers for `TIMEOUT`, and the dropping device, scripted to drop after 3 and 2 s
 held-by-other prompt and the reconnect on "Done". Unit tests cover the quick-drop count in
 `ConnectionSupervisor` on a fake clock.
 
+### Built in journey 2
+
+`connect` and the held-by-other path are built: a refused connection commits the *likely* observation, posts "Disconnect other apps and watches" with "Done" and "Stop", and connects again on "Done" (at most three attempts). `GattSession` is folded into `WebBluetoothBleLayer`'s `connection` signal. Not built yet: the two-quick-drops trigger and `ConnectionSupervisor` (journey 10), `ConnectionBanner` (journey 10) and `get_permitted_devices` (P2). The screen shows the device's name in the app bar and the device panel and "Connected." in the step's card.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

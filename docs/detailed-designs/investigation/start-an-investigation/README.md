@@ -118,6 +118,10 @@ visible and finds the investigation with its start time, mode, app version and k
 version. One answers "Don't know" twice and reaches Find. One types a location label and finds it in
 the exported profile, with no geolocation call recorded.
 
+### Built in journey 2
+
+Home offers "Identify a device" with the empty and returning hero copy and the mode chip; `InvestigationStarter` (`agent/investigation-starter.ts`) holds the four calls `HomePage` makes, so the Verdict page's "New investigation" reuses them. The Prepare stage runs as the table above. Not built yet: the route to `/start` when Bluetooth is unusable (the Readiness page, journey 5), so a missing adapter currently ends in "Not connectable"; the location label, the options sheet and the add-note dialog (journey 4); and the Home sections for the paused investigation, saved devices, past investigations and missing-tool requests (journeys 11, 4, 15 and 14).
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

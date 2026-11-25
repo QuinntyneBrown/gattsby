@@ -149,6 +149,10 @@ three `update_hypothesis` actions against the scripted FTMS treadmill, exports t
 three versions with their step numbers and evidence. Unit tests cover `ConfidenceScorer` for a
 proposal of 0.95 with no supporting observation (stored 0) and for each contribution row.
 
+### Built in journey 2
+
+`HypothesisTracker` and `ConfidenceScorer` are built; the rules' hypothesis is rescored after every step and committed with it. `update_hypothesis` is registered with its evidence check; proposals from the model arrive with journey 6.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

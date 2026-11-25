@@ -121,6 +121,10 @@ and check the size and position of the answers. The inactivity spec advances Pla
 2 minutes instead of waiting. Unit tests cover `askUserTool`'s "Don't know" rule and the 500-character
 cut, and `PromptChannel`'s timer on a fake clock.
 
+### Built in journey 2
+
+`ask_user`, `request_action`, `PromptChannel` and `PromptCard` are built, with "Skip" on every question and action and the 500-character cut on free text. The machine-type question's detail line reads "Pick one, or answer “Don’t know” if you’re not sure." because it offers no free text; the mock's "type your own answer below" refers to the agent composer, which arrives with journey 6. Not built yet: the 2-minute inactivity timer and "Still there?" (FR-051 AC2), which come with the stop-pause-and-resume journey (11), and `needsReady` ("Ready" before "Done"), first needed by recordings in journey 3.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

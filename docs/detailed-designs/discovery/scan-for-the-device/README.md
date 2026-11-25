@@ -144,6 +144,10 @@ non-blocklisted known UUID; `acceptAllDevices: true` for the open scan), that no
 before the tap, and that a cancel leads to the `find-cancelled` prompt. Unit tests cover
 `ScanOptionsBuilder` with a vendor entry and a blocklisted UUID.
 
+### Built in journey 2
+
+Both scan tools share `scanBehindTap` (`tools/discovery/scan.ts`), which builds the request, posts the tap prompt and calls the BLE layer. `requestDevice` is called first inside the tap and `availability()` only afterwards, to tell a missing adapter from a cancel, because an `await` before the call could spend the tap's user activation. Not built yet: the 2-minute tap timeout (journey 11, with "Still there?") and `assess_reachability` after three empty scans (journey 12).
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

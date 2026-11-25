@@ -127,6 +127,10 @@ object: Stop `08 01` is recorded within 500 ms of the tap, then Reset `01`; a la
 `LanguageModel` is mid-call (the call's signal is aborted), while an approval is pending (nothing is
 written), and on the fake device with no Control Point (disconnect, no write).
 
+### Built in journey 2
+
+Journey 2 sends no command, so it shows `EmergencyStopButton` whenever a device is connected and treats every protocol as having no known stop (rule 5): one tap aborts the loop, disconnects at once, sends nothing, and concludes with the stop reason `emergencyStop`; the verdict's summary tells the person to use the machine's own stop. The stop sequence, the approval ledger's lock and `EmergencyStopDialog` arrive with journey 8.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

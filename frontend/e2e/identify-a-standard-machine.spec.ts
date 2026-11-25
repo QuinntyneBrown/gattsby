@@ -50,7 +50,7 @@ test.describe('Identify a standard machine', () => {
         );
         await expect(verdict.item('Observed', 'Maker')).toContainText('Johnson Health Tech');
         await expect(verdict.item('Couldn’t determine', 'Services Chrome hides')).toBeVisible();
-        await expect(verdict.newInvestigation).toBeVisible();
+        await expect(verdict.newInvestigation).toBeInViewport();
 
         const id = /\/investigations\/([^/]+)\/verdict$/.exec(page.url())![1];
         const stored = await new StoredRecords(page).investigation(id);
@@ -73,7 +73,7 @@ test.describe('Identify a standard machine', () => {
 
       await investigation.choose('Find the device');
 
-      await expect(investigation.title).toHaveText(devices.treadmill.name);
+      await expect.poll(() => fakeBluetooth.requestDeviceOptions().length).toBe(1);
       const [options] = fakeBluetooth.requestDeviceOptions();
       expect('filters' in options && options.filters).toContainEqual({
         services: [uuids.fitnessMachine],
@@ -90,6 +90,16 @@ test.describe('Identify a standard machine', () => {
         expect(options.optionalServices).toContain(known);
       }
       expect(options.optionalServices).not.toContain(uuids.humanInterfaceDevice);
+    });
+  });
+
+  test.describe('an FTMS treadmill held on its last read', () => {
+    test.use({
+      bluetooth: {
+        devices: [devices.treadmill.id],
+        chooser: [{ pick: devices.treadmill.id }],
+        readDelays: { [uuids.supportedSpeedRange]: 60_000 },
+      },
     });
 
     test('Given a connected treadmill, when the layout is read, then the feed lists its services and the hypothesis forms with confidence and evidence', async ({
@@ -203,7 +213,7 @@ test.describe('Identify a standard machine', () => {
       );
       await investigation.choose('Show all nearby devices');
 
-      await expect(investigation.title).toHaveText(devices.treadmill.name);
+      await expect.poll(() => fakeBluetooth.requestDeviceOptions().length).toBe(2);
       const [, open] = fakeBluetooth.requestDeviceOptions();
       expect(open).toMatchObject({ acceptAllDevices: true });
       expect(open.optionalServices).toContain(uuids.fitnessMachine);

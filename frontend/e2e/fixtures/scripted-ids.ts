@@ -31,4 +31,5 @@ export const uuids = {
   runningSpeedCadence: canonicalUuid(0x1814),
   humanInterfaceDevice: canonicalUuid(0x1812),
   manufacturerName: canonicalUuid(0x2a29),
+  supportedSpeedRange: canonicalUuid(0x2ad4),
 } as const;

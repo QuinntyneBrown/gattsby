@@ -97,6 +97,10 @@ give manufacturer "Acme" and model "T100", and assert the hypothesis's maker and
 evidence. Further scripts give manufacturer and firmware only, a blocklisted serial number, and no
 `0x180A` at all, and assert the omitted fields, the `BLOCKLISTED` summary and the recorded absence.
 
+### Built in journey 2
+
+Built as described. A device without `0x180A` records "Device Information absent" in the `enumerate_gatt` step, and the rules move on to the match.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

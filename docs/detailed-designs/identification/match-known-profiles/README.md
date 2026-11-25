@@ -109,6 +109,10 @@ model call in full agent mode and the "Pick the next step" options in checklist 
 `ProfileMatcher` twice on the same input and compare the outputs, and run `VendorSignatureMatcher`
 on an Echelon name pattern and on a name that matches nothing.
 
+### Built in journey 2
+
+`match_known_profiles` and `ProfileMatcher` are built with the weights and the threshold above. `vendor_signature_lookup` and `VendorSignatureMatcher` wait for the first vendor file (the Echelon entry, A-15); `ProfileMatcher` already adds 5 points when a vendor's name pattern or brand agrees. An ambiguous match goes to the `Decider`; until journeys 6 and 7 add the model and checklist deciders, `ConcludeDecider` concludes with what is known.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

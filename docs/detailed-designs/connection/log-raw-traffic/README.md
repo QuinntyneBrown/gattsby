@@ -119,6 +119,10 @@ timestamps (NFR-003). The approve-a-command specs assert `approvalId` on every w
 heap spec of NFR-005 samples the JS heap every minute; it cannot fit CI's 5-minute budget and runs
 when a person asks. Unit tests cover `HexCodec`, the window's eviction and the flush on a fake clock.
 
+### Built in journey 2
+
+`RawTrafficLog` keeps the 2,000-entry window, flushes batches of 200 or every 500 ms as provisional rows, and hands the rest to the step commit. Scans, connects, disconnects and reads are logged; notifications arrive with journey 3. The 12,000-notification spec of NFR-003 waits for notifications (journey 3).
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

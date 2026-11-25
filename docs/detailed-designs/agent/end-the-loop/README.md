@@ -104,6 +104,10 @@ three identical refusals, and simultaneous conditions for the precedence order. 
 script the fake `LanguageModel` never to return `finish` (the loop stops at step 40 and the Verdict
 page shows a verdict), and to repeat one refused action (the loop stops with "no progress").
 
+### Built in journey 2
+
+`LoopConfig`, `checkStop` and the stop paths for `finish`, `stepBudget`, `noProgress`, `personStop`, `emergencyStop` and `failure` are built. `confidenceReached` waits for the Standard path, because no journey 2 step can reach 0.9. A `finish` refused twice ends the loop with `failure`.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirement; it refines the level-1 (L1) requirement

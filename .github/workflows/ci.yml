@@ -36,7 +36,7 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
-      - name: Lint
+      - name: Validate the knowledge base and lint (FR-069)
         run: npm run lint
 
       - name: Build for production
@@ -57,5 +57,7 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps --only-shell chromium
 
+      # One critical path per journey: the app shell (journey 1) and identifying an FTMS treadmill
+      # (journey 2).
       - name: Run the critical behaviour specs
         run: npm run e2e:critical

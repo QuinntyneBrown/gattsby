@@ -135,6 +135,10 @@ envelope. An acceptance spec scripts a GATT read error in the fake Bluetooth fix
 the record holds the code, tool and stage and that the person sees a message saying what to try
 (NFR-025 AC1). The fixture fails any spec with a page error.
 
+### Built in journey 2
+
+`ToolResult`, `ToolError`, the shared codes and `executeTool` (`agent/tool-executor.ts`) are built; the BLE layer maps Web Bluetooth exceptions as tabled. `ErrorMessages` and the failed-step message in the feed are not built yet; a failed step's card shows its summary.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

@@ -151,6 +151,10 @@ Heart Rate" with live BPM. A spec has the fake `LanguageModel` return `finish` w
 FTMS" before any confirmation and checks the refusal. Unit tests cover `VerdictBuilder.derive` for
 each stop reason and each evidence rule.
 
+### Built in journey 2
+
+`finish`, `VerdictBuilder` and the Verdict page are built as the open questions below describe. When the evidence supports no verdict, `finish` raises the request that blocked it (rule 5): one "Decode service *UUID*" per unknown service, or else "Identify this device’s protocol". The page is the error, default and loading states; the stopped, not-connectable and missing-tool states render through the same template.
+
 ### Open questions
 
 1. **The verdict for an identified but unconfirmed protocol (journey 2).** Until live data can be

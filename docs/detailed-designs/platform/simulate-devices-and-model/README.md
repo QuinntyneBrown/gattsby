@@ -128,6 +128,10 @@ behaviour specs that use them: each MVP acceptance criterion above has at least 
 CI with no real Bluetooth or model (NFR-023). One spec against the production build checks that
 "Find the device" calls the real API path and offers no simulated device.
 
+### Built in journey 2
+
+Journey 2 adds the held-by-other device (`refusedConnections`, a device that refuses its first connection, for FR-017) and the hostile-name device, and lets a spec delay a characteristic's reads on the page's clock (`readDelays`) to watch a running step. `SimulatedChooserDialog` for development builds is not built yet.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)

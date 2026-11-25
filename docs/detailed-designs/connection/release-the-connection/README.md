@@ -83,6 +83,10 @@ listener left, that navigating to Past investigations during an investigation sh
 disconnects on "Leave and disconnect", and that "Stay" keeps the connection. A unit test drives the
 hidden-page timer with a fake clock and a fake visibility source.
 
+### Built in journey 2
+
+The orchestrator disconnects after committing the verdict and before opening the Verdict page, and the Investigation page releases the connection and the raw log's memory when it is destroyed, so leaving by the back link or the brand disconnects. Not built yet: `leaveInvestigationGuard` and the leave and stop dialogs, and the hidden-page timer (journey 11). Until then leaving disconnects without asking.
+
 ## Requirements
 
 The feature realizes the following level-2 (L2) requirements; each refines the level-1 (L1)
