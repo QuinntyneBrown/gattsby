@@ -68,6 +68,7 @@ export const decodeStandardTool = entry<DecodeStandardInput, unknown>({
     const { metric, baseline, qualifying, startedAt, baselineDistance, distance } =
       await ctx.confirmationCheck.finish(input.doneAt, ctx.ble, ctx.signal);
     const confirmed = !!(baseline && qualifying && startedAt !== null);
+    const confirmations = new Map<string, readonly string[]>();
     const label = metric === 'speed' ? 'Speed' : 'Heart rate';
     const unit = metric === 'speed' ? 'km/h' : 'BPM';
     const precision = metric === 'speed' ? 1 : 0;
@@ -83,18 +84,33 @@ export const decodeStandardTool = entry<DecodeStandardInput, unknown>({
       evidence: [baseline?.rawLogId, qualifying?.rawLogId].filter((id) => id !== undefined),
     });
     const evidence = [observation, recordingId];
-    if (baselineDistance && distance) {
-      evidence.push(
-        ctx.observe({
-          kind: 'metric-confirmed',
-          subject: 'distance',
-          value: 'confirmed',
-          text: `Distance: ${distance.value} m`,
-          tag: 'confirmed',
-          evidence: [baselineDistance.rawLogId, distance.rawLogId],
-        }),
-      );
+    if (confirmed) {
+      confirmations.set(metric, [observation, baseline.rawLogId, qualifying.rawLogId]);
     }
+    if (baselineDistance && distance) {
+      const distanceObservation = ctx.observe({
+        kind: 'metric-confirmed',
+        subject: 'distance',
+        value: 'confirmed',
+        text: `Distance: ${distance.value} m`,
+        tag: 'confirmed',
+        evidence: [baselineDistance.rawLogId, distance.rawLogId],
+      });
+      evidence.push(distanceObservation);
+      confirmations.set('distance', [
+        distanceObservation,
+        baselineDistance.rawLogId,
+        distance.rawLogId,
+      ]);
+    }
+    const { resolveReadableMetrics } = await import('../../outcome/readable-metric-resolver');
+    const readableMetrics = resolveReadableMetrics(
+      characteristic,
+      rows,
+      decoder.metricLayout ?? [],
+      { names: ctx.state.machineFeatures, evidence: ctx.state.machineFeatureEvidence },
+      confirmations,
+    );
     return ok(
       summary,
       {
@@ -102,6 +118,7 @@ export const decodeStandardTool = entry<DecodeStandardInput, unknown>({
         confirmed,
         statistics: analysis.statistics,
         errors: analysis.errors,
+        readableMetrics,
       },
       evidence,
     );

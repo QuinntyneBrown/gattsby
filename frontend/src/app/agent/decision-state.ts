@@ -34,6 +34,8 @@ export interface DecisionState {
   readonly ambiguityResolved: boolean;
   readonly reads: readonly string[];
   readonly rangesAttempted: boolean;
+  readonly machineFeatures: readonly string[];
+  readonly machineFeatureEvidence: readonly string[];
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
   readonly standardRecordingId: string | null;
   readonly speedAction: number | 'skipped' | null;
@@ -62,6 +64,8 @@ export const INITIAL_STATE: DecisionState = {
   ambiguityResolved: false,
   reads: [],
   rangesAttempted: false,
+  machineFeatures: [],
+  machineFeatureEvidence: [],
   standardRecording: 'pending',
   standardRecordingId: null,
   speedAction: null,
@@ -162,7 +166,12 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return { ...next, reads: [...state.reads, input.characteristic] };
     }
     case 'read_supported_ranges':
-      return { ...next, rangesAttempted: true };
+      return {
+        ...next,
+        rangesAttempted: true,
+        machineFeatures: (data?.['machineFeatures'] as string[] | undefined) ?? [],
+        machineFeatureEvidence: step.result.ok ? step.result.evidence.slice(0, 1) : [],
+      };
     case 'disconnect':
       return { ...next, connected: false };
     case 'subscribe_and_record':

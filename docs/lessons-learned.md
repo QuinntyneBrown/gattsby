@@ -177,3 +177,11 @@ None; this is the first entry.
   `decode_standard` result caught a missing link between confirmation and the timed baseline.
 - Use the recording’s step index to fetch only its packets. Keep the statistics and errors in the
   playbook step. Per-packet values are available from the raw rows when a person needs the evidence.
+
+## Journey 3, slice 11: Keep the rules for readable metrics
+
+- The critical path could show a confirmed metric before it had enough saved information to
+  explain how to decode it. It now checks a fixed byte offset, a flag rule, and the difference
+  between a field seen without confirmation and a device claim that never appeared.
+- Reuse the decoder’s layout for claims without live samples. The saved rule then agrees with the
+  code even when no packet carried the field during this investigation.

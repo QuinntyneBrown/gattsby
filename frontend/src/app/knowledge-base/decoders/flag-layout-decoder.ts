@@ -1,9 +1,14 @@
 import type { DecodedMetric } from './decoded-metric';
 import { DecodeError, type DecodedValue } from './decoder';
+import type { MetricLayoutField } from './metric-layout-field';
 
-type Field = Omit<DecodedMetric, 'offset' | 'value' | 'flag'>;
+type Field = Omit<MetricLayoutField, 'flag'>;
 
-const WIDTH = { uint8: 1, uint16: 2, uint24: 3, sint16: 2 } as const;
+export const METRIC_WIDTH = { uint8: 1, uint16: 2, uint24: 3, sint16: 2 } as const;
+
+export function describeFlagLayout(layout: readonly (readonly Field[])[]): MetricLayoutField[] {
+  return layout.flatMap((fields, flag) => fields.map((field) => ({ ...field, flag })));
+}
 
 /** The first flag is More Data: its field is present when the bit is clear. */
 export function decodeFlagLayout(
@@ -18,7 +23,7 @@ export function decodeFlagLayout(
     const present = bit === 0 ? !(flags & mask) : !!(flags & mask);
     return present ? group.map((field) => ({ ...field, flag: bit })) : [];
   });
-  const length = fields.reduce((sum, field) => sum + WIDTH[field.type], 2);
+  const length = fields.reduce((sum, field) => sum + METRIC_WIDTH[field.type], 2);
   if (bytes.length < length) {
     throw new DecodeError(
       `The flags announce ${length} bytes but the notification has ${bytes.length}.`,
@@ -31,7 +36,7 @@ export function decodeFlagLayout(
       offset,
       value: read(view, field.type, offset) / (1 / field.scale),
     };
-    offset += WIDTH[field.type];
+    offset += METRIC_WIDTH[field.type];
     return decoded;
   });
   return {

@@ -147,6 +147,9 @@ keeps that fourth word is the mocks' open question 4 (`docs/mocks/README.md`).
 5. Every readable metric carries at least one evidence ID: the feature read, the recording and, when
    confirmed, the confirmation observation (FR-055 AC2, FR-056).
 
+Journey 3 saves these rules and statuses in the investigation record. Journey 4 uses the saved
+facts when it builds the device profile and adds export.
+
 ### Data shapes
 
 | Type | Fields |

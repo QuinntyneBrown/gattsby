@@ -1,5 +1,5 @@
 import type { Decoder } from './decoder';
-import { decodeFlagLayout } from './flag-layout-decoder';
+import { decodeFlagLayout, describeFlagLayout } from './flag-layout-decoder';
 
 // Bluetooth SIG Fitness Machine Service 1.0.1, Treadmill Data, in flag-bit order.
 const LAYOUT = [
@@ -59,5 +59,6 @@ const LAYOUT = [
 
 export const treadmillDataDecoder: Decoder = {
   id: 'treadmill-data',
+  metricLayout: describeFlagLayout(LAYOUT),
   decode: (bytes) => decodeFlagLayout(bytes, LAYOUT),
 };

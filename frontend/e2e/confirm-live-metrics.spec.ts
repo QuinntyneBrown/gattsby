@@ -245,6 +245,30 @@ test(
           { metric: 'speed', min: 3, max: 3, trend: 'flat' },
           expect.objectContaining({ metric: 'distance', trend: 'rising' }),
         ]),
+        readableMetrics: expect.arrayContaining([
+          expect.objectContaining({
+            metric: 'speed',
+            characteristic: uuids.treadmillData,
+            status: 'confirmed',
+            rule: { kind: 'offset', from: 2, to: 3 },
+            type: 'uint16',
+            scale: 0.01,
+            unit: 'km/h',
+            evidence: expect.arrayContaining([expect.stringMatching(/^r-/)]),
+          }),
+          expect.objectContaining({
+            metric: 'distance',
+            status: 'confirmed',
+            rule: { kind: 'flag', bit: 2 },
+            unit: 'm',
+          }),
+          expect.objectContaining({ metric: 'incline', status: 'claimedOnly' }),
+          expect.objectContaining({
+            metric: 'heartRate',
+            status: 'claimedNotSeen',
+            rule: { kind: 'flag', bit: 8 },
+          }),
+        ]),
       },
     });
     const observations = await records.observations(id);

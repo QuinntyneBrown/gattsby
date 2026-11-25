@@ -1,5 +1,5 @@
 import type { Decoder } from './decoder';
-import { decodeFlagLayout } from './flag-layout-decoder';
+import { decodeFlagLayout, describeFlagLayout } from './flag-layout-decoder';
 
 const LAYOUT = [
   [{ metric: 'speed', label: 'Speed', unit: 'km/h', type: 'uint16', scale: 0.01 }],
@@ -37,5 +37,6 @@ const LAYOUT = [
 
 export const indoorBikeDataDecoder: Decoder = {
   id: 'indoor-bike-data',
+  metricLayout: describeFlagLayout(LAYOUT),
   decode: (bytes) => decodeFlagLayout(bytes, LAYOUT),
 };
