@@ -43,22 +43,22 @@ needs a style or component this system lacks, add it here, then use it in the mo
 | [Skip link](components/skip-link.html) | Navigation | [pages/home/default](../mocks/pages/home/default.html) |
 | [Layout primitives](components/layout.html) | Containers | [pages/home/default](../mocks/pages/home/default.html), [pages/verdict/default](../mocks/pages/verdict/default.html), [pages/readiness/default](../mocks/pages/readiness/default.html) |
 | [Card](components/card.html) | Containers | [pages/home/default](../mocks/pages/home/default.html), [pages/verdict/missing-tool](../mocks/pages/verdict/missing-tool.html), [dialogs/leave-investigation/default](../mocks/dialogs/leave-investigation/default.html) |
-| [Dialog](components/dialog.html) | Containers | [dialogs/approval/default](../mocks/dialogs/approval/default.html), [dialogs/emergency-stop/default](../mocks/dialogs/emergency-stop/default.html), [dialogs/export/default](../mocks/dialogs/export/default.html) |
+| [Dialog](components/dialog.html) | Containers | [dialogs/approval/default](../mocks/dialogs/approval/default.html), [dialogs/approval/handshake](../mocks/dialogs/approval/handshake.html), [dialogs/emergency-stop/default](../mocks/dialogs/emergency-stop/default.html) |
 | [Brand](components/brand.html) | Data display | [pages/home/default](../mocks/pages/home/default.html), [pages/readiness/default](../mocks/pages/readiness/default.html) |
-| [Badge](components/badge.html) | Data display | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/device-profile/default](../mocks/pages/device-profile/default.html), [pages/missing-tools/default](../mocks/pages/missing-tools/default.html) |
+| [Badge](components/badge.html) | Data display | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/not-confirmed](../mocks/pages/investigation/not-confirmed.html), [pages/device-profile/default](../mocks/pages/device-profile/default.html) |
 | [Verdict mark](components/verdict-mark.html) | Data display | [pages/profiles/default](../mocks/pages/profiles/default.html), [pages/verdict/default](../mocks/pages/verdict/default.html), [pages/history/default](../mocks/pages/history/default.html) |
 | [Row list](components/row-list.html) | Data display | [pages/home/default](../mocks/pages/home/default.html), [pages/profiles/default](../mocks/pages/profiles/default.html), [pages/history/default](../mocks/pages/history/default.html) |
 | [Key-value list](components/key-value.html) | Data display | [pages/device-profile/default](../mocks/pages/device-profile/default.html), [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/evidence/default](../mocks/pages/evidence/default.html) |
 | [Data table](components/data-table.html) | Data display | [pages/device-profile/default](../mocks/pages/device-profile/default.html) |
 | [Code and bytes](components/code.html) | Data display | [dialogs/approval/default](../mocks/dialogs/approval/default.html), [pages/readiness/unsupported](../mocks/pages/readiness/unsupported.html) |
-| [Live reading](components/live-reading.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/control](../mocks/pages/investigation/control.html) |
+| [Live reading](components/live-reading.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/not-confirmed](../mocks/pages/investigation/not-confirmed.html), [pages/investigation/recording](../mocks/pages/investigation/recording.html) |
 | [Activity feed](components/activity-feed.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/loading](../mocks/pages/investigation/loading.html) |
-| [Tool call](components/tool-call.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/proprietary](../mocks/pages/investigation/proprietary.html) |
-| [Prompt dock](components/prompt-dock.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/identify](../mocks/pages/investigation/identify.html), [pages/investigation/checklist](../mocks/pages/investigation/checklist.html) |
+| [Tool call](components/tool-call.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/proprietary](../mocks/pages/investigation/proprietary.html), [pages/investigation/recording](../mocks/pages/investigation/recording.html) |
+| [Prompt dock](components/prompt-dock.html) | Investigation | [pages/investigation/default](../mocks/pages/investigation/default.html), [pages/investigation/identify](../mocks/pages/investigation/identify.html), [pages/investigation/cannot-find](../mocks/pages/investigation/cannot-find.html) |
 | [Readiness check](components/readiness-check.html) | Investigation | [pages/readiness/default](../mocks/pages/readiness/default.html), [pages/readiness/downloading](../mocks/pages/readiness/downloading.html), [pages/readiness/bluetooth-off](../mocks/pages/readiness/bluetooth-off.html) |
 | [Evidence entry](components/evidence-entry.html) | Investigation | [pages/evidence/default](../mocks/pages/evidence/default.html), [pages/evidence/filtered](../mocks/pages/evidence/filtered.html), [pages/evidence/no-results](../mocks/pages/evidence/no-results.html) |
 | [Missing-tool request](components/missing-tool-request.html) | Investigation | [pages/missing-tools/default](../mocks/pages/missing-tools/default.html), [pages/verdict/missing-tool](../mocks/pages/verdict/missing-tool.html) |
-| [Progress and meter](components/progress.html) | Feedback | [pages/readiness/downloading](../mocks/pages/readiness/downloading.html), [pages/investigation/default](../mocks/pages/investigation/default.html) |
+| [Progress and meter](components/progress.html) | Feedback | [pages/readiness/downloading](../mocks/pages/readiness/downloading.html), [pages/investigation/recording](../mocks/pages/investigation/recording.html), [pages/investigation/default](../mocks/pages/investigation/default.html) |
 | [Spinner](components/spinner.html) | Feedback | [notifications/connection-banner/warning](../mocks/notifications/connection-banner/warning.html), [pages/readiness/loading](../mocks/pages/readiness/loading.html) |
 | [Skeleton](components/skeleton.html) | Feedback | [pages/home/loading](../mocks/pages/home/loading.html), [pages/investigation/loading](../mocks/pages/investigation/loading.html) |
 | [Alert and banner](components/alert.html) | Feedback | [notifications/connection-banner/warning](../mocks/notifications/connection-banner/warning.html), [notifications/connection-banner/danger](../mocks/notifications/connection-banner/danger.html), [notifications/mode-banner/warning](../mocks/notifications/mode-banner/warning.html) |
@@ -115,6 +115,8 @@ readings 32px (NFR-009); breakpoints are NFR-010's 576, 768, 992 and 1200px.
 | assets/ui.css | Switch rules and <code>.inv__feed</code> declared twice. | Merged into one rule each. |
 | assets/ui.css | Kit parts no mock uses: tabs, breadcrumb, pagination, stepper, top bar, nav links, sidebar, avatar, accordion, drawer, popover, tooltip, dropdown menu, sortable table, list, badge, select, input group, button group, link and block buttons, stat, well. | Not carried into <code>components.css</code>; see “Not extracted” below. |
 | dialogs/approval, confidence meter | The confidence meter uses <code>role="progressbar"</code>. | Documented as <code>role="meter"</code>, which matches a level rather than progress; fix in the product, the mock is unchanged. |
+| pages/investigation/recording | The progress bar in the prompt dock is spaced with an inline <code>style="margin-top: var(--space-3)"</code>. | <code>components.css</code> gives <code>.dock__inner &gt; .progress</code> that margin; the inline style is now redundant and can be removed from the mock. |
+| pages/investigation/not-confirmed | <em>not confirmed</em> is the first use of <code>.conf--refused</code>; the class name and the word differ. | Kept the class (renaming would touch every mock); the badge page documents that <code>--refused</code> renders <em>not confirmed</em>. |
 | pages/investigation (stage track) | The current-stage segment in signal is 2.8:1 on paper (mocks README, open question 3). | Kept as redundant: the stage is named in the subtitle and the segment is taller. Listed in <code>contrast-pairs.json</code> with min 1 and the reason. |
 
 ## Not extracted
@@ -129,6 +131,13 @@ device. Add one only when a mock needs it.
 | Select, radio group, combobox, date picker, slider | No screen asks for them; choices are quick replies, chips or buttons beside a machine. |
 | Tooltip, popover, dropdown menu, drawer | Every overlay is a sheet, which works one-handed and the same at every width. |
 | Avatar, accordion, stat with delta, pagination | No mock content needs them. |
+
+## Changelog
+
+| Date | Change |
+|---|---|
+| 25 Nov 2026 | First extraction from 111 mocks. |
+| 25 Nov 2026 | Updated for commit ee71620 (six new mock states, 117 mocks). No token changed. Added `.dock__inner > .progress`. Documented: the *not confirmed* badge and ✕ reading marker (FR-025); the prompt dock’s checks, recording, effect-check and failed states (FR-014, FR-028, FR-038, NFR-008); the handshake approval sheet with no stand-clear tick and focus on Don’t send (FR-032). Fixed the dialog code sample’s footer order to match the mocks (Don’t send, then Send). |
 
 ## Open questions
 
@@ -146,9 +155,10 @@ Run on 25 November 2026, after the last change:
 | `check_contrast.py docs/design-system/tokens/tokens.css` | 160 passed, 0 failed (80 pairs × light and dark). The first run failed 3 dark pairs (danger red edges on ink, 1.8–2.3:1); fixed with `--color-border-danger`. |
 | `tokens_to_json.py` | `tokens/tokens.json` written, 270 tokens. |
 | `check_design_system.py docs/design-system` | 58 pages (12 foundations, 35 components, 10 patterns, index), 0 errors, 0 warnings. Every token in `tokens.css` (207) is on exactly one foundation page. |
-| `check_mocks.py docs/mocks` | 27 screens, 111 mocks, 0 errors, 0 warnings, with the mocks reading the design system’s tokens and components. |
+| `check_mocks.py docs/mocks` | 27 screens, 117 mocks (after merging ee71620), 0 errors, 0 warnings, with the mocks reading the design system’s tokens and components. |
 | Design-system pages in Chromium (Playwright) | All 58 pages at 360, 768 and 1280 px in light and dark (348 captures): no horizontal scroll, no console errors, no failed loads. Reviewed by eye: the index, color, button, dialog, activity feed, prompt dock, text field, emergency stop and approvals pattern. Fixed during review: example canvases that widened the page at 360 px, the doc chrome shrinking titles inside examples, a sheet caught mid-animation, and overlapping anatomy callouts. |
 | Mocks before and after | Every mock captured at 360 and 1280 px in both themes before (from the last commit) and after pointing the mocks at the system. Differences are the spacing snaps (a few pixels taller; readiness rows +24 px in total) and the red-300 outline on the emergency stop in dark; layouts and content are unchanged. |
+| Update for ee71620 | The six new mocks (`approval/handshake`, `investigation/cannot-find`, `control-check`, `not-confirmed`, `recording`, `storage-full`) use no class the system lacked and no raw colour. Rendered at 360 and 1280 px in both themes: no horizontal scroll, no errors. The ten changed design-system pages swept again at 360, 768 and 1280 px in both themes: clean. |
 
 
 ## Re-running the checks

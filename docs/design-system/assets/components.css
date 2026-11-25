@@ -682,3 +682,5 @@ a.row:hover, .row--link:hover { background: color-mix(in srgb, var(--color-bg-su
 /* Words that drop on phones; screen readers still hear them. */
 .sm-hide-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (min-width: 48rem) { .sm-hide-text { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; } }
+/* A progress bar inside the prompt dock (a recording window) sits under the detail. */
+.dock__inner > .progress { margin-top: var(--space-3); }
