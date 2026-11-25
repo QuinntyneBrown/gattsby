@@ -1,0 +1,86 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — End the loop
+
+enum StopReason {
+  finish
+  confidenceReached
+  stepBudget
+  noProgress
+  personStop
+  emergencyStop
+  failure
+}
+
+class LoopConfig {
+  +finishConfidence: number = 0.9
+  +stepBudget: number = 40
+  +noProgressSteps: number = 5
+}
+
+class LoopProgress {
+  +steps: number
+  +noProgressRun: number
+  +observationKeys: Set<string>
+  +refusedCalls: Map<string, number>
+  +record(step: Step): void
+}
+
+class StopConditions {
+  +check(progress: LoopProgress, state: DecisionState, lastStep: Step): StopReason | null
+  -precedence: StopReason[]
+}
+
+class LoopEnd {
+  +reason: StopReason
+  +atStep: number
+  +stage: Stage
+  +verdict: Verdict
+  +profileId: string
+  +note?: string
+}
+
+abstract class AgentOrchestrator <<contract>> {
+  +status: Signal<LoopStatus>
+  +start(id: string): Promise<void>
+  +resume(id: string): Promise<void>
+  +stop(reason: StopReason): Promise<void>
+}
+
+class PlaybookOrchestrator {
+  -progress: LoopProgress
+  -abort: AbortController
+  -conclude(reason: StopReason): Promise<LoopEnd>
+}
+
+class VerdictBuilder {
+  +supported(investigation: Investigation): Verdict
+  +check(verdict: Verdict, investigation: Investigation): Verdict | ToolError
+}
+
+class ProfileBuilder {
+  +build(investigation: Investigation): DeviceProfile
+}
+
+AgentOrchestrator <|-- PlaybookOrchestrator
+PlaybookOrchestrator *-- LoopProgress
+PlaybookOrchestrator ..> StopConditions : after each step
+StopConditions ..> LoopConfig
+StopConditions ..> LoopProgress
+StopConditions ..> StopReason : returns
+PlaybookOrchestrator ..> VerdictBuilder : conclude
+PlaybookOrchestrator ..> ProfileBuilder : conclude
+PlaybookOrchestrator ..> LoopEnd : records
+LoopEnd --> StopReason
+@enduml

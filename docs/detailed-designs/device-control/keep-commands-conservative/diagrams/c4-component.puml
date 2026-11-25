@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Keep commands conservative
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(validator, "ActionValidator", "Service", "Checks every send_command before any prompt")
+  Component(gate, "ApprovalGate", "Service", "Checks the value again before it asks the person")
+  Component(limits, "SafetyLimits", "Service", "Offers one value; refuses others with UNSAFE_VALUE")
+  Component(kbs, "KnowledgeBase", "Service", "safeLimits(deviceType), commands, writeTargets()")
+  Component(encoder, "CommandEncoder", "Pure helper", "Op code plus little-endian parameter at its resolution")
+  Component(missing, "MissingToolRecorder", "Service", "Records 'safe command limits for <type>'")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Writes only to known command targets")
+}
+Container(kb, "Knowledge base data", "Versioned JSON files", "limits/*.json, commands/ftms.json")
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and missing-tool requests")
+
+Rel(validator, limits, "check(command, value, facts)")
+Rel(gate, limits, "check again before the prompt")
+Rel(limits, kbs, "Reads safe limits and the command definition")
+Rel(limits, encoder, "Encodes the allowed value")
+Rel(limits, missing, "No limit for the device type")
+Rel(kbs, kb, "Loads, validated at build")
+Rel(ble, kbs, "Checks the target is in writeTargets()")
+Rel(missing, idb, "Stores the request")
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Keep writes to known command targets
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Maintainer" as dev
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "validate-knowledge-base.ts" as script
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "ApprovalLedger" as ledger
+end box
+
+== Build time ==
+dev -> script : Add commands/vendor-x.json
+script -> script : Validate against knowledge-base.schema.json
+alt A command targets 0x180A, 0x1800, a firmware update\nservice, or an op code outside 00 01 02 03 04 05 07 08
+  script --> dev : Build fails (NFR-019)
+else Every target and op code is allowed
+  script --> dev : Build passes; writeTargets() includes the new target
+end
+
+== Run time ==
+executor -> ble : write(characteristic, bytes, approvalId)
+ble -> kb : writeTargets()
+kb --> ble : { 0x2AD9 }
+alt Characteristic is not a known command target
+  ble --> executor : PRECONDITION_FAILED (NFR-019);\ntoken not consumed, nothing written
+else Characteristic is 0x2AD9
+  ble -> ledger : consume(approvalId, 0x2AD9, bytes)
+  ledger --> ble : valid (see approve-a-command)
+  ble --> executor : Written
+end
+@enduml

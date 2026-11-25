@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Pick the next step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ChecklistDecider" as decider
+  participant "PlaybookRules" as rules
+  participant "PromptChannel" as channel
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+
+orch -> decider : decide(state at Identify, signal)
+decider -> rules : next(state)
+rules --> decider : decided: read_device_info
+decider -> rules : alternatives(state)
+rules --> decider : match_known_profiles, subscribe_and_record 10 s, scan_devices
+decider -> channel : post(Pick the next step; recommended first)
+channel -> card : Render options as text, 48 px
+card -> person : Recommended: read device information.\nIt's read-only and takes a second.
+person -> card : Read device information
+card --> channel : answer
+channel --> decider : choice
+decider --> orch : candidate call_tool read_device_info
+orch -> validator : validate(candidate) (FR-043)
+validator --> orch : ValidAction
+orch -> executor : run(read_device_info)
+executor --> orch : ok, summary
+orch -> orch : Commit step with mode "checklist" (FR-005 AC4)
+@enduml

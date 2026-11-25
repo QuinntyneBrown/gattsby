@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Refuse an action
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "ModeSelector" as mode
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ToolRegistry" as registry
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+orch -> validator : validate(candidate, state)
+alt Tool not in the registry
+  validator -> registry : get("read_everything")
+  registry --> validator : undefined
+  validator --> orch : Refusal UNKNOWN_TOOL (FR-043 AC1)
+else send_command before request_control succeeded
+  validator -> validator : Precondition controlGranted is false
+  validator --> orch : Refusal PRECONDITION_FAILED (FR-043 AC2)
+else Input misses a required field
+  validator -> validator : Input schema fails: characteristics required
+  validator --> orch : Refusal INVALID_INPUT (FR-043 AC3)
+end
+orch -> store : commitStep(refusal, raw candidate, stage, mode)
+orch -> orch : Step count + 1 (counts against the budget);\nsummary "Refused <tool>: <reason> (<code>)"
+note over orch : Nothing ran; the next DecisionState carries the reason
+orch -> mode : recordRefusal()
+alt Third consecutive refusal in agent mode
+  mode -> orch : Fall back to checklist mode (FR-006 AC2)
+else Otherwise
+  mode --> orch : continue
+end
+@enduml

@@ -1,0 +1,86 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Apply heuristics first
+
+enum Stage {
+  prepare
+  find
+  identify
+  standard
+  proprietary
+  control
+  conclude
+}
+
+class Playbook {
+  +stages: Stage[]
+  +toolsAt(stage: Stage): string[]
+  +stepText(ruleId: string): StepText
+}
+
+class StageRule {
+  +id: string
+  +stage: Stage
+  +when(state: DecisionState): boolean
+  +then(state: DecisionState): RuleOutcome
+}
+
+class RuleOption {
+  +action: AgentAction
+  +label: string
+  +purpose: string
+  +recommended: boolean
+}
+
+class RuleOutcome <<union>> {
+  +kind: "decided" | "ambiguous"
+  +action?: AgentAction
+  +options?: RuleOption[]
+  +ruleId: string
+}
+
+class PlaybookRules {
+  +next(state: DecisionState): RuleOutcome
+}
+
+abstract class Decider <<contract>> {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+}
+
+class ModelDecider
+class ChecklistDecider
+
+class PlaybookOrchestrator {
+  -decider: Decider
+  +start(id: string): Promise<void>
+  -step(): Promise<void>
+}
+
+class Investigation {
+  +id: string
+  +mode: "agent" | "checklist"
+  +modelConsultations: number
+}
+
+PlaybookRules ..> Playbook : reads
+PlaybookRules "1" *-- "*" StageRule
+StageRule --> Stage
+PlaybookRules ..> RuleOutcome : returns
+RuleOutcome "1" *-- "*" RuleOption
+Decider <|-- ModelDecider
+Decider <|-- ChecklistDecider
+PlaybookOrchestrator ..> PlaybookRules : first
+PlaybookOrchestrator --> Decider : only when ambiguous
+ModelDecider ..> Investigation : counts consultations
+@enduml

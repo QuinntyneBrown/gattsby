@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Time out or abort
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ModelDecider" as decider
+  participant "ModeSelector" as mode
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ModelSession" as session
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome Prompt API" as api
+end box
+
+orch -> decider : decide(state, investigationSignal)
+decider -> session : promptAction(prompt, schema, callSignal)
+session -> api : clone.prompt(..., { signal })
+alt No answer after 10 s
+  decider -> decider : Timer fires; callController.abort()
+  api --> session : AbortError
+  session -> api : clone.destroy()
+  session --> decider : aborted
+  decider --> orch : TIMEOUT
+  orch -> orch : Step recorded as timed out; counts as a step (FR-047 AC1)
+  orch -> mode : recordTimeout()
+  alt Second timeout in a row
+    mode -> orch : Fall back to checklist at the current stage (FR-006)
+    orch -> session : destroy() base session
+  else First timeout
+    mode --> orch : continue in agent mode
+  end
+else The person taps Stop or Emergency stop
+  person -> orch : stop(reason)
+  orch -> orch : investigationController.abort()
+  api --> session : AbortError at once (FR-047, FR-039 AC3)
+  session --> decider : aborted
+  decider --> orch : ABORTED; no fallback
+  orch -> session : destroy() base session
+end
+@enduml

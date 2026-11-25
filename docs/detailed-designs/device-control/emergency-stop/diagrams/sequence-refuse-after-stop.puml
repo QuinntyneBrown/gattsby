@@ -1,0 +1,46 @@
+@startuml
+title UML sequence behaviour — Refuse after the stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ActionValidator" as validator
+  participant "ApprovalGate" as gate
+  participant "EmergencyStopController" as estop
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "WebBluetoothBleLayer" as ble
+end box
+
+alt The agent or the checklist proposes a write or control call after the stop
+  validator -> estop : stopped?
+  estop --> validator : true
+  validator --> validator : Refuse with EMERGENCY_STOPPED (FR-039 AC2)
+else A call reaches the gate anyway
+  gate -> estop : stopped?
+  estop --> gate : true
+  gate --> gate : EMERGENCY_STOPPED; no prompt shown
+else A write reaches the BLE layer anyway
+  ble -> ledger : consume(id, characteristic, bytes)
+  ledger --> ble : EMERGENCY_STOPPED (ledger locked)
+else The model returns call_tool emergency_stop
+  validator -> validator : emergency_stop has no stage
+  validator --> validator : Refuse with NOT_ALLOWED_AT_STAGE (TOOL-024 AC2)
+  validator -> feed : The agent asked for a stop; button stays one tap away
+end
+@enduml

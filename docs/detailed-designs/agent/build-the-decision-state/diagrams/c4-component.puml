@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Build the decision state
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Asks for a state before each decision")
+  Component(builder, "DecisionStateBuilder", "Service", "Facts, hypothesis, last 5 summaries, stage, tools")
+  Component(tracker, "HypothesisTracker", "Service", "Current hypothesis and confidence")
+  Component(list, "ToolListGenerator", "Service", "Tools allowed at the stage and available")
+  Component(executor, "ToolExecutor", "Service", "Enforces one line of at most 200 characters")
+  Component(composer, "PromptComposer", "Service", "Instructions, tools and state within the budget")
+  Component(budget, "PromptBudget", "Value", "Context window less a 512-token answer reserve")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "contextWindow, measureTokens")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, observations")
+
+Rel(orch, builder, "build(investigation, stage)")
+Rel(builder, tracker, "current()")
+Rel(builder, list, "forStage(stage, capabilities)")
+Rel(builder, idb, "Reads observations and summaries")
+Rel(executor, idb, "Commits step with its summary")
+Rel(orch, composer, "compose(state)")
+Rel(composer, budget, "Fits within")
+Rel(composer, model, "measureTokens(text)")
+Rel(budget, model, "contextWindow")
+@enduml

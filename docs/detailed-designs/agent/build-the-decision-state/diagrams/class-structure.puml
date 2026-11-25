@@ -1,0 +1,107 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Build the decision state
+
+class DecisionState {
+  +stage: Stage
+  +step: number
+  +stepsLeft: number
+  +device: DeviceFacts
+  +hypothesis: HypothesisSnapshot
+  +recent: StepSummary[]
+  +allowedTools: ToolListEntry[]
+}
+
+class DeviceFacts {
+  +advertisedName?: string
+  +machineType?: string
+  +brandAnswer?: string
+  +maker?: string
+  +model?: string
+  +firmware?: string
+  +services: NamedUuid[]
+  +connected: boolean
+  +controlGranted: boolean
+  +emergencyStopped: boolean
+}
+
+class HypothesisSnapshot {
+  +protocol: string | null
+  +deviceType?: string
+  +maker?: string
+  +model?: string
+  +confidence: number
+  +version: number
+}
+
+class StepSummary {
+  +step: number
+  +action: ActionType
+  +tool?: string
+  +ok: boolean
+  +text: string
+  +errorCode?: ErrorCode
+}
+
+class ToolListEntry {
+  +name: string
+  +description: string
+  +inputSchema: JsonSchema
+}
+
+class DecisionStateBuilder {
+  +build(investigation: Investigation, stage: Stage): Promise<DecisionState>
+  -lastSummaries(steps: Step[], window: number): StepSummary[]
+  -omitByteRuns(text: string): string
+}
+
+class PromptBudget {
+  +contextWindow: number
+  +answerReserve: number = 512
+  +available: number
+}
+
+class ComposedPrompt {
+  +text: string
+  +tokens: number
+  +droppedSummaries: number
+  +shortenedDescriptions: boolean
+}
+
+class PromptComposer {
+  +compose(state: DecisionState, budget: PromptBudget): Promise<ComposedPrompt | "contextExhausted">
+}
+
+abstract class ModelAdapter <<contract>> {
+  +contextWindow: number
+  +measureTokens(text: string): Promise<number>
+}
+
+class ToolExecutor {
+  +run(action: ValidAction, ctx: ToolContext): Promise<ToolResult<unknown>>
+  -enforceSummary(text: string): string
+}
+
+DecisionState *-- DeviceFacts
+DecisionState *-- HypothesisSnapshot
+DecisionState "1" *-- "0..5" StepSummary
+DecisionState "1" *-- "*" ToolListEntry
+DecisionStateBuilder ..> DecisionState : builds
+PromptComposer ..> DecisionState : reads
+PromptComposer ..> PromptBudget : fits within
+PromptComposer ..> ComposedPrompt : produces
+PromptComposer ..> ModelAdapter : measureTokens
+PromptBudget ..> ModelAdapter : contextWindow
+ToolExecutor ..> StepSummary : writes
+@enduml

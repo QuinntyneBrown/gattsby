@@ -1,0 +1,48 @@
+@startuml
+title UML sequence behaviour — Validate an action
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "SafetyLimits" as limits
+  participant "ApprovalGate" as gate
+  participant "EmergencyStopController" as estop
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "SchemaValidator" as schema
+  participant "ToolRegistry" as registry
+end box
+
+orch -> validator : validate(call_tool send_command setResistance 6, state)
+validator -> schema : action schema
+schema --> validator : one call_tool action
+validator -> registry : get("send_command")
+registry --> validator : ToolDefinition (control, stage control)
+validator -> validator : Stage is control; capabilities available
+validator -> schema : send_command input schema
+schema --> validator : valid
+validator -> validator : Preconditions: connected, controlGranted,\nnotEmergencyStopped (FR-043)
+validator -> estop : stopped?
+estop --> validator : false
+validator -> limits : check(setResistance, 6, facts)
+limits --> validator : SafeCommand (current 5, +1)
+validator -> gate : isDeniedRecently(call)
+gate --> validator : false
+validator --> orch : ValidAction (branded)
+orch -> executor : run(ValidAction)
+executor -> gate : Approval for this one call (see approve-a-command)
+@enduml

@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Check a proposed command value
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ActionValidator" as validator
+  participant "SafetyLimits" as limits
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "KnowledgeBase" as kb
+  participant "CommandEncoder" as encoder
+  participant "MissingToolRecorder" as missing
+end box
+
+validator -> limits : check(setSpeed, value, facts)
+limits -> kb : safeLimits(treadmill)
+alt Limits exist and the value is allowed
+  kb --> limits : firstSpeedKmh 2.0
+  limits -> limits : Belt moving at 6.0; device step 0.1;\nallowed = { 5.9 } (FR-036)
+  limits -> kb : command setSpeed (0x2AD9, op 0x02, uint16, 0.01 km/h)
+  limits -> encoder : encode(setSpeed, 5.9)
+  encoder --> limits : 02 4E 02
+  limits --> validator : SafeCommand 5.9 km/h, 02 4E 02, motion
+  validator -> gate : Valid call_tool send_command
+  gate -> limits : check again (defence in depth)
+  gate -> gate : Post approval prompt (see approve-a-command)
+else The value is above the limits
+  kb --> limits : firstSpeedKmh 2.0
+  limits -> limits : Belt stopped; 8.0 > max(2.0, device min)
+  limits --> validator : UNSAFE_VALUE (FR-036 AC1)
+  validator --> validator : Refusal recorded as a step;\nno approval prompt shown
+else No safe limit for the device type
+  kb --> limits : null
+  limits -> missing : record("safe command limits for treadmill")
+  missing --> limits : request id
+  limits --> validator : UNSAFE_VALUE (FR-036 AC3)
+  validator --> validator : Refusal recorded; no prompt
+end
+@enduml

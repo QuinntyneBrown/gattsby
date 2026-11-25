@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Request control
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Gets the approval, runs the tool, commits the step")
+  Component(gate, "ApprovalGate", "Service", "Approval without stand-clear check (OQ-12)")
+  Component(tool, "requestControlTool", "ToolDefinition", "request_control: input {}, output { result, raw }")
+  Component(exchange, "ControlPointExchange", "Helper", "Subscribe, write, wait 5 s for the matching response")
+  Component(decoder, "ControlPointResponseDecoder", "Decoder", "80 <op code> <result>")
+  Component(session, "GattSession", "BLE layer", "controlGranted for this connection")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "subscribe, write with approval ID, raw log")
+  Component(store, "IndexedDbInvestigationStore", "Store", "commitStep in one transaction")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, raw log, quirks")
+
+Rel(executor, gate, "Requests approval")
+Rel(executor, tool, "run({}, ctx with approvalId)")
+Rel(tool, exchange, "send(00)")
+Rel(exchange, ble, "subscribe(0x2AD9); write(0x2AD9, 00, approvalId)")
+Rel(exchange, decoder, "Decodes each indication")
+Rel(tool, session, "Sets or clears controlGranted")
+Rel(ble, device, "startNotifications, writeValueWithResponse", "Web Bluetooth")
+Rel(executor, store, "commitStep")
+Rel(store, idb, "Writes")
+@enduml

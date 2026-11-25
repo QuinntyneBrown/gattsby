@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — End the loop
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Orchestrator, stop conditions, verdict and profile builders")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Stop reason, verdict, profile")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, spa, "Stop and get the verdict", "Touch or keyboard")
+Rel(spa, idb, "Commits stop reason, verdict and profile")
+Rel(spa, device, "Disconnects", "Web Bluetooth")
+@enduml

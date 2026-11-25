@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Reach a verdict without a model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ChecklistDecider" as decider
+  participant "PlaybookRules" as rules
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "baselineVsActivityTool" as baseline
+  participant "findVaryingBytesTool" as varying
+  participant "VerdictBuilder" as verdict
+end box
+
+orch -> decider : decide(state: Identify done, only unknown services)
+decider -> rules : next(state)
+rules --> decider : no standard service; move to Proprietary path
+decider -> page : Pick the next step: Record idle, then activity (recommended)
+person -> page : Record idle, then activity
+orch -> baseline : run (after validation)
+baseline -> page : Walk slowly, then tap Ready (FR-051)
+person -> page : Ready
+baseline --> orch : two recordings, 10 s each (A-09)
+orch -> decider : decide(state)
+decider -> rules : next(state)
+rules --> decider : decided: find_varying_bytes
+person -> page : Find the fields that vary
+orch -> varying : run
+varying --> orch : byte 4 varies with effort
+orch -> orch : Stop condition (rules reach Conclude, budget or no progress)
+orch -> verdict : supported(investigation)
+alt Some fields decoded or varying
+  verdict --> orch : Partially decoded (FR-049 AC2)
+else Blocked by a missing capability
+  verdict --> orch : Needs a missing tool (FR-049 AC2)
+end
+orch -> page : Open the verdict; same profile schema as agent mode
+@enduml

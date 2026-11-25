@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Resolve an ambiguous step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "PlaybookRules" as rules
+  participant "ModelDecider" as model
+  participant "ChecklistDecider" as checklist
+  participant "ActionValidator" as validator
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+orch -> rules : next(state: Standard path, FTMS confirmed, 0xFFF0 notifies)
+rules --> orch : ambiguous: [record 0xFFF0 for 10 s (recommended),\nmove on to Control, request a missing tool]
+alt Full agent mode
+  orch -> model : decide(state with options, signal)
+  model -> nano : prompt; schema narrowed to the options' tools
+  nano --> model : call_tool subscribe_and_record 0xFFF0
+  model -> model : modelConsultations + 1 (at most 5 for FTMS, FR-046 AC1)
+  model --> orch : candidate action
+else Checklist mode
+  orch -> checklist : decide(state with options, signal)
+  checklist -> page : Pick the next step; recommended first
+  person -> page : Record data for 10 s
+  page --> checklist : choice
+  checklist --> orch : candidate action
+end
+orch -> validator : validate(candidate)
+validator --> orch : ValidAction (same checks in both modes)
+orch -> orch : Run, commit, update hypothesis deterministically
+@enduml

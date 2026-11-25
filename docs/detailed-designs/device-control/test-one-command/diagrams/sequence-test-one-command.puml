@@ -1,0 +1,67 @@
+@startuml
+title UML sequence behaviour — Test one command and stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "PlaybookRules" as rules
+  participant "SafetyLimits" as limits
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "sendCommandTool" as tool
+  participant "CommandEffectChecker" as checker
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+orch -> rules : next(state at Control)
+rules --> orch : ask_user "Test control?"
+orch -> page : Prompt: Test control / Skip — finish read-only
+person -> page : Test control
+note over orch, device : request_control approved; 80 00 01 (see request-control)
+orch -> rules : next(state)
+rules -> limits : offer(setSpeed, belt moving at 6.0)
+limits --> rules : 5.9 km/h, 02 4E 02 (FR-036)
+rules --> orch : send_command setSpeed 5.9
+orch -> dialog : Command 2 of 3: Lower the target speed to 5.9 km/h?
+person -> dialog : Tick stand-clear, tap Send (FR-035)
+orch -> tool : run(setSpeed 5.9, approvalId a-17)
+tool -> device : write 0x2AD9 02 4E 02
+device --> tool : indicate 80 02 01
+tool --> orch : ok, sent 02 4E 02, result success
+par Ask the person
+  orch -> page : "Did the speed change?" Yes / No / Don't know
+  person -> page : Yes
+else Check the data
+  orch -> checker : check(setSpeed, 6.0, 5.9, samples within 15 s)
+  checker --> orch : asExpected, observed 5.90
+end
+orch -> orch : Observation: target speed confirmed (FR-038 AC2)
+orch -> rules : next(state)
+rules --> orch : send_command stop (FR-038 AC3)
+orch -> dialog : Command 3 of 3: Stop the belt? No stand-clear check
+person -> dialog : Send
+orch -> tool : run(stop, approvalId a-18)
+tool -> device : write 0x2AD9 08 01
+device --> tool : indicate 80 08 01
+tool --> orch : ok, stop acknowledged
+orch -> orch : Commit step; move to Conclude
+@enduml

@@ -1,0 +1,63 @@
+@startuml
+title UML sequence behaviour — Build the state and fit the prompt
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "DecisionStateBuilder" as builder
+  participant "PromptComposer" as composer
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "HypothesisTracker" as tracker
+  participant "ToolListGenerator" as list
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "PromptApiModelAdapter" as model
+end box
+
+orch -> builder : build(investigation, identify)
+builder -> store : Observations and the last 5 step summaries
+store --> builder : 12 steps so far -> summaries 8 to 12 (FR-041 AC1)
+builder -> tracker : current()
+tracker --> builder : FTMS treadmill, 0.65
+builder -> list : forStage(identify, capabilities)
+list --> builder : Tools allowed now (FR-071)
+builder -> builder : Quote device strings; omit byte runs (FR-041)
+builder --> orch : DecisionState
+orch -> composer : compose(state, budget)
+composer -> model : contextWindow
+model --> composer : 4,096 tokens; budget = 4,096 - 512
+composer -> model : measureTokens(prompt)
+alt Fits the budget
+  model --> composer : 2,900 tokens
+  composer --> orch : ComposedPrompt (NFR-020 AC1)
+else Too large
+  model --> composer : over budget
+  loop While over budget and summaries remain
+    composer -> composer : Drop the oldest summary
+  end
+  opt Still over budget
+    composer -> composer : Shorten tool descriptions to first sentence
+  end
+  composer -> composer : Safety instructions never cut (NFR-020)
+  alt Now fits
+    composer --> orch : ComposedPrompt with cuts recorded
+  else Still does not fit
+    composer --> orch : contextExhausted
+    orch -> orch : Fall back to checklist mode (FR-006)
+  end
+end
+@enduml

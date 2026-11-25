@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Keep commands conservative
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Action validator, safety limits, approval gate, BLE layer")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Safe limits per device type, command definitions, forbidden targets")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Refusals, missing-tool requests, steps")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Approves or declines the offered value", "Touch or keyboard")
+Rel(spa, kb, "Reads safe limits, command bytes and write targets")
+Rel(spa, idb, "Commits refusals and missing-tool requests")
+Rel(spa, device, "Writes only to known command targets", "Web Bluetooth")
+@enduml

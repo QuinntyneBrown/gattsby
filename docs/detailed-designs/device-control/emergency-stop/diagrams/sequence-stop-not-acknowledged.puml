@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Stop not acknowledged, or no stop known
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "EmergencyStopDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "EmergencyStopController" as estop
+  participant "PlaybookOrchestrator" as orch
+  participant "ConnectionReleaser" as releaser
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "KnowledgeBase" as kb
+  participant "ControlPointExchange" as exchange
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+estop -> kb : stop sequence for the connected protocol
+alt FTMS with a Control Point, but no acknowledgement
+  kb --> estop : [08 01, 01]
+  estop -> exchange : send(08 01)
+  exchange -> device : write 0x2AD9 08 01
+  exchange --> estop : TIMEOUT after 5 s, or 80 08 05
+  estop -> releaser : disconnect
+  releaser -> device : gatt.disconnect()
+  estop -> orch : stop(emergencyStop)
+  estop -> dialog : No answer to Stop. Use the machine's own stop now
+else No known stop for this device
+  kb --> estop : none
+  estop -> releaser : disconnect (FR-039 AC4)
+  releaser -> device : gatt.disconnect()
+  estop -> orch : stop(emergencyStop)
+  estop -> dialog : Use the machine's own stop
+end
+estop -> estop : Commit event; writes stay blocked
+opt Stop was acknowledged but the machine keeps moving
+  person -> dialog : It's still moving
+  dialog --> estop : stillMoving
+  estop -> estop : Record quirk "kept moving after acknowledged stop"
+  estop -> releaser : disconnect
+  estop -> dialog : Use the machine's own stop now
+end
+@enduml

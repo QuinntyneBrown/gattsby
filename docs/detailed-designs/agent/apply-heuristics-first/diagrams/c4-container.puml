@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Apply heuristics first
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Playbook, rules, deciders, orchestrator")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Profiles, vendor signatures, decoders' data")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, observations, model consultation count")
+}
+System_Ext(nano, "Gemini Nano", "Via Chrome's Prompt API")
+
+Rel(person, spa, "Answers and picks", "Touch or keyboard")
+Rel(spa, kb, "Rules read profiles and signatures")
+Rel(spa, idb, "Commits each step")
+Rel(spa, nano, "Ambiguous steps only", "Prompt API")
+@enduml

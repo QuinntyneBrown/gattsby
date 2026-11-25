@@ -1,0 +1,101 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Validate every action
+
+enum ActionType {
+  call_tool
+  ask_user
+  update_hypothesis
+  request_missing_tool
+  finish
+}
+
+class ActionValidator {
+  +validate(candidate: unknown, state: DecisionState): ValidAction | Refusal
+  -checkShape(candidate: unknown): AgentAction | Refusal
+  -checkToolCall(action: CallToolAction, state: DecisionState): ValidToolCall | Refusal
+  -checkSafety(tool: ToolDefinition, input: unknown, state: DecisionState): Refusal | null
+  -checkEvidence(ids: string[]): Refusal | null
+}
+
+class ValidAction <<union>> {
+  -brand: unique symbol
+  +type: ActionType
+  +tool?: ToolDefinition
+  +input: unknown
+}
+
+class Refusal {
+  +code: ErrorCode
+  +check: string
+  +reason: string
+  +candidate: unknown
+}
+
+class Precondition {
+  +id: string
+  +check(state: DecisionState): boolean
+  +reason: string
+}
+
+class ToolDefinition<I, O> {
+  +name: string
+  +safetyClass: SafetyClass
+  +stages: Stage[]
+  +requiredCapabilities: CapabilityId[]
+  +inputSchema: JsonSchema
+  +preconditions: Precondition[]
+}
+
+class ToolRegistry {
+  +get(name: string): ToolDefinition | undefined
+}
+
+class SchemaValidator {
+  +validate(schemaId: string, value: unknown): SchemaResult
+}
+
+class SafetyLimits {
+  +check(command: CommandName, value: number | undefined, facts: LimitFacts): SafeCommand | ToolError
+}
+
+class ApprovalGate {
+  +isDeniedRecently(call: PendingCall, step: number): boolean
+}
+
+class EmergencyStopController {
+  +stopped: Signal<boolean>
+}
+
+class EvidenceResolver {
+  +resolves(ids: string[]): boolean
+}
+
+class ToolExecutor {
+  +run(action: ValidAction, ctx: ToolContext): Promise<ToolResult<unknown>>
+}
+
+ActionValidator ..> ValidAction : creates
+ActionValidator ..> Refusal : creates
+ActionValidator ..> SchemaValidator
+ActionValidator ..> ToolRegistry
+ActionValidator ..> SafetyLimits
+ActionValidator ..> ApprovalGate
+ActionValidator ..> EmergencyStopController
+ActionValidator ..> EvidenceResolver
+ToolRegistry "1" *-- "*" ToolDefinition
+ToolDefinition "1" *-- "*" Precondition
+ValidAction --> ActionType
+ToolExecutor ..> ValidAction : accepts only
+@enduml

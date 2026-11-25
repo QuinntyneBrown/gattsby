@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Lose control
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ConnectionSupervisor" as supervisor
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ControlPointExchange" as exchange
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "GattSession" as session
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+alt The connection drops and is restored
+  device --> ble : gattserverdisconnected
+  ble --> supervisor : disconnected event
+  supervisor -> session : clearControl("reconnected")
+  supervisor -> ble : reconnect (see recover-a-dropped-connection)
+  ble -> device : Restore subscriptions, including 0x2AD9
+else The device reports Control Permission Lost
+  device --> ble : notify 0x2ADA, op code 0xFF
+  ble --> exchange : status value
+  exchange -> session : clearControl("permission lost")
+end
+validator -> session : controlGranted?
+session --> validator : false
+validator --> validator : Refuse send_command with\nPRECONDITION_FAILED (FR-043 AC2)
+note over validator : A new, approved request_control is needed\nbefore any further command
+@enduml

@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Emergency stop
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(button, "EmergencyStopButton", "Angular component", "In the app bar and every dialog toolbar")
+  Component(dialog, "EmergencyStopDialog", "Angular component", "Sending, acknowledged, not acknowledged")
+  Component(estop, "EmergencyStopController", "Service", "Latch; runs the stop sequence; aborts the loop")
+  Component(tool, "emergencyStopTool", "ToolDefinition", "emergency_stop; no stage, so never offered to the model")
+  Component(ledger, "ApprovalLedger", "BLE layer", "revokeAll, issueForEmergencyStop, lock")
+  Component(exchange, "ControlPointExchange", "Helper", "Write and wait 5 s for 80 <op> <result>")
+  Component(orch, "PlaybookOrchestrator", "Service", "Owns the AbortController; ends the loop")
+  Component(releaser, "ConnectionReleaser", "Service", "Disconnects when the stop is not confirmed")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+ContainerDb(idb, "Investigation database", "IndexedDB", "Event and latch")
+
+Rel(person, button, "Taps")
+Rel(button, estop, "pressed")
+Rel(estop, ledger, "Revokes, issues stop tokens, locks")
+Rel(estop, tool, "run({}) with stop tokens")
+Rel(tool, exchange, "08 01, then 01")
+Rel(exchange, device, "0x2AD9", "Web Bluetooth")
+Rel(estop, orch, "Aborts; stop(emergencyStop)")
+Rel(estop, dialog, "Outcome")
+Rel(estop, releaser, "Disconnect if not acknowledged")
+Rel(estop, idb, "Commits event and latch")
+@enduml

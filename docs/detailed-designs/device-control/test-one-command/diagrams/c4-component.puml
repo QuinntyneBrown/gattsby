@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Test one command
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Test control? prompt; Yes or No answers")
+  Component(rules, "PlaybookRules", "Service", "Control-stage steps in order")
+  Component(limits, "SafetyLimits", "Service", "Offers the one test value")
+  Component(gate, "ApprovalGate", "Service", "One approval per command")
+  Component(tool, "sendCommandTool", "ToolDefinition", "send_command: encode, send, map response")
+  Component(exchange, "ControlPointExchange", "Helper", "Write and wait 5 s for 80 <op> <result>")
+  Component(checker, "CommandEffectChecker", "Pure helper", "asExpected, notSeen or opposite in 15 s")
+  Component(resolver, "ControllableFeatureResolver", "Service", "Feature bits, ranges and outcomes to statuses")
+  Component(profile, "ProfileBuilder", "Service", "Controllable features in the device profile")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, page, "Taps Test control, Send, Yes")
+Rel(rules, limits, "offer(test command)")
+Rel(rules, page, "Prompts through PromptChannel")
+Rel(tool, gate, "Approval with stand-clear for motion")
+Rel(tool, exchange, "send(02 4E 02)")
+Rel(exchange, device, "0x2AD9 write and indication", "Web Bluetooth")
+Rel(rules, checker, "Checks decoded data after the write")
+Rel(resolver, checker, "Reads effects")
+Rel(profile, resolver, "resolve()")
+@enduml

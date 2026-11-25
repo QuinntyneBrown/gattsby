@@ -1,0 +1,71 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Run checklist mode
+
+abstract class Decider <<contract>> {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+}
+
+class ChecklistDecider {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+  -toStep(outcome: RuleOutcome, state: DecisionState): ChecklistStep
+}
+
+class PlaybookRules {
+  +next(state: DecisionState): RuleOutcome
+  +alternatives(state: DecisionState): RuleOption[]
+}
+
+class ChecklistStep {
+  +stage: Stage
+  +title: string
+  +recommendation: string
+  +options: RuleOption[]
+}
+
+class RuleOption {
+  +action: AgentAction
+  +label: string
+  +purpose: string
+  +recommended: boolean
+}
+
+class PromptChannel {
+  +post(prompt: PersonPrompt): Promise<PromptResponse>
+}
+
+class ModeSelector {
+  +mode: Signal<"agent" | "checklist">
+  +select(capabilities: Capabilities, choice?: "checklist"): Promise<Decider>
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+  +answered: output<PromptResponse>
+}
+
+class Playbook {
+  +optionLabel(tool: string): string
+  +purpose(tool: string): string
+}
+
+Decider <|-- ChecklistDecider
+ChecklistDecider ..> PlaybookRules
+ChecklistDecider ..> PromptChannel : posts step
+ChecklistDecider ..> ChecklistStep : builds
+ChecklistDecider ..> Playbook : labels
+ChecklistStep "1" *-- "1..4" RuleOption
+PromptChannel ..> PromptCard : rendered by
+ModeSelector ..> ChecklistDecider : creates
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Stop on the persons request
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "StopInvestigationDialog" as dialog
+  participant "EmergencyStopButton" as button
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "EmergencyStopController" as estop
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "finishTool" as finish
+  participant "VerdictBuilder" as verdict
+end box
+
+alt The person stops
+  person -> dialog : Stop and get the verdict
+  dialog -> orch : stop(personStop)
+  orch -> orch : abort(): model call, prompt, running tool
+  orch -> finish : run("Stopped by the person") (FR-009, FR-054)
+else The person taps Emergency stop
+  person -> button : Tap
+  button -> estop : pressed (see emergency-stop)
+  estop -> orch : stop(emergencyStop)
+  orch -> orch : abort(): model call, prompt, running tool
+  orch -> verdict : supported(investigation)
+  verdict --> orch : e.g. Connected — FTMS
+  orch -> finish : run(supported verdict)
+end
+finish --> orch : verdict, profileId
+orch -> orch : Record LoopEnd; release the connection;\ndestroy the model session
+@enduml

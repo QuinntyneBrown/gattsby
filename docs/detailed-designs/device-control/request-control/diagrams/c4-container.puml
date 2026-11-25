@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Request control
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Approval dialog, tool executor, request_control tool, BLE layer")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Request Control definition, control point response codes")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, raw log, observations, connection quirks")
+}
+System_Ext(device, "Device", "FTMS machine with a Control Point (Bluetooth LE)")
+
+Rel(person, spa, "Approves Request Control", "Touch or keyboard")
+Rel(spa, kb, "Reads the command definition")
+Rel(spa, device, "Writes 00 to 0x2AD9; receives the indication", "Web Bluetooth")
+Rel(spa, idb, "Commits the result, raw entries and any quirk")
+@enduml

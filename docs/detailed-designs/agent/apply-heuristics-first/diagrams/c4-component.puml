@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Apply heuristics first
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Rules first, then a decider")
+  Component(playbook, "Playbook", "Data", "Seven stages, tools per stage, step texts")
+  Component(rules, "PlaybookRules", "Pure service", "next(state): decided or ambiguous")
+  Component(matcher, "ProfileMatcher", "Service", "0-100 profile scores")
+  Component(scorer, "ConfidenceScorer", "Service", "Deterministic confidence")
+  Component(model, "ModelDecider", "Decider", "Model chooses among options")
+  Component(checklist, "ChecklistDecider", "Decider", "Person chooses among options")
+  Component(validator, "ActionValidator", "Service", "Checks every action, decided or chosen")
+  Component(executor, "ToolExecutor", "Service", "Runs the valid action")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(orch, rules, "next(state)")
+Rel(rules, playbook, "Stage rules and allowed tools")
+Rel(rules, matcher, "Reads scores")
+Rel(rules, scorer, "Reads confidence")
+Rel(orch, model, "Ambiguous, agent mode")
+Rel(orch, checklist, "Ambiguous, checklist mode")
+Rel(model, nano, "One action", "Prompt API")
+Rel(orch, validator, "validate(action)")
+Rel(orch, executor, "run(ValidAction)")
+@enduml

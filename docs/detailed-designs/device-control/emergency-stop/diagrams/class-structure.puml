@@ -1,0 +1,98 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Emergency stop
+
+enum StopState {
+  sending
+  acknowledged
+  notAcknowledged
+  noKnownStop
+}
+
+class EmergencyStopController {
+  +stopped: Signal<boolean>
+  +outcome: Signal<EmergencyStopOutcome | null>
+  +trigger(source: "button"): Promise<void>
+  +restore(investigation: Investigation): void
+}
+
+class emergencyStopTool <<const>> {
+  +name = "emergency_stop"
+  +safetyClass = "control"
+  +stages = []
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<EmergencyStopOutput>>
+}
+
+class ApprovalLedger {
+  +revokeAll(): void
+  +issueForEmergencyStop(characteristic: string, bytes: Uint8Array): ApprovalToken | ToolError
+  +lock(): void
+  +consume(id: string, characteristic: string, bytes: Uint8Array): ApprovalToken | ToolError
+}
+
+class EmergencyStopOutcome {
+  +state: StopState
+  +sentAt?: number
+  +deviceKind: string
+}
+
+class EmergencyStopEvent {
+  +id: string
+  +tappedAt: number
+  +firstWriteAt?: number
+  +sent: string[]
+  +responses: string[]
+  +outcome: StopState
+  +personReport?: "stopped" | "stillMoving"
+  +stage: Stage
+  +mode: "agent" | "checklist"
+}
+
+class EmergencyStopOutput {
+  +sent: string[]
+  +loopStopped: true
+  +writesBlocked: true
+}
+
+class EmergencyStopButton <<component>> {
+  +compact: input<boolean>
+  +pressed: output<void>
+}
+
+class EmergencyStopDialog <<component>> {
+  +outcome: input<EmergencyStopOutcome>
+  +stillMoving: output<void>
+  +stopped: output<void>
+}
+
+abstract class AgentOrchestrator <<contract>> {
+  +stop(reason: StopReason): Promise<void>
+}
+
+class PlaybookOrchestrator {
+  -abort: AbortController
+  +stop(reason: StopReason): Promise<void>
+}
+
+EmergencyStopButton ..> EmergencyStopController : pressed
+EmergencyStopController ..> emergencyStopTool : only caller
+EmergencyStopController --> ApprovalLedger : revoke, issue, lock
+EmergencyStopController ..> AgentOrchestrator : stop(emergencyStop)
+EmergencyStopController ..> EmergencyStopOutcome : publishes
+EmergencyStopController ..> EmergencyStopEvent : commits
+emergencyStopTool ..> EmergencyStopOutput : returns
+EmergencyStopDialog ..> EmergencyStopOutcome : renders
+EmergencyStopOutcome --> StopState
+AgentOrchestrator <|-- PlaybookOrchestrator
+@enduml
