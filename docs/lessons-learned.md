@@ -204,3 +204,20 @@ None; this is the first entry.
   and 1280 px in both themes. The phone and laptop comparisons are in
   `docs/assets/journey-03/`. The Verdict mock also illustrates features from later journeys,
   including Evidence and Export.
+
+## Journey 3, slice 14: Check memory through a long investigation
+
+- Keep the device subscribed for 30 virtual minutes at 20 Hz. The fake clock preserves every
+  notification and the normal IndexedDB writes. The Chromium heap test runs on demand because
+  it takes several minutes even with virtual time.
+- Verify the number of stored packets as well as the collected heap. A quiet characteristic could
+  otherwise pass a memory check without exercising continuous traffic.
+
+## Journey 3, slice 15: Keep evidence for each confirmed reading
+
+- An incline check needs the most recent incline before the prompt. Offer the check when a small
+  rise to the mock's target can be measured, and preserve the earlier speed and distance evidence
+  when the person skips it or the incline does not change.
+- A single pace change can supply separate evidence for distance, elapsed time, bike cadence and
+  bike power. Each confirmed field links to its own before and after packets. Other claimed
+  readings retain their decoding rules and the status supported by the investigation.

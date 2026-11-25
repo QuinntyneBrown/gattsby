@@ -44,6 +44,30 @@ export interface StoredRecording {
 export class StoredRecords {
   constructor(private readonly page: Page) {}
 
+  rawCount(investigationId: string): Promise<number> {
+    return this.page.evaluate(
+      (id) =>
+        new Promise<number>((resolve, reject) => {
+          const open = indexedDB.open('gattsby');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const db = open.result;
+            const range = IDBKeyRange.bound([id, 0], [id, Number.MAX_SAFE_INTEGER]);
+            const count = db.transaction('rawLog').objectStore('rawLog').count(range);
+            count.onsuccess = () => {
+              db.close();
+              resolve(count.result);
+            };
+            count.onerror = () => {
+              db.close();
+              reject(count.error);
+            };
+          };
+        }),
+      investigationId,
+    );
+  }
+
   investigations(): Promise<StoredInvestigation[]> {
     return this.readAll<StoredInvestigation>('investigations');
   }

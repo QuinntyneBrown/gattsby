@@ -199,6 +199,7 @@ npx playwright install chromium   # once, for the behaviour specs
 | `npm test` | Unit tests (Vitest), once |
 | `npm run e2e` | Production build, then every behaviour spec (Playwright, Chromium only) |
 | `npm run e2e:critical` | The critical behaviour specs CI runs, against an existing build |
+| `npm run e2e:memory` | Runs the 30-minute, 20 Hz simulated investigation and samples Chromium heap against an existing build |
 | `npm run lint` / `npm run format` | ESLint / Prettier (`format:check` checks without writing) |
 | `npm run check:bundle` | Fails when the initial bundle is over 250 KB gzip (NFR-004) |
 | `npm run check:headers -- <url>` | Checks a running Gattsby's security headers (NFR-013, NFR-014); defaults to `http://localhost:4300/` |
