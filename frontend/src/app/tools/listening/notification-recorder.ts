@@ -1,4 +1,5 @@
 import { inject, Injectable } from '@angular/core';
+import { ConfirmationCheck } from '../../agent/confirmation-check';
 import type { BleLayer } from '../../ble/ble-layer';
 import type { DecodedMetric } from '../../knowledge-base/decoders/decoded-metric';
 import type { Decoder } from '../../knowledge-base/decoders/decoder';
@@ -10,6 +11,7 @@ import { ToolError } from '../tool-error';
 export class NotificationRecorder {
   private readonly clock = inject(Clock);
   private readonly live = inject(LiveMetrics);
+  private readonly confirmation = inject(ConfirmationCheck);
 
   async record(
     ble: BleLayer,
@@ -22,12 +24,14 @@ export class NotificationRecorder {
     let count = 0;
     let decodeErrors = 0;
     let recording = true;
-    const stop = await ble.subscribe(service, characteristic, ({ bytes }) => {
+    const stop = await ble.subscribe(service, characteristic, ({ bytes, entryId }) => {
       if (signal.aborted) return;
       if (recording) count++;
       try {
         const { value } = decoder.decode(bytes);
-        this.live.update(value as readonly DecodedMetric[]);
+        const fields = value as readonly DecodedMetric[];
+        this.live.update(fields);
+        this.confirmation.sample(fields, entryId, recording);
       } catch {
         if (recording) decodeErrors++;
       }

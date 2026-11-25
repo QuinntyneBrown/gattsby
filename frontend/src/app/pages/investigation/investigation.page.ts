@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
+import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { PromptChannel } from '../../agent/prompt-channel';
 import { LiveMetrics } from '../../live/live-metrics';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
@@ -39,7 +40,13 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     PromptCardComponent,
     StageTrackComponent,
   ],
-  providers: [PlaybookOrchestrator, PromptChannel, LiveMetrics, NotificationRecorder],
+  providers: [
+    PlaybookOrchestrator,
+    PromptChannel,
+    LiveMetrics,
+    NotificationRecorder,
+    ConfirmationCheck,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {

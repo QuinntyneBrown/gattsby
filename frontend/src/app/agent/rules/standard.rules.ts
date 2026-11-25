@@ -40,4 +40,35 @@ export const STANDARD_RULES: readonly StageRule[] = [
         seconds: 10,
       }),
   },
+  {
+    id: 'standard.speed-action',
+    stage: 'standard',
+    when: ({ state }) => state.standardRecording === 'recorded' && state.speedAction === null,
+    then: () =>
+      decided('standard.speed-action', 'standard', 'request_action', {
+        instruction: 'Now speed up to about 6 km/h. Change only the speed.',
+        needsReady: false,
+        confirmSpeed: true,
+        why: 'If the speed field rises when you change the speed, the decoding is right.',
+      }),
+  },
+  {
+    id: 'standard.confirm-speed',
+    stage: 'standard',
+    when: ({ state }) => typeof state.speedAction === 'number' && state.speedConfirmation === null,
+    then: ({ state }) =>
+      decided('standard.confirm-speed', 'standard', 'decode_standard', {
+        doneAt: state.speedAction,
+      }),
+  },
+  {
+    id: 'standard.speed-follow-up',
+    stage: 'standard',
+    when: ({ state }) => state.speedConfirmation === 'notConfirmed',
+    then: () =>
+      decided('standard.speed-follow-up', 'standard', 'ask_user', {
+        question: 'Did the belt speed up?',
+        answers: ['Yes', 'No'],
+      }),
+  },
 ];

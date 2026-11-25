@@ -2,6 +2,7 @@ import type { BleLayer } from '../ble/ble-layer';
 import type { CapabilityDetector } from '../environment/capability-detector';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
 import type { DecisionState } from '../agent/decision-state';
+import type { ConfirmationCheck } from '../agent/confirmation-check';
 import type { PromptChannel } from '../agent/prompt-channel';
 import type { NewObservation } from '../store/model/observation';
 import type { Stage } from '../store/model/stage';
@@ -24,6 +25,7 @@ export interface ToolContext {
   readonly state: DecisionState;
   readonly ble: BleLayer;
   readonly notificationRecorder: NotificationRecorder;
+  readonly confirmationCheck: ConfirmationCheck;
   readonly kb: KnowledgeBaseIndex;
   readonly prompts: PromptChannel;
   readonly capabilities: CapabilityDetector;

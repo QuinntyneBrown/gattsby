@@ -21,6 +21,14 @@ export interface StoredStep {
   readonly status: string;
 }
 
+export interface StoredObservation {
+  readonly investigationId: string;
+  readonly kind: string;
+  readonly subject: string;
+  readonly value: string;
+  readonly evidence: readonly string[];
+}
+
 export class StoredRecords {
   constructor(private readonly page: Page) {}
 
@@ -34,6 +42,11 @@ export class StoredRecords {
 
   async steps(id: string): Promise<StoredStep[]> {
     const rows = await this.readAll<StoredStep & { investigationId: string }>('steps');
+    return rows.filter((row) => row.investigationId === id);
+  }
+
+  async observations(id: string): Promise<StoredObservation[]> {
+    const rows = await this.readAll<StoredObservation>('observations');
     return rows.filter((row) => row.investigationId === id);
   }
 

@@ -108,3 +108,13 @@ None; this is the first entry.
   confirmed. The confirmation slice will supply the evidence the Connected verdict needs.
 - On Windows, the global Git configuration checks tracked files out with CRLF. Prettier passed
   with the local end-of-line mode set to auto. The repository still stores LF.
+
+## Journey 3, slice 2: Confirm treadmill speed
+
+- Both new Chromium cases failed first at the missing speed action. The speed increase test changes
+  the fake’s effort before "Done", so it catches a window that opens too late. The unchanged-speed
+  test advances the clock after "Done" and records the person’s answer without treating it as
+  confirmation.
+- Keep the baseline and the first qualifying notification separately. Their raw log IDs let the
+  investigation explain what changed without consulting the model or holding the action recording
+  in memory.

@@ -14,6 +14,7 @@ const MVP_TOOLS = [
   'read_characteristic',
   'match_known_profiles',
   'subscribe_and_record',
+  'decode_standard',
   'ask_user',
   'request_action',
   'update_hypothesis',

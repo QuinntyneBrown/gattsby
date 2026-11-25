@@ -10,6 +10,7 @@ export interface RequestActionInput {
   readonly steps?: readonly string[];
   readonly why?: string;
   readonly stoppable?: boolean;
+  readonly confirmSpeed?: boolean;
 }
 
 export interface RequestActionOutput {
@@ -51,6 +52,7 @@ export const requestActionTool = entry<RequestActionInput, RequestActionOutput>(
       return fail('INVALID_INPUT', 'The expected time must be 5 to 120 seconds.');
     }
     const button = input.needsReady ? 'Ready' : 'Done';
+    if (ctx.stage === 'standard' && input.confirmSpeed === true) ctx.confirmationCheck.begin();
     const response = await ctx.prompts.post(
       {
         kind: 'action',

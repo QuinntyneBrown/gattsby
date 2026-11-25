@@ -33,7 +33,9 @@ export interface DecisionState {
   readonly candidates: readonly ProfileCandidate[] | null;
   readonly ambiguityResolved: boolean;
   readonly reads: readonly string[];
-  readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'attempted';
+  readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
+  readonly speedAction: number | 'skipped' | null;
+  readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly finished: boolean;
 }
 
@@ -58,6 +60,8 @@ export const INITIAL_STATE: DecisionState = {
   ambiguityResolved: false,
   reads: [],
   standardRecording: 'pending',
+  speedAction: null,
+  speedConfirmation: null,
   finished: false,
 };
 
@@ -87,10 +91,17 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       if (step.ruleId === 'prepare.brand') {
         return { ...next, brand: answer && answer !== DONT_KNOW ? answer : null };
       }
+      if (step.ruleId === 'standard.speed-follow-up') {
+        return { ...next, speedConfirmation: 'reported' };
+      }
       return next;
     case 'request_action':
       if (step.ruleId === 'standard.ready') {
         return { ...next, standardRecording: answer === 'Ready' ? 'ready' : 'skipped' };
+      }
+      if (step.ruleId === 'standard.speed-action') {
+        const doneAt = data?.['doneAt'];
+        return { ...next, speedAction: answer && typeof doneAt === 'number' ? doneAt : 'skipped' };
       }
       if (step.ruleId === 'prepare.power-on') return { ...next, poweredOn: true };
       if (step.ruleId === 'identify.held-by-other') {
@@ -149,7 +160,18 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
     case 'disconnect':
       return { ...next, connected: false };
     case 'subscribe_and_record':
-      return { ...next, standardRecording: 'attempted' };
+      return {
+        ...next,
+        standardRecording:
+          data?.['silent'] === false && data['count'] !== data['decodeErrors']
+            ? 'recorded'
+            : 'attempted',
+      };
+    case 'decode_standard':
+      return {
+        ...next,
+        speedConfirmation: data?.['confirmed'] === true ? 'confirmed' : 'notConfirmed',
+      };
     case 'finish':
       return { ...next, finished: true, connected: false };
     default:

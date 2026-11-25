@@ -23,6 +23,7 @@ import type { NewMissingToolRequest, ToolContext } from '../tools/tool-context';
 import { ToolRegistry } from '../tools/tool-registry';
 import { fail, type ToolResult } from '../tools/tool-result';
 import { applyStep, stateFrom, type DecisionState } from './decision-state';
+import { ConfirmationCheck } from './confirmation-check';
 import { Decider } from './decider';
 import { buildFeed } from './feed-builder';
 import type { FeedEntry } from './feed-entry';
@@ -60,6 +61,7 @@ export class PlaybookOrchestrator {
   private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly ble = inject(BleLayer);
   private readonly notificationRecorder = inject(NotificationRecorder);
+  private readonly confirmationCheck = inject(ConfirmationCheck);
   private readonly log = inject(RawTrafficLog);
   private readonly capabilities = inject(CapabilityDetector);
   private readonly clock = inject(Clock);
@@ -298,6 +300,7 @@ export class PlaybookOrchestrator {
       state,
       ble: this.ble,
       notificationRecorder: this.notificationRecorder,
+      confirmationCheck: this.confirmationCheck,
       kb,
       prompts: this.prompts,
       capabilities: this.capabilities,
