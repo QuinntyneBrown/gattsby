@@ -8,7 +8,10 @@ if (rules.length !== 1 || rules[0].pattern !== '/*') {
 }
 
 const config = {
-  navigationFallback: { rewrite: '/index.html', exclude: ['/*.*'] },
+  navigationFallback: {
+    rewrite: '/index.html',
+    exclude: ['/*.{js,css,json,svg,ico,woff2,png,webmanifest,txt}'],
+  },
   globalHeaders: rules[0].headers,
 };
 await writeFile(new URL('staticwebapp.config.json', output), JSON.stringify(config, null, 2));
