@@ -73,6 +73,7 @@ test.describe('The browser has no on-device model', () => {
     await investigation.choose('Done');
     await investigation.waitForPrompt('Raise the incline to 2%, and keep the same speed.');
     await investigation.choose('Skip');
+    await investigation.choose('Skip — finish read-only');
     const verdict = new VerdictPage(page);
     await expect(verdict.title).toHaveText('Connected — FTMS');
     await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');

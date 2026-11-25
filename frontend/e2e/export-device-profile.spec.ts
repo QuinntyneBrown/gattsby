@@ -74,6 +74,7 @@ async function finishTreadmill(
   await bluetooth.setIncline(2);
   await page.clock.runFor(1_100);
   await investigation.choose('Done');
+  await investigation.choose('Skip — finish read-only');
   await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
   return investigation.id();
 }

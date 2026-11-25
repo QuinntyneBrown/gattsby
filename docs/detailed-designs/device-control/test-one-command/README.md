@@ -31,7 +31,7 @@ against the command shows the Unexpected response dialog
 (`docs/mocks/dialogs/unexpected-effect/default.html`). The result appears under "Can control" on the
 Verdict page (`docs/mocks/pages/verdict/default.html`) and under "Controllable" on the Device profile
 page (`docs/mocks/pages/device-profile/default.html`). Whether the Control stage runs in a store at
-all is open (OQ-08); the design keeps it optional and skippable.
+all was open (OQ-08). The Control stage is optional and skippable even when the device supports it.
 
 ## Description
 

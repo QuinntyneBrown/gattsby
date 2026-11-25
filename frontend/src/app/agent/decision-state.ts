@@ -46,6 +46,7 @@ export interface DecisionState {
   readonly inclineAction: number | 'skipped' | null;
   readonly inclineConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly inclineBaseline: number | null;
+  readonly controlChoice: 'test' | 'skip' | null;
   readonly finished: boolean;
 }
 
@@ -81,6 +82,7 @@ export const INITIAL_STATE: DecisionState = {
   inclineAction: null,
   inclineConfirmation: null,
   inclineBaseline: null,
+  controlChoice: null,
   finished: false,
 };
 
@@ -115,6 +117,9 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       }
       if (step.ruleId === 'standard.incline-follow-up') {
         return { ...next, inclineConfirmation: 'reported' };
+      }
+      if (step.ruleId === 'control.offer') {
+        return { ...next, controlChoice: answer === 'Test control' ? 'test' : 'skip' };
       }
       return next;
     case 'request_action':

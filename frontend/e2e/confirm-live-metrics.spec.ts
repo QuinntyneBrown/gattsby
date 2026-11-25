@@ -73,6 +73,7 @@ test.describe('FTMS indoor bike', () => {
     await page.clock.runFor(1100);
     await expect(investigation.liveMetric('Cadence')).toContainText(/120(?:\.0)?\s*rpm/);
     await investigation.choose('Done');
+    await investigation.choose('Skip — finish read-only');
 
     const verdict = new VerdictPage(page);
     await expect(verdict.title).toHaveText('Connected — FTMS');
@@ -98,6 +99,7 @@ test('Given the treadmill confirms speed, when the person raises incline on the 
   await fakeBluetooth.setIncline(2);
   await page.clock.runFor(1_100);
   await investigation.choose('Done');
+  await investigation.choose('Skip — finish read-only');
   const verdict = new VerdictPage(page);
   await expect(verdict.item('Can read', 'Speed')).toContainText('confirmed');
   await expect(verdict.item('Can read', 'Incline')).toContainText('2.0 %');
@@ -256,6 +258,7 @@ test(
     await investigation.choose('Done');
     await investigation.waitForPrompt('Raise the incline to 2%, and keep the same speed.');
     await investigation.choose('Skip');
+    await investigation.choose('Skip — finish read-only');
 
     const verdict = new VerdictPage(page);
     await expect(verdict.title).toHaveText('Connected — FTMS');
