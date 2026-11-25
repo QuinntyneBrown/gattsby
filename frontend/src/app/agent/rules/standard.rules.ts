@@ -88,10 +88,16 @@ export const STANDARD_RULES: readonly StageRule[] = [
   {
     id: 'standard.confirm-speed',
     stage: 'standard',
-    when: ({ state }) => typeof state.speedAction === 'number' && state.speedConfirmation === null,
-    then: ({ state }) =>
+    when: (ctx) =>
+      typeof ctx.state.speedAction === 'number' &&
+      ctx.state.speedConfirmation === null &&
+      ctx.state.standardRecordingId !== null &&
+      !!standardPath(ctx),
+    then: (ctx) =>
       decided('standard.confirm-speed', 'standard', 'decode_standard', {
-        doneAt: state.speedAction,
+        doneAt: ctx.state.speedAction,
+        characteristic: standardPath(ctx)!.characteristic,
+        recordingId: ctx.state.standardRecordingId,
       }),
   },
   {

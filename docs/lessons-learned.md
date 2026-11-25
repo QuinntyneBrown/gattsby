@@ -170,3 +170,10 @@ None; this is the first entry.
   value count.
 - Save the recording with the same transaction as the tool step. Keep packet counts and distinct
   lengths in memory while listening, and batch the packet writes through the existing raw log.
+
+## Journey 3, slice 10: Analyse the saved baseline
+
+- The critical path already asserted the verdict. Extending it to inspect the saved
+  `decode_standard` result caught a missing link between confirmation and the timed baseline.
+- Use the recording’s step index to fetch only its packets. Keep the statistics and errors in the
+  playbook step. Per-packet values are available from the raw rows when a person needs the evidence.

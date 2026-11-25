@@ -35,6 +35,7 @@ export interface DecisionState {
   readonly reads: readonly string[];
   readonly rangesAttempted: boolean;
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
+  readonly standardRecordingId: string | null;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly finished: boolean;
@@ -62,6 +63,7 @@ export const INITIAL_STATE: DecisionState = {
   reads: [],
   rangesAttempted: false,
   standardRecording: 'pending',
+  standardRecordingId: null,
   speedAction: null,
   speedConfirmation: null,
   finished: false,
@@ -166,6 +168,7 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
     case 'subscribe_and_record':
       return {
         ...next,
+        standardRecordingId: typeof data?.['recordingId'] === 'string' ? data['recordingId'] : null,
         standardRecording:
           data?.['silent'] === false &&
           data['interrupted'] !== true &&

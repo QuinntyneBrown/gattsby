@@ -20,6 +20,7 @@ export interface StoredStep {
   readonly stage: string;
   readonly tool: string;
   readonly status: string;
+  readonly result: { readonly ok: boolean; readonly data: unknown };
 }
 
 export interface StoredObservation {

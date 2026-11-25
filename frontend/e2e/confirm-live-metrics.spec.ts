@@ -235,6 +235,18 @@ test(
     await expect(verdict.item('Can read', 'Distance')).toContainText('confirmed');
     const records = new StoredRecords(page);
     expect((await records.investigation(id))?.verdict?.kind).toBe('connected');
+    const [baseline] = await records.recordings(id);
+    const analysis = (await records.steps(id)).find((step) => step.tool === 'decode_standard');
+    expect(analysis?.result).toMatchObject({
+      ok: true,
+      data: {
+        recordingId: baseline.id,
+        statistics: expect.arrayContaining([
+          { metric: 'speed', min: 3, max: 3, trend: 'flat' },
+          expect.objectContaining({ metric: 'distance', trend: 'rising' }),
+        ]),
+      },
+    });
     const observations = await records.observations(id);
     for (const metric of ['speed', 'distance']) {
       const observation = observations.find(

@@ -10,6 +10,7 @@ import {
 import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
+import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
@@ -180,6 +181,22 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return (await request(
       tx.objectStore('rawLog').getAll(investigationRange(id)),
     )) as RawLogEntry[];
+  }
+
+  async recordedPackets(
+    investigationId: string,
+    recordingId: string,
+  ): Promise<RawLogEntry[] | null> {
+    const db = await this.open();
+    const tx = db.transaction(['recordings', 'rawLog'], 'readonly');
+    const recording = (await request(
+      tx.objectStore('recordings').get([investigationId, recordingId]),
+    )) as Recording | undefined;
+    if (!recording) return null;
+    const rows = (await request(
+      tx.objectStore('rawLog').index('byStep').getAll([investigationId, recording.stepN]),
+    )) as RawLogEntry[];
+    return rows.filter((row) => row.recordingId === recordingId);
   }
 
   async usage(): Promise<{
