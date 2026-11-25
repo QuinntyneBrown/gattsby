@@ -161,16 +161,17 @@ non-negotiable:
 
 ## Project status
 
-Gattsby is being specified before it is built.
+Gattsby is specified and its implementation has started, one journey at a time
+([`docs/journeys.md`](docs/journeys.md)).
 
 | Phase | State |
 |---|---|
 | Application brief | Done ([`docs/application-brief.md`](docs/application-brief.md)) |
 | Requirements (L1, L2) | Draft ([`docs/specs/`](docs/specs/)) |
 | Behaviour description | Not yet in the repository |
-| Mocks and design system | Not started |
-| Detailed designs | Not started |
-| MVP implementation | Not started |
+| Mocks and design system | Done ([`docs/mocks/`](docs/mocks/), [`docs/design-system/`](docs/design-system/)) |
+| Detailed designs | Done ([`docs/detailed-designs/`](docs/detailed-designs/)) |
+| MVP implementation | In progress: journey 1, *Scaffold the app*, is done |
 
 The MVP must identify an FTMS treadmill or bike end to end, in full agent mode and in checklist
 mode. The open questions that block later phases are listed in
@@ -178,22 +179,39 @@ mode. The open questions that block later phases are listed in
 
 ## Getting started
 
-There is no app to run yet. To take part in specifying it:
+Prerequisites: [Node.js](https://nodejs.org/) 22.18 or later (the build scripts are TypeScript
+run by Node directly), npm, and Chrome. No Bluetooth device or on-device model is needed: the
+behaviour specs run against scripted fakes.
 
 ```shell
 git clone https://github.com/QuinntyneBrown/gattsby.git
-cd gattsby
+cd gattsby/frontend
+npm ci
+npx playwright install chromium   # once, for the behaviour specs
 ```
 
-Then read, in order:
+| Command (in `frontend/`) | What it does |
+|---|---|
+| `npm start` | Development server at `http://localhost:4200` (no security headers) |
+| `npm run build` | Production build in `dist/frontend/browser/` |
+| `npm run serve:dist` | Serves the production build at `http://localhost:4300` with the headers in `public/_headers` |
+| `npm test` | Unit tests (Vitest), once |
+| `npm run e2e` | Production build, then every behaviour spec (Playwright, Chromium only) |
+| `npm run e2e:critical` | The critical behaviour specs CI runs, against an existing build |
+| `npm run lint` / `npm run format` | ESLint / Prettier (`format:check` checks without writing) |
+| `npm run check:bundle` | Fails when the initial bundle is over 250 KB gzip (NFR-004) |
+| `npm run check:headers -- <url>` | Checks a running Gattsby's security headers (NFR-013, NFR-014); defaults to `http://localhost:4300/` |
+
+The app is served as static files over HTTPS by a host that reads `public/_headers` (Cloudflare
+Pages or Netlify), or another host with the same headers translated (ADR 0003). After each
+deployment, run `npm run check:headers -- https://<deployed host>/`.
+
+To take part in specifying Gattsby, read, in order:
 
 1. [`docs/application-brief.md`](docs/application-brief.md): what Gattsby is.
 2. [`docs/specs/L1.md`](docs/specs/L1.md) and [`docs/specs/L2.md`](docs/specs/L2.md): what it must
    do, with acceptance criteria.
 3. [`AGENTS.md`](AGENTS.md): the architecture rules and the required workflow.
-
-When the frontend exists, this section will give the prerequisites, the commands to build and run
-it, and how to run it against a simulated device.
 
 ## Repository structure
 
@@ -201,12 +219,19 @@ it, and how to run it against a simulated device.
 gattsby/
 ├── .agents/skills/          Agent skills (requirements, designs, mocks, incremental delivery, ...)
 ├── .claude/skills/          The same skills, for Claude Code
-├── .github/                 Issue and pull request templates
+├── .github/                 CI workflow, issue and pull request templates
 ├── docs/
+│   ├── adr/                   Architecture decision records
 │   ├── application-brief.md   The technical scope Gattsby is built from
 │   ├── assets/                The Gattsby logo and mark (SVG)
+│   ├── design-system/         Tokens and components extracted from the mocks
+│   ├── detailed-designs/      One design per feature, with C4, class and sequence diagrams
+│   ├── journeys.md            The user journeys, in order, with effort and progress
+│   ├── lessons-learned.md     One entry per implemented journey
 │   ├── mocks/                 HTML mocks of every screen, dialog and notification in every state
+│   ├── prompts/               One implementation prompt per journey
 │   └── specs/                 Requirements: L1 (high level), L2 (detailed, with acceptance criteria)
+├── frontend/                Angular workspace: the app, its behaviour specs and build checks
 ├── AGENTS.md                Purpose, architecture, safety rules and workflow, for people and agents
 ├── CLAUDE.md                Points Claude Code at AGENTS.md
 ├── CONTRIBUTING.md          How to propose a change
@@ -224,6 +249,10 @@ gattsby/
 | [L1 requirements](docs/specs/L1.md) | High-level requirements |
 | [L2 requirements](docs/specs/L2.md) | Functional, non-functional and tool requirements, with acceptance criteria, phases, assumptions and open questions |
 | [UI mocks](docs/mocks/README.md) | Every screen in every state, light and dark; open [`docs/mocks/index.html`](docs/mocks/index.html) from disk |
+| [Design system](docs/design-system/README.md) | Tokens and components extracted from the mocks |
+| [Detailed designs](docs/detailed-designs/README.md) | One design per feature |
+| [Architecture decisions](docs/adr/) | ADR 0001 (frontend stack), 0002 (initial-bundle check), 0003 (headers file and local server) |
+| [Journeys](docs/journeys.md) | The order Gattsby is built in, with progress |
 | [AGENTS.md](AGENTS.md) | Purpose, architecture rules, safety rules and the required workflow |
 
 ## Contributing

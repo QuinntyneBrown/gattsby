@@ -77,9 +77,24 @@ agents: `engineering-requirements`, `writing-software-design-documents`, `writin
 
 ## Development setup
 
-There is no frontend yet. When there is, [Getting started](README.md#getting-started) in the README
-will give the prerequisites and commands. You will need Chrome; you will not need a real device,
-because every feature runs end to end against a simulated one.
+[Getting started](README.md#getting-started) in the README gives the prerequisites (Node.js 22.18
+or later, npm, Chrome) and every command. In short, in `frontend/`:
+
+```shell
+npm ci
+npx playwright install chromium   # once
+npm run format && npm run lint && npm test && npm run e2e
+```
+
+You will not need a real device or model: every feature runs end to end against the fake
+Bluetooth API and fake model in `frontend/src/simulation/`, installed by the shared fixture
+`frontend/e2e/fixtures/gattsby-test.ts`. Import `test` and `expect` from that fixture in every
+behaviour spec; it fails a spec on an unexpected Bluetooth or model call, an unapproved write, a
+request off localhost, a page error, a dialog or a geolocation call. The specs run against the
+production build served with its Content Security Policy, so a Trusted Types violation fails them
+too. CI (`.github/workflows/ci.yml`) runs format, lint, the build, the bundle and header checks and
+the specs tagged `@critical`; run the unit tests and the full behaviour suite locally before you
+open a pull request.
 
 ## Coding conventions
 

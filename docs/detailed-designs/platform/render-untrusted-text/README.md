@@ -31,8 +31,8 @@ code in the page that holds the approval gate and the Bluetooth connection.
 
 ## Description
 
-The design introduces these building blocks in the Angular (pending ADR 0001) workspace under
-`frontend/src/app/`:
+The design introduces these building blocks in the Angular workspace under `frontend/src/app/`
+([ADR 0001](../../../adr/0001-frontend-stack.md)):
 
 - **Templates** — every untrusted string is bound with interpolation (`{{ value }}`) or
   `[textContent]`. Angular escapes interpolated text, so markup appears literally. No template binds
@@ -48,8 +48,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   `gattsby`, at bootstrap. It defines `createScriptURL` only, accepting same-origin URLs on an
   allowlist (the service worker script `/ngsw-worker.js`, and any worker a later design adds). It
   defines no `createHTML` and no `createScript`, so no Gattsby code can produce HTML or script from a
-  string. Whether Angular's service worker registration passes through this policy or through
-  Angular's own is `<TO SUPPLY>` until the workspace exists.
+  string. The allowlist check is a pure function, `isAllowedScriptUrl`
+  (`security/script-url-allowlist.ts`), with unit tests. Whether
+  Angular's service worker registration passes through this policy or through Angular's own is
+  settled by the work-offline journey, which adds the service worker; until then the allowlist
+  holds `/ngsw-worker.js` only.
 - **`SchemaValidator`** (`tools/schema-validator.ts`) — validates model actions, tool inputs and
   outputs, and imported files against JSON Schemas compiled to standalone code at build time, so no
   validator uses `eval` or `new Function` at run time. Schemas limit every string's length.
@@ -64,8 +67,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   `ConfidenceBadge` and every page render untrusted text through the rules above. `ByteTable` renders
   bytes as hex, never decoded as markup.
 - **Lint** — the framework's lint configuration refuses `eval`, implied `eval`, `new Function`, and
-  `innerHTML` or `outerHTML` bindings and assignments; CI fails on a violation. The exact rule names
-  are `<TO SUPPLY>` with ADR 0001.
+  `innerHTML` or `outerHTML` bindings and assignments; CI fails on a violation. The rules
+  (ADR 0001) are ESLint's `no-eval`, `no-implied-eval` and `no-new-func`; `no-restricted-syntax` on
+  TypeScript assignments to `innerHTML` or `outerHTML` and on calls to
+  `DomSanitizer.bypassSecurityTrust*`; and `no-restricted-syntax` in templates on `BoundAttribute`
+  nodes named `innerHTML` or `outerHTML`.
 
 ### Sources and their handling
 

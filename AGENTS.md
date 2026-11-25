@@ -65,9 +65,9 @@ Use the words the specs use in code, docs and UI; no synonyms.
 
 - **The frontend is the product.** There is no backend, and nothing in the app calls an API.
   Gattsby is static files served over HTTPS.
-- **The frontend stack** is not yet fixed by an ADR. The default, matching the owner's other apps
-  and the `angular-developer` and `angular-new-app` skills in this repository, is an Angular
-  workspace in `frontend/`. ADR 0001 records the choice when the workspace is created.
+- **The frontend stack** is an Angular workspace in `frontend/`, matching the owner's other apps
+  and the `angular-developer` and `angular-new-app` skills in this repository
+  ([ADR 0001](docs/adr/0001-frontend-stack.md)). Commands are in the README's "Getting started".
 - Before building a feature, read its requirement (`docs/specs/`), its detailed design
   (`docs/detailed-designs/`) and its mocks (`docs/mocks/`).
 - Read the relevant ADRs in `docs/adr/` before changing the areas they cover.
@@ -98,10 +98,10 @@ gattsby/
 │   ├── design-system/              # Tokens and components extracted from the mocks
 │   └── assets/                     # Logos
 └── frontend/                       # Angular workspace (ADR 0001)
-    ├── public/                     # manifest.webmanifest, _headers, self-hosted fonts and icons
-    ├── scripts/                    # Build checks: schemas, knowledge base, headers, initial bundle
+    ├── public/                     # _headers, favicon, manifest.webmanifest (fonts: design system)
+    ├── scripts/                    # Build checks (bundle, headers, ...) and serve-dist.ts
     ├── e2e/                        # Playwright, Chromium only
-    │   ├── fixtures/               # fake-bluetooth.ts, fake-language-model.ts, gattsby-test.ts
+    │   ├── fixtures/               # gattsby-test.ts, the fakes' handles, guards, misbehaviour
     │   ├── pages/                  # One page object per screen or dialog (*.page.ts)
     │   └── *.spec.ts               # Behaviour specs, each headed with its requirement IDs
     └── src/
@@ -112,7 +112,7 @@ gattsby/
         │   ├── limits/             # Safe speed, incline and resistance limits
         │   └── generated/          # Compiled knowledge-base.json (build output)
         ├── schemas/                # JSON schemas for exported records and profiles
-        ├── simulation/             # Simulated devices and model for demos (devices/*.device.ts)
+        ├── simulation/             # Fake Bluetooth API and model; devices/*.device.ts
         └── app/
             ├── app.routes.ts, app-shell.ts
             ├── agent/              # Orchestrator: loop, playbook, rules/, approvals, stops
