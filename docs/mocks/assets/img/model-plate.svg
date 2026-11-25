@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t"><title id="t">Photo of the model plate on a Horizon T202 treadmill frame</title>
+<rect width="240" height="240" fill="#3b3e44"/>
+<rect x="0" y="0" width="240" height="240" fill="url(#g)" opacity="0.5"/>
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a5e66"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9e7e1"/><stop offset="0.55" stop-color="#cfccc3"/><stop offset="1" stop-color="#b9b6ad"/></linearGradient></defs>
+<g transform="rotate(-4 120 120)">
+<rect x="28" y="52" width="184" height="136" rx="8" fill="url(#m)" stroke="#8d8a82"/>
+<circle cx="40" cy="64" r="3.5" fill="#8d8a82"/><circle cx="200" cy="64" r="3.5" fill="#8d8a82"/><circle cx="40" cy="176" r="3.5" fill="#8d8a82"/><circle cx="200" cy="176" r="3.5" fill="#8d8a82"/>
+<text x="120" y="82" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#22242a">JOHNSON HEALTH TECH</text>
+<text x="48" y="108" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#33363c">MODEL</text><text x="112" y="108" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#22242a">T202-04</text>
+<text x="48" y="128" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#33363c">SERIAL</text><text x="112" y="128" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#22242a">TM2023-118477</text>
+<text x="48" y="148" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#33363c">MFD</text><text x="112" y="148" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#22242a">2023-04</text>
+<text x="48" y="170" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#55585f">220-240V~ 50/60Hz  10A  MAX USER 136 KG</text>
+</g></svg>

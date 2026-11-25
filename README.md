@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/gattsby-logo-dark.svg">
+    <img src="docs/assets/gattsby-logo.svg" alt="Gattsby" width="360">
+  </picture>
+</p>
+
 # Gattsby
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -197,6 +204,8 @@ gattsby/
 ├── .github/                 Issue and pull request templates
 ├── docs/
 │   ├── application-brief.md   The technical scope Gattsby is built from
+│   ├── assets/                The Gattsby logo and mark (SVG)
+│   ├── mocks/                 HTML mocks of every screen, dialog and notification in every state
 │   └── specs/                 Requirements: L1 (high level), L2 (detailed, with acceptance criteria)
 ├── AGENTS.md                Purpose, architecture, safety rules and workflow, for people and agents
 ├── CLAUDE.md                Points Claude Code at AGENTS.md
@@ -214,6 +223,7 @@ gattsby/
 | [Application brief](docs/application-brief.md) | Gattsby's technical scope, architecture, tool catalogue and playbook |
 | [L1 requirements](docs/specs/L1.md) | High-level requirements |
 | [L2 requirements](docs/specs/L2.md) | Functional, non-functional and tool requirements, with acceptance criteria, phases, assumptions and open questions |
+| [UI mocks](docs/mocks/README.md) | Every screen in every state, light and dark; open [`docs/mocks/index.html`](docs/mocks/index.html) from disk |
 | [AGENTS.md](AGENTS.md) | Purpose, architecture rules, safety rules and the required workflow |
 
 ## Contributing

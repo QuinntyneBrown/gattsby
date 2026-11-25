@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete all data · invalid — Gattsby mocks</title>
+<meta name="mock:kind" content="dialog">
+<meta name="mock:screen" content="delete-all-data">
+<meta name="mock:state" content="invalid">
+<meta name="mock:requirements" content="FR-065">
+<meta name="description" content="Wrong confirmation text.">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/ui.css">
+<link rel="stylesheet" href="../../assets/mock.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div inert aria-hidden="true"><div class="app"><header class="appbar"><a class="btn btn--ghost btn--icon" href="../../pages/home/default.html" aria-label="Back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a><div class="appbar__titles"><h1 class="appbar__title">Settings</h1></div></header><main id="main" class="page page--reading"><section class="settings-group"><h2 class="section-title">Mode</h2><div class="setting"><div class="setting__body"><p class="setting__title" id="agent-label">Use the agent when it’s available</p><p class="setting__detail">Off: every investigation runs as a checklist, even when the on-device model is ready.</p></div><label class="switch"><input type="checkbox" role="switch" checked aria-labelledby="agent-label"></label></div><div class="setting"><div class="setting__body"><p class="setting__title">On-device model</p><p class="setting__detail">Gemini Nano · ready · runs offline</p></div></div></section><section class="settings-group"><h2 class="section-title">Data on this device</h2><div class="setting"><div class="setting__body"><p class="setting__title">Stored on this device</p><p class="setting__detail">8 investigations · 6 device profiles · 3 photos · 14.2 MB</p></div></div><div class="setting"><div class="setting__body"><p class="setting__title" id="persist-label">Keep data when space is low</p><p class="setting__detail">Asks Chrome not to clear Gattsby’s storage on its own.</p></div><label class="switch"><input type="checkbox" role="switch" checked aria-labelledby="persist-label"></label></div><div class="setting"><div class="setting__body"><p class="setting__title">Import</p><p class="setting__detail">A device profile or investigation record exported by Gattsby.</p></div><a class="btn" href="../../dialogs/import/default.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import</a></div><div class="setting"><div class="setting__body"><p class="setting__title">Delete all data</p><p class="setting__detail">Every investigation, profile, photo and setting. Can’t be undone.</p></div><a class="btn btn--danger" href="../../dialogs/delete-all-data/default.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>Delete all</a></div></section><section class="settings-group"><h2 class="section-title">About</h2><dl class="kv"><dt>App</dt><dd>Gattsby 0.1.0</dd><dt>Knowledge base</dt><dd>2026.11 · 7 standard protocols</dd><dt>Profile format</dt><dd>1</dd></dl><p class="text-sm text-muted" style="margin-top: var(--space-4);">Nothing leaves this device: no accounts, no analytics, no server. Exporting is the only way data leaves, and only when you start it.</p></section></main></div></div><div class="backdrop"></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-desc" data-dismiss-on-escape><div class="dialog__panel"><div class="dialog__grabber" aria-hidden="true"></div><div class="dialog__header"><div style="flex: 1; min-width: 0;"><div class="dialog__icon dialog__icon--danger" style="margin-bottom: var(--space-3);"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg></div><h2 class="dialog__title" id="dlg-title">Delete all data?</h2><p id="dlg-desc" class="dialog__lead">This removes every investigation, device profile, photo and setting Gattsby holds on this device: 8 investigations, 6 profiles and 3 photos. It can’t be undone.</p></div><div class="dialog__close"><button class="btn btn--ghost btn--icon" type="button" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div><div class="dialog__body stack"><label class="field"><span class="field__label">Type DELETE to confirm</span><input class="input" id="confirm" type="text" value="delete all" autocomplete="off" aria-invalid="true" aria-describedby="confirm-error"><span class="field__error" id="confirm-error">Type DELETE in capitals to confirm.</span></label></div><div class="dialog__footer"><button class="btn btn--lg" type="button">Cancel</button><button class="btn btn--danger btn--lg" type="button" disabled>Delete all data</button></div></div></div>
+
+<nav class="mock-bar" aria-label="Mock navigation">
+  <a class="mock-bar__home" href="../../index.html" aria-label="All mocks">⌂</a>
+  <span class="mock-bar__screen">Delete all data</span>
+  <ul class="mock-bar__states"><li><a href="default.html">default</a></li><li><a href="invalid.html" aria-current="page">invalid</a></li><li><a href="confirm.html">confirm</a></li><li><a href="busy.html">busy</a></li></ul>
+  <button type="button" data-theme-toggle aria-pressed="false">☾ Dark</button>
+  <button type="button" data-chrome-toggle aria-label="Hide mock chrome">×</button>
+</nav>
+<script src="../../assets/mock.js"></script>
+</body>
+</html>

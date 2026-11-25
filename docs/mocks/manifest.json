@@ -1,0 +1,565 @@
+{
+  "project": "Gattsby",
+  "source": "Magic Patterns project “Bluetooth Device Investigator” (Gattsby App and Gattsby Brand prototypes), aligned with docs/specs/L2.md",
+  "required_states": {
+    "page": [
+      "default",
+      "loading",
+      "empty",
+      "error"
+    ],
+    "dialog": [
+      "default",
+      "busy",
+      "invalid"
+    ],
+    "notification": [
+      "info",
+      "success",
+      "warning",
+      "danger"
+    ]
+  },
+  "screens": [
+    {
+      "id": "readiness",
+      "kind": "page",
+      "title": "Readiness check",
+      "route": "/start",
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "NFR-016"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "checklist",
+        "downloadable",
+        "downloading",
+        "download-failed",
+        "bluetooth-off",
+        "permission-denied",
+        "unsupported",
+        "insecure",
+        "error"
+      ],
+      "not_applicable": {
+        "empty": "The check always lists the same six capabilities; there is no collection to be empty."
+      }
+    },
+    {
+      "id": "home",
+      "kind": "page",
+      "title": "Home",
+      "route": "/",
+      "requirements": [
+        "FR-005",
+        "FR-007",
+        "FR-009",
+        "FR-059",
+        "FR-061",
+        "NFR-012"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty",
+        "error",
+        "checklist"
+      ]
+    },
+    {
+      "id": "investigation",
+      "kind": "page",
+      "title": "Investigation",
+      "route": "/investigations/:id",
+      "requirements": [
+        "FR-005",
+        "FR-008",
+        "FR-011",
+        "FR-012",
+        "FR-013",
+        "FR-015",
+        "FR-017",
+        "FR-024",
+        "FR-025",
+        "FR-026",
+        "FR-028",
+        "FR-038",
+        "FR-039",
+        "FR-048",
+        "FR-049",
+        "FR-050",
+        "FR-051",
+        "FR-052",
+        "FR-053",
+        "NFR-009",
+        "NFR-010"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "error",
+        "prepare",
+        "find",
+        "find-candidates",
+        "find-cancelled",
+        "identify",
+        "proprietary",
+        "control",
+        "checklist",
+        "held-by-other"
+      ],
+      "not_applicable": {
+        "empty": "An investigation opens with its first question (see prepare); it never has an empty feed."
+      }
+    },
+    {
+      "id": "verdict",
+      "kind": "page",
+      "title": "Verdict",
+      "route": "/investigations/:id/verdict",
+      "requirements": [
+        "FR-009",
+        "FR-018",
+        "FR-054",
+        "FR-056",
+        "FR-057",
+        "FR-058",
+        "FR-060",
+        "FR-062",
+        "FR-063"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "error",
+        "partial",
+        "missing-tool",
+        "not-connectable",
+        "stopped"
+      ],
+      "not_applicable": {
+        "empty": "Every investigation ends with exactly one verdict (FR-054)."
+      }
+    },
+    {
+      "id": "device-profile",
+      "kind": "page",
+      "title": "Device profile",
+      "route": "/profiles/:id",
+      "requirements": [
+        "FR-010",
+        "FR-023",
+        "FR-027",
+        "FR-040",
+        "FR-055",
+        "FR-062"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "error",
+        "success",
+        "partial"
+      ],
+      "not_applicable": {
+        "empty": "A profile always has an identity and a verdict; empty sections say so in place."
+      }
+    },
+    {
+      "id": "evidence",
+      "kind": "page",
+      "title": "Evidence log",
+      "route": "/investigations/:id/evidence",
+      "requirements": [
+        "FR-056",
+        "FR-073",
+        "NFR-013"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty",
+        "error",
+        "filtered",
+        "no-results"
+      ]
+    },
+    {
+      "id": "profiles",
+      "kind": "page",
+      "title": "Saved devices",
+      "route": "/profiles",
+      "requirements": [
+        "FR-002",
+        "FR-055",
+        "FR-061",
+        "FR-064"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty",
+        "error",
+        "filtered",
+        "no-results"
+      ]
+    },
+    {
+      "id": "history",
+      "kind": "page",
+      "title": "Past investigations",
+      "route": "/investigations",
+      "requirements": [
+        "FR-009",
+        "FR-061"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty",
+        "error"
+      ]
+    },
+    {
+      "id": "missing-tools",
+      "kind": "page",
+      "title": "Missing tools",
+      "route": "/missing-tools",
+      "requirements": [
+        "FR-058",
+        "FR-059"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty",
+        "error"
+      ]
+    },
+    {
+      "id": "settings",
+      "kind": "page",
+      "title": "Settings",
+      "route": "/settings",
+      "requirements": [
+        "FR-005",
+        "FR-064",
+        "FR-065",
+        "NFR-008",
+        "NFR-012"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "error"
+      ],
+      "not_applicable": {
+        "empty": "Settings always have values; there is no collection."
+      }
+    },
+    {
+      "id": "not-found",
+      "kind": "page",
+      "title": "Not found",
+      "route": "/*",
+      "requirements": [
+        "FR-064"
+      ],
+      "states": [
+        "default"
+      ],
+      "not_applicable": {
+        "loading": "A static page; nothing loads.",
+        "empty": "Nothing to list.",
+        "error": "This page is itself the error."
+      }
+    },
+    {
+      "id": "approval",
+      "kind": "dialog",
+      "title": "Approve a command",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-034",
+        "FR-035",
+        "FR-036",
+        "FR-037",
+        "FR-038",
+        "FR-039",
+        "NFR-018"
+      ],
+      "states": [
+        "default",
+        "busy",
+        "confirmed",
+        "failed",
+        "stop"
+      ],
+      "not_applicable": {
+        "invalid": "Send is disabled until the stand-clear box is ticked, so an invalid submission can’t happen."
+      }
+    },
+    {
+      "id": "emergency-stop",
+      "kind": "dialog",
+      "title": "Emergency stop",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-039"
+      ],
+      "states": [
+        "default",
+        "busy",
+        "failed"
+      ],
+      "not_applicable": {
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "unexpected-effect",
+      "kind": "dialog",
+      "title": "Unexpected response",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-038",
+        "FR-039"
+      ],
+      "states": [
+        "default"
+      ],
+      "not_applicable": {
+        "busy": "Opens after Stop has already been sent.",
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "still-there",
+      "kind": "dialog",
+      "title": "Still there? / Paused",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-009",
+        "FR-051"
+      ],
+      "states": [
+        "default",
+        "paused"
+      ],
+      "not_applicable": {
+        "busy": "Continue and Pause act locally and at once.",
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "investigation-menu",
+      "kind": "dialog",
+      "title": "Investigation options",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-009",
+        "FR-010",
+        "FR-022",
+        "FR-056"
+      ],
+      "states": [
+        "default"
+      ],
+      "not_applicable": {
+        "busy": "A menu; each item opens its own screen.",
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "add-note",
+      "kind": "dialog",
+      "title": "Add a note or the location",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-010"
+      ],
+      "states": [
+        "default",
+        "invalid"
+      ],
+      "not_applicable": {
+        "busy": "Saving is a local write that finishes at once."
+      }
+    },
+    {
+      "id": "photo-read",
+      "kind": "dialog",
+      "title": "Read the model plate",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-022",
+        "NFR-017"
+      ],
+      "states": [
+        "default",
+        "busy",
+        "invalid",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "stop-investigation",
+      "kind": "dialog",
+      "title": "Stop the investigation",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-009",
+        "FR-018"
+      ],
+      "states": [
+        "default",
+        "busy"
+      ],
+      "not_applicable": {
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "leave-investigation",
+      "kind": "dialog",
+      "title": "Leave the investigation",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-018",
+        "FR-060"
+      ],
+      "states": [
+        "default",
+        "busy"
+      ],
+      "not_applicable": {
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "export",
+      "kind": "dialog",
+      "title": "Export",
+      "opens_from": "device-profile",
+      "requirements": [
+        "FR-062",
+        "FR-063",
+        "NFR-012"
+      ],
+      "states": [
+        "default",
+        "busy",
+        "success"
+      ],
+      "not_applicable": {
+        "invalid": "Choices only; the photos box is optional."
+      }
+    },
+    {
+      "id": "import",
+      "kind": "dialog",
+      "title": "Import",
+      "opens_from": "profiles",
+      "requirements": [
+        "FR-064",
+        "NFR-015"
+      ],
+      "states": [
+        "default",
+        "busy",
+        "invalid",
+        "failed",
+        "success"
+      ]
+    },
+    {
+      "id": "delete-investigation",
+      "kind": "dialog",
+      "title": "Delete an investigation",
+      "opens_from": "history",
+      "requirements": [
+        "FR-061"
+      ],
+      "states": [
+        "default",
+        "busy"
+      ],
+      "not_applicable": {
+        "invalid": "No inputs."
+      }
+    },
+    {
+      "id": "delete-all-data",
+      "kind": "dialog",
+      "title": "Delete all data",
+      "opens_from": "settings",
+      "requirements": [
+        "FR-065"
+      ],
+      "states": [
+        "default",
+        "invalid",
+        "confirm",
+        "busy"
+      ]
+    },
+    {
+      "id": "connection-banner",
+      "kind": "notification",
+      "title": "Connection banner",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-015",
+        "FR-016",
+        "NFR-007"
+      ],
+      "states": [
+        "info",
+        "success",
+        "warning",
+        "danger"
+      ]
+    },
+    {
+      "id": "mode-banner",
+      "kind": "notification",
+      "title": "Mode banner",
+      "opens_from": "investigation",
+      "requirements": [
+        "FR-005",
+        "FR-006"
+      ],
+      "states": [
+        "info",
+        "warning"
+      ],
+      "not_applicable": {
+        "success": "The mode never upgrades mid-investigation; a new investigation picks up the agent.",
+        "danger": "A model failure is never fatal: it always falls back to the checklist (the warning state)."
+      }
+    },
+    {
+      "id": "toast",
+      "kind": "notification",
+      "title": "Toast",
+      "opens_from": "device-profile",
+      "requirements": [
+        "FR-062",
+        "NFR-008"
+      ],
+      "states": [
+        "info",
+        "success",
+        "warning",
+        "danger",
+        "stacked"
+      ]
+    }
+  ]
+}
