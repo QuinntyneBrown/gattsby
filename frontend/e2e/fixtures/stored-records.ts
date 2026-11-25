@@ -12,6 +12,7 @@ export interface StoredInvestigation {
   readonly stage: string;
   readonly status: string;
   readonly lastCommittedStep: number;
+  readonly modelConsultations?: number;
   readonly verdict?: { readonly kind: string; readonly label: string } | null;
 }
 
@@ -20,6 +21,7 @@ export interface StoredStep {
   readonly stage: string;
   readonly tool: string;
   readonly status: string;
+  readonly decidedBy?: string;
   readonly result: { readonly ok: boolean; readonly data: unknown };
 }
 

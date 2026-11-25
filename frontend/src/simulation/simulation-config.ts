@@ -8,6 +8,9 @@ export interface BluetoothScript {
   readonly advertisementScanning?: boolean;
   readonly absent?: boolean;
   readonly blocked?: boolean;
+  /** Services the test's chooser grants alongside the matching filter and optional services. */
+  readonly permittedServices?: readonly (string | number)[];
+  readonly omitCharacteristics?: readonly (string | number)[];
   /** What `getAvailability()` reports; true when omitted. */
   readonly available?: boolean;
   /** Ids of the scripted devices nearby. */

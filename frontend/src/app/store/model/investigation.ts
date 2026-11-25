@@ -36,6 +36,7 @@ export type InvestigationPatch = Partial<
     | 'interruptedAt'
     | 'verdict'
     | 'profileId'
+    | 'modelConsultations'
   >
 >;
 

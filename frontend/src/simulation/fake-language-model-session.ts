@@ -52,8 +52,10 @@ export class FakeLanguageModelSession {
     return this.unexpected('append');
   }
 
-  clone(): never {
-    return this.unexpected('clone');
+  async clone(options?: { signal?: AbortSignal }): Promise<FakeLanguageModelSession> {
+    options?.signal?.throwIfAborted();
+    this.report({ kind: 'model-call', method: 'clone' });
+    return new FakeLanguageModelSession(this.responses, this.report);
   }
 
   private unexpected(method: string): never {

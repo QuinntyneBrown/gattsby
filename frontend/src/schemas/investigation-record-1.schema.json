@@ -237,6 +237,17 @@
           "mode": {
             "enum": ["agent", "checklist"]
           },
+          "modelDecision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["startedAt", "promptTokens", "modelMs"],
+            "properties": {
+              "startedAt": { "type": "number" },
+              "promptTokens": { "type": ["number", "null"] },
+              "modelMs": { "type": "number", "minimum": 0 },
+              "rawText": { "type": "string", "maxLength": 8192 }
+            }
+          },
           "action": {
             "type": "object",
             "additionalProperties": false,

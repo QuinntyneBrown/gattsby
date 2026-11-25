@@ -86,6 +86,7 @@ export class FakeBluetoothApi extends EventTarget {
       [
         ...filters.flatMap((filter) => filter.services ?? []),
         ...(options?.optionalServices ?? []),
+        ...(this.script.permittedServices ?? []),
       ].map(canonicalUuid),
     );
     device.grant(services);

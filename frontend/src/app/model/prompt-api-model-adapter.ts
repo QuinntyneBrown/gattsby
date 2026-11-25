@@ -40,7 +40,30 @@ export class PromptApiModelAdapter {
       native.destroy();
       return null;
     }
-    return { destroy: () => native.destroy() };
+    return {
+      promptBudget: Math.max(
+        0,
+        (native.contextWindow ?? native.inputQuota ?? 0) -
+          (native.contextUsage ?? native.inputUsage ?? 0) -
+          512,
+      ),
+      measure: async (prompt, schema) => {
+        if (native.measureContextUsage)
+          return native.measureContextUsage(prompt, { responseConstraint: schema });
+        const combined = `${prompt}\n${JSON.stringify(schema)}`;
+        return native.measureInputUsage?.(combined) ?? new TextEncoder().encode(combined).length;
+      },
+      ask: async (prompt, schema, signal) => {
+        const clone = await native.clone({ signal });
+        try {
+          signal.throwIfAborted();
+          return await clone.prompt(prompt, { responseConstraint: schema, signal });
+        } finally {
+          clone.destroy();
+        }
+      },
+      destroy: () => native.destroy(),
+    };
   }
 
   async download(onProgress: (percent: number) => void, signal: AbortSignal): Promise<void> {

@@ -16,6 +16,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
+import { ModelDecider } from '../../agent/model-decider';
 import { PromptChannel } from '../../agent/prompt-channel';
 import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
 import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
@@ -58,6 +59,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     LiveMetrics,
     NotificationRecorder,
     ConfirmationCheck,
+    ModelDecider,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -160,6 +162,14 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
               </div>
             }
             @default {
+              @if (orchestrator.modelThinking()) {
+                <div class="dock__inner" role="status">
+                  <h2 class="prompt__title" id="prompt-title">Choosing the next step</h2>
+                  <p class="prompt__detail">
+                    The on-device model is reviewing what the device has reported.
+                  </p>
+                </div>
+              }
               @if (metrics().length > 0) {
                 <div class="dock__inner" aria-live="off">
                   <div class="live-strip" role="group" aria-label="Live readings">

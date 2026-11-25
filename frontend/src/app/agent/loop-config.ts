@@ -10,6 +10,7 @@ export interface LoopConfig {
   /** Two protocols within this many points are ambiguous (FR-021). */
   readonly profileMargin: number;
   readonly connectTimeoutMs: number;
+  readonly modelTimeoutMs?: number;
 }
 
 export const DEFAULT_LOOP_CONFIG: LoopConfig = {
@@ -19,6 +20,7 @@ export const DEFAULT_LOOP_CONFIG: LoopConfig = {
   profileThreshold: 70,
   profileMargin: 10,
   connectTimeoutMs: 10_000,
+  modelTimeoutMs: 10_000,
 };
 
 export const LOOP_CONFIG = new InjectionToken<LoopConfig>('LOOP_CONFIG', {

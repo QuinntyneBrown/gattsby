@@ -1,0 +1,156 @@
+{
+  "$id": "agent-action-1.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gattsby agent action",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "tool", "input"],
+      "properties": {
+        "type": {
+          "const": "call_tool"
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "input": {
+          "type": "object"
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "question", "answers", "why"],
+      "properties": {
+        "type": {
+          "const": "ask_user"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "answers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "minItems": 2,
+          "maxItems": 6
+        },
+        "allowFreeText": {
+          "type": "boolean"
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "protocol", "proposedConfidence", "evidence"],
+      "properties": {
+        "type": {
+          "const": "update_hypothesis"
+        },
+        "protocol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "deviceType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "maker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "proposedConfidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "minItems": 0,
+          "maxItems": 24
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "capability", "reason", "evidence"],
+      "properties": {
+        "type": {
+          "const": "request_missing_tool"
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 280
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "minItems": 0,
+          "maxItems": 24
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "verdict", "summary"],
+      "properties": {
+        "type": {
+          "const": "finish"
+        },
+        "verdict": {
+          "enum": ["connected", "partiallyDecoded", "needsMissingTool", "notConnectable"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 280
+        }
+      }
+    }
+  ]
+}

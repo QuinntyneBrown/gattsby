@@ -37,6 +37,7 @@ export const requestActionTool = entry<RequestActionInput, RequestActionOutput>(
   },
   outputSchema: { type: 'object' },
   safetyClass: 'n/a',
+  modelSelectable: false,
   preconditions: [],
   stages: ['prepare', 'find', 'identify', 'standard', 'proprietary', 'control', 'conclude'],
   requiredCapabilities: [],

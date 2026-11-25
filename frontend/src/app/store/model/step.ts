@@ -1,5 +1,6 @@
 import type { ToolResult } from '../../tools/tool-result';
 import type { OperatingMode } from './operating-mode';
+import type { ModelDecision } from './model-decision';
 import type { Stage } from './stage';
 import type { StepError } from './step-error';
 
@@ -17,6 +18,7 @@ export interface Step {
   readonly n: number;
   readonly id: string;
   readonly mode?: OperatingMode;
+  readonly modelDecision?: ModelDecision;
   readonly stage: Stage;
   readonly tool: string;
   readonly input: unknown;

@@ -38,6 +38,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   readonly inputSchema: object;
   readonly outputSchema: object;
   readonly safetyClass: SafetyClass;
+  /** Physical prompts and other rule-owned operations may be withheld from the model. */
+  readonly modelSelectable?: boolean;
   readonly preconditions: readonly Precondition[];
   readonly stages: readonly Stage[];
   readonly requiredCapabilities: readonly string[];

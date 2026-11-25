@@ -164,7 +164,13 @@ describe('PlaybookRules (FR-046)', () => {
   });
 
   it('hands two protocols within 10 points to the decider', () => {
-    const rival = { ...treadmill, profileId: 'heart-rate-sensor', serviceUuid: 'hr', score: 90 };
+    const rival = {
+      ...treadmill,
+      profileId: 'heart-rate-sensor',
+      protocol: 'Heart Rate',
+      serviceUuid: 'hr',
+      score: 90,
+    };
     expect(
       tool({
         ...prepared,
