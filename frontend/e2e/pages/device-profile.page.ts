@@ -19,6 +19,10 @@ export class DeviceProfilePage {
     return this.page.getByRole('button', { name: 'Export', exact: true });
   }
 
+  get notes() {
+    return this.page.getByRole('region', { name: 'Notes' });
+  }
+
   open(id: string) {
     return this.page.goto(`/profiles/${id}`);
   }

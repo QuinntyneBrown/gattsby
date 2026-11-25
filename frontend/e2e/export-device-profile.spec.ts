@@ -1,5 +1,5 @@
 // Acceptance Test
-// Traces to: FR-055, FR-062, FR-063, NFR-012, NFR-013, NFR-024
+// Traces to: FR-010, FR-055, FR-062, FR-063, NFR-012, NFR-013, NFR-024
 // Given an FTMS treadmill, when the investigation concludes, then its saved profile
 // conforms to the published schema and each metric points to evidence in the record.
 
@@ -13,9 +13,11 @@ import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { seedStoredPhoto, tinyPng } from './fixtures/stored-photo';
 import { StoredRecords } from './fixtures/stored-records';
+import { AddNoteDialogPage } from './pages/add-note.dialog.page';
 import { DeviceProfilePage } from './pages/device-profile.page';
 import { ExportDialogPage } from './pages/export.dialog.page';
 import { HomePage } from './pages/home.page';
+import { InvestigationOptionsDialogPage } from './pages/investigation-options.dialog.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { VerdictPage } from './pages/verdict.page';
 
@@ -41,7 +43,11 @@ test('opens the saved device profile and explains an unreadable profile', async 
   await expect(profile.error).toContainText('This profile couldn’t be opened');
 });
 
-async function finishTreadmill(page: Page, bluetooth: FakeBluetooth): Promise<string> {
+async function finishTreadmill(
+  page: Page,
+  bluetooth: FakeBluetooth,
+  beforeRecording?: (investigation: InvestigationPage) => Promise<void>,
+): Promise<string> {
   await page.clock.install();
   const home = new HomePage(page);
   const investigation = new InvestigationPage(page);
@@ -49,6 +55,12 @@ async function finishTreadmill(page: Page, bluetooth: FakeBluetooth): Promise<st
   await home.identify();
   await investigation.prepare('Treadmill', 'Don’t know');
   await investigation.choose('Find the device');
+  if (beforeRecording) {
+    await investigation.waitForPrompt(
+      'Step on, press Start and walk slowly — around 3 km/h. Tap Ready when you’re walking.',
+    );
+    await beforeRecording(investigation);
+  }
   await bluetooth.setEffort(1);
   await investigation.choose('Ready');
   await expect.poll(() => bluetooth.calls()).toContain('startNotifications');
@@ -99,6 +111,42 @@ test('downloads a versioned profile from the verdict and device profile @critica
     if (before === 0) await verdict.deviceProfile.click();
   }
   expect(downloads).toHaveLength(2);
+});
+
+// Given an open investigation, when the person types their own location,
+// then the record, saved profile and exported profile carry the same label.
+test('saves a validated location and shows it in the exported profile', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const note = new AddNoteDialogPage(page);
+  const options = new InvestigationOptionsDialogPage(page);
+  const id = await finishTreadmill(page, fakeBluetooth, async (investigation) => {
+    await investigation.options.click({ timeout: 3_000 });
+    await options.addNote.click();
+    await expect(note.emergencyStop).toBeVisible();
+    await note.save.click();
+    await expect(note.error).toContainText('Nothing to save yet');
+    await note.location.fill('  Decathlon, Lille  ');
+    await note.note.fill('Model confirmed on the console.');
+    await note.save.click();
+    await expect(note.dialog).not.toBeVisible();
+  });
+  expect(await new StoredRecords(page).investigation(id)).toMatchObject({
+    location: 'Decathlon, Lille',
+  });
+  const verdict = new VerdictPage(page);
+  const profile = new DeviceProfilePage(page);
+  const exportDialog = new ExportDialogPage(page);
+  await verdict.deviceProfile.click();
+  await expect(profile.notes).toContainText('Decathlon, Lille');
+  await expect(profile.notes).toContainText('Model confirmed on the console.');
+  await profile.exportButton.click();
+  const download = page.waitForEvent('download');
+  await exportDialog.deviceProfile.click();
+  const exported: unknown = JSON.parse(await readFile((await (await download).path())!, 'utf8'));
+  expect(exported).toMatchObject({ location: 'Decathlon, Lille' });
+  expect(exported).not.toHaveProperty('notes');
 });
 
 test('saves one versioned device profile with evidence for each reading', async ({

@@ -47,6 +47,10 @@ export class DeviceProfilePage {
     params: () => this.id(),
     loader: ({ params }) => this.store.getProfile(params),
   });
+  protected readonly recordHeader = resource({
+    params: () => (this.profile.hasValue() ? this.profile.value().investigationId : undefined),
+    loader: ({ params }) => this.store.getInvestigation(params),
+  });
   protected readonly starting = signal(false);
   protected readonly startFailed = signal(false);
   protected readonly exporting = signal(false);

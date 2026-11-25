@@ -1,4 +1,5 @@
 import type { Investigation, NewInvestigation } from './model/investigation';
+import type { InvestigationNote } from './model/investigation-note';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { StepCommit } from './model/step-commit';
@@ -19,6 +20,7 @@ export abstract class InvestigationStore {
   abstract recover(id: string): Promise<Investigation>;
   abstract get(id: string): Promise<InvestigationRecord>;
   abstract getInvestigation(id: string): Promise<Investigation>;
+  abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
   abstract list(): Promise<Investigation[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
   abstract rawLogPages(id: string): AsyncIterable<RawLogEntry[]>;

@@ -9,6 +9,7 @@ import {
 } from './database-schema';
 import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationPhoto } from './model/investigation-photo';
+import type { InvestigationNote } from './model/investigation-note';
 import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
@@ -16,6 +17,7 @@ import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
+import { validateNote } from './validate-note';
 
 const RECORD_FORMAT = 1;
 const EXPORT_PAGE_SIZE = 2000;
@@ -113,7 +115,10 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
         commit.observations.forEach((o) => tx.objectStore('observations').put(o));
         if (commit.hypothesis) tx.objectStore('hypotheses').put(commit.hypothesis);
         commit.missingToolRequests.forEach((r) => tx.objectStore('missingToolRequests').put(r));
-        tx.objectStore('profiles').add(commit.profile);
+        const profile = current.location
+          ? { ...commit.profile, location: current.location }
+          : commit.profile;
+        tx.objectStore('profiles').add(profile);
         store.put({
           ...current,
           ...commit.investigationPatch,
@@ -188,6 +193,37 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     );
     if (!row) throw new StoreError('NOT_FOUND', 'No investigation with that id.');
     return row as Investigation;
+  }
+
+  async saveNote(id: string, input: InvestigationNote): Promise<InvestigationNote> {
+    const details = validateNote(input);
+    await this.write(['investigations', 'profiles'], 'strict', (tx) => {
+      const store = tx.objectStore('investigations');
+      const lookup = store.get(id);
+      lookup.onsuccess = () => {
+        const current = lookup.result as Investigation | undefined;
+        if (!current) {
+          refuse(tx, new StoreError('NOT_FOUND', 'No investigation with that id.'));
+          return;
+        }
+        if (!details.location && !details.note && !current.location && !current.note) {
+          refuse(tx, new StoreError('EMPTY_NOTE', 'Add a location or a note before saving.'));
+          return;
+        }
+        // Keep these fields independent of step data so a concurrent step commit preserves them.
+        const location = details.location || undefined;
+        store.put({ ...current, location, note: details.note || undefined });
+        if (current.profileId) {
+          const profiles = tx.objectStore('profiles');
+          const lookup = profiles.get(current.profileId);
+          lookup.onsuccess = () => {
+            const profile = lookup.result as DeviceProfile | undefined;
+            if (profile) profiles.put({ ...profile, location });
+          };
+        }
+      };
+    });
+    return details;
   }
 
   async rawLog(id: string): Promise<RawLogEntry[]> {
@@ -376,4 +412,9 @@ function toStoreError(tx: IDBTransaction): StoreError {
     return new StoreError('STORAGE_FULL', 'Storage is full.');
   }
   return new StoreError('STORAGE_UNAVAILABLE', tx.error?.message ?? 'The transaction failed.');
+}
+
+function refuse(tx: IDBTransaction, error: StoreError): void {
+  (tx as IDBTransaction & { gattsbyRefusal?: StoreError }).gattsbyRefusal = error;
+  tx.abort();
 }

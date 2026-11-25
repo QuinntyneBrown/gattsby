@@ -212,8 +212,13 @@
                 {{ p.counts.approvedCommands }} approved commands.
               </p>
             </section>
-            <section>
-              <h2 class="section-title">Notes</h2>
+            <section aria-labelledby="profile-notes-title">
+              <h2 class="section-title" id="profile-notes-title">Notes</h2>
+              @if (recordHeader.hasValue() && recordHeader.value().note) {
+                <p class="text-sm">
+                  <bdi>{{ recordHeader.value().note }}</bdi>
+                </p>
+              }
               <p class="fine-print">
                 @if (p.location) {
                   <bdi>{{ p.location }}</bdi> ·
