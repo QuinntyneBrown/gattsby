@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Approve a command
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(dialog, "ApprovalDialog", "Angular component", "Shows what, where, why and risk; stand-clear box; Send and Don't send")
+  Component(channel, "PromptChannel", "Service", "Posts the approval prompt and awaits the decision")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated write or control call")
+  Component(gate, "ApprovalGate", "Service", "Builds the approval request; issues one ApprovalToken on Send")
+  Component(estop, "EmergencyStopController", "Service", "Latch that refuses every later approval and write")
+  Component(ledger, "ApprovalLedger", "BLE layer", "Holds issued tokens; consumes one per matching write")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only code that writes to the device")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs each write with its approval ID")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, gate, "Requests approval for one call")
+Rel(gate, estop, "Checks the latch")
+Rel(gate, channel, "Posts approval prompt")
+Rel(channel, dialog, "Renders")
+Rel(person, dialog, "Ticks stand-clear, taps Send")
+Rel(gate, ledger, "Issues ApprovalToken")
+Rel(executor, ble, "write(characteristic, bytes, approvalId)")
+Rel(ble, ledger, "consume(approvalId, characteristic, bytes)")
+Rel(ble, log, "Appends write entry")
+Rel(log, idb, "Flushes")
+Rel(ble, device, "writeValueWithResponse", "Web Bluetooth")
+@enduml

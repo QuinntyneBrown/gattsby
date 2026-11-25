@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Approve a command
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Approval dialog, agent orchestrator, approval gate, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, approvals and the raw log")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Commands, motion flags and safe limits")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Approves or declines one call", "Touch or keyboard")
+Rel(spa, kb, "Reads command bytes, motion flag and risk")
+Rel(spa, idb, "Commits the approval decision and the write entry")
+Rel(spa, device, "Writes the approved bytes", "Web Bluetooth")
+@enduml

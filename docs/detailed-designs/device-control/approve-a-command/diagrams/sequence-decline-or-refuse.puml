@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Decline, or refuse an unapproved write
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "WebBluetoothBleLayer" as ble
+end box
+
+alt The person declines
+  executor -> gate : request(request_control)
+  gate -> dialog : Show approval prompt
+  person -> dialog : Tap "Don't send"
+  dialog --> gate : decision dontSend
+  gate -> gate : Remember denial for the next 3 steps (FR-034)
+  gate --> executor : APPROVAL_DENIED
+  executor --> executor : Envelope ok false; nothing written
+else A write arrives without a valid token
+  executor -> ble : write(0x2AD9, 02 E8 03, a-17)
+  ble -> ledger : consume(a-17, 0x2AD9, 02 E8 03)
+  ledger --> ble : refused: bytes differ or token used
+  ble --> executor : APPROVAL_REQUIRED (NFR-018)
+else Emergency stop was used earlier
+  executor -> gate : request(send_command)
+  gate --> executor : EMERGENCY_STOPPED (FR-039); no prompt shown
+end
+@enduml
