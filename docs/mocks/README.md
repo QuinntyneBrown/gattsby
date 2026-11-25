@@ -12,7 +12,7 @@ difference is listed under [Departures from the Magic Patterns designs](#departu
 ## Opening the mocks
 
 - Open [`index.html`](index.html) straight from disk. No server, build or network is needed: fonts
-  (Geist and Geist Mono, SIL Open Font License, in `assets/fonts/`) and images are bundled.
+  (Geist and Geist Mono, SIL Open Font License, in `../design-system/assets/fonts/`) and images are bundled.
 - Every mock has a bar at the bottom with its sibling states, a theme toggle and a button that hides
   the mock chrome. Press `t` to switch theme.
 - `?theme=dark` or `?theme=light` forces a theme; `?chrome=0` hides the bar and the yellow notes, so
@@ -27,11 +27,10 @@ docs/mocks/
   README.md            this file: cast, decisions, coverage matrix (generated section)
   index.html           gallery of every screen and state (generated)
   manifest.json        screens, states, routes and requirement IDs
-  assets/tokens.css    design tokens, light (paper) and dark (ink)
-  assets/ui.css        component kit shared by every mock
+  assets/tokens.css    imports ../design-system/tokens/tokens.css (the design tokens)
+  assets/ui.css        imports ../design-system/assets/components.css (the component kit)
   assets/mock.css      mock bar and notes (not product UI)
   assets/mock.js       theme and chrome switches
-  assets/fonts/        Geist and Geist Mono (variable, woff2) and their licence
   assets/img/          the model-plate photo used in notes and the photo dialog
   pages/<id>/<state>.html
   dialogs/<id>/<state>.html          shown over the page they open from
@@ -143,9 +142,13 @@ python .claude/skills/writing-html-mocks/scripts/check_mocks.py docs/mocks --wri
 python .claude/skills/writing-html-mocks/scripts/screenshot_mocks.py docs/mocks     # PNGs in docs/mocks/.cache (never commit)
 ```
 
-## Next step
+## Design system
 
-Run the `extracting-design-systems` skill to turn these mocks into `docs/design-system/`.
+The tokens, component styles and fonts now live in [`docs/design-system/`](../design-system/README.md), extracted
+from these mocks on 25 November 2026. The two files in `assets/` only import them, so every mock and the design
+system always agree. When a mock needs a style or component the system lacks, add it to the design system first,
+then use it here. The extraction snapped 6, 10 and 14px spacing to the 4px grid and gave invalid edges and the
+emergency stop a red-300 outline in dark; the design system's README lists every change.
 
 ## Coverage
 

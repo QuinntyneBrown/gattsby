@@ -1,0 +1,485 @@
+{
+  "$comment": "Foreground/background token pairs checked by check_contrast.py for both themes. 4.5:1 is WCAG 2.2 AA for text (1.4.3); 3:1 is AA for UI edges, meaningful graphics and focus indicators (1.4.11); the emergency stop is held to 7:1. min 1 marks a pair that is documented as decorative or redundant, with the reason in the note.",
+  "pairs": [
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "body text on canvas"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "body text on surface"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-bg-surface-raised",
+      "min": 4.5,
+      "note": "body text on surface-raised"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-bg-surface-sunken",
+      "min": 4.5,
+      "note": "body text on surface-sunken"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-bg-subtle",
+      "min": 4.5,
+      "note": "body text on subtle"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-bg-subtle-hover",
+      "min": 4.5,
+      "note": "body text on subtle-hover"
+    },
+    {
+      "fg": "--color-fg-muted",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "secondary text, units, timestamps on canvas"
+    },
+    {
+      "fg": "--color-fg-muted",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "secondary text, units, timestamps on surface"
+    },
+    {
+      "fg": "--color-fg-muted",
+      "bg": "--color-bg-surface-raised",
+      "min": 4.5,
+      "note": "secondary text, units, timestamps on surface-raised"
+    },
+    {
+      "fg": "--color-fg-muted",
+      "bg": "--color-bg-surface-sunken",
+      "min": 4.5,
+      "note": "secondary text, units, timestamps on surface-sunken"
+    },
+    {
+      "fg": "--color-fg-muted",
+      "bg": "--color-bg-subtle",
+      "min": 4.5,
+      "note": "secondary text, units, timestamps on subtle"
+    },
+    {
+      "fg": "--color-fg-subtle",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "placeholders and metadata on canvas"
+    },
+    {
+      "fg": "--color-fg-subtle",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "placeholders and metadata on surface"
+    },
+    {
+      "fg": "--color-fg-subtle",
+      "bg": "--color-bg-surface-raised",
+      "min": 4.5,
+      "note": "placeholders and metadata on surface-raised"
+    },
+    {
+      "fg": "--color-fg-inverse",
+      "bg": "--color-bg-inverse",
+      "min": 4.5,
+      "note": "person's message, toast, tool-name chip, resume card"
+    },
+    {
+      "fg": "--color-fg-inverse",
+      "bg": "--color-bg-inverse-hover",
+      "min": 4.5,
+      "note": "hovered resume card"
+    },
+    {
+      "fg": "--color-fg-inverse-muted",
+      "bg": "--color-bg-inverse",
+      "min": 4.5,
+      "note": "resume card meta, tool card text"
+    },
+    {
+      "fg": "--color-success-on-inverse",
+      "bg": "--color-bg-inverse",
+      "min": 3,
+      "note": "success toast icon"
+    },
+    {
+      "fg": "--color-warning-on-inverse",
+      "bg": "--color-bg-inverse",
+      "min": 3,
+      "note": "warning toast icon"
+    },
+    {
+      "fg": "--color-danger-on-inverse",
+      "bg": "--color-bg-inverse",
+      "min": 3,
+      "note": "danger toast icon"
+    },
+    {
+      "fg": "--color-fg-link",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "links on canvas"
+    },
+    {
+      "fg": "--color-fg-link-hover",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "hovered links on canvas"
+    },
+    {
+      "fg": "--color-fg-link",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "links on surface"
+    },
+    {
+      "fg": "--color-fg-link-hover",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "hovered links on surface"
+    },
+    {
+      "fg": "--color-fg-accent",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "accent text on cards"
+    },
+    {
+      "fg": "--color-fg-accent",
+      "bg": "--color-accent-subtle",
+      "min": 4.5,
+      "note": "accent text on a selected row"
+    },
+    {
+      "fg": "--color-fg-on-accent",
+      "bg": "--color-accent",
+      "min": 4.5,
+      "note": "primary button label, selected chip"
+    },
+    {
+      "fg": "--color-fg-on-accent",
+      "bg": "--color-accent-hover",
+      "min": 4.5,
+      "note": "primary button label (hover)"
+    },
+    {
+      "fg": "--color-fg-on-accent",
+      "bg": "--color-accent-active",
+      "min": 4.5,
+      "note": "primary button label (active)"
+    },
+    {
+      "fg": "--color-accent",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "primary button, done stage, checked box, meter fill vs canvas"
+    },
+    {
+      "fg": "--color-accent",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "primary button, done stage, checked box, meter fill vs surface"
+    },
+    {
+      "fg": "--color-accent",
+      "bg": "--color-bg-surface-raised",
+      "min": 3,
+      "note": "primary button, done stage, checked box, meter fill vs surface-raised"
+    },
+    {
+      "fg": "--color-border-strong",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "input edge, checkbox edge, switch track off vs canvas"
+    },
+    {
+      "fg": "--color-border-strong",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "input edge, checkbox edge, switch track off vs surface"
+    },
+    {
+      "fg": "--color-border-strong",
+      "bg": "--color-bg-surface-raised",
+      "min": 3,
+      "note": "input edge, checkbox edge, switch track off vs surface-raised"
+    },
+    {
+      "fg": "--color-focus-ring",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "focus ring vs canvas"
+    },
+    {
+      "fg": "--color-focus-ring",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "focus ring vs surface"
+    },
+    {
+      "fg": "--color-focus-ring",
+      "bg": "--color-bg-surface-raised",
+      "min": 3,
+      "note": "focus ring vs surface-raised"
+    },
+    {
+      "fg": "--color-focus-ring",
+      "bg": "--color-bg-subtle",
+      "min": 3,
+      "note": "focus ring vs subtle"
+    },
+    {
+      "fg": "--color-fg-on-danger",
+      "bg": "--color-danger-solid",
+      "min": 7,
+      "note": "emergency stop label (FR-039, enhanced 7:1)"
+    },
+    {
+      "fg": "--color-fg-on-danger",
+      "bg": "--color-danger-solid-hover",
+      "min": 7,
+      "note": "emergency stop label (hover)"
+    },
+    {
+      "fg": "--color-border-danger",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "emergency stop and destructive button edge, invalid input edge, danger sheet ring vs canvas"
+    },
+    {
+      "fg": "--color-border-danger",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "emergency stop and destructive button edge, invalid input edge, danger sheet ring vs surface"
+    },
+    {
+      "fg": "--color-border-danger",
+      "bg": "--color-bg-surface-raised",
+      "min": 3,
+      "note": "emergency stop and destructive button edge, invalid input edge, danger sheet ring vs surface-raised"
+    },
+    {
+      "fg": "--color-info-fg",
+      "bg": "--color-info-bg",
+      "min": 4.5,
+      "note": "info alert title, confidence badge, check status"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-info-bg",
+      "min": 4.5,
+      "note": "info alert body text"
+    },
+    {
+      "fg": "--color-info-icon",
+      "bg": "--color-info-bg",
+      "min": 3,
+      "note": "info alert icon"
+    },
+    {
+      "fg": "--color-success-fg",
+      "bg": "--color-success-bg",
+      "min": 4.5,
+      "note": "success alert title, confidence badge, check status"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-success-bg",
+      "min": 4.5,
+      "note": "success alert body text"
+    },
+    {
+      "fg": "--color-success-icon",
+      "bg": "--color-success-bg",
+      "min": 3,
+      "note": "success alert icon"
+    },
+    {
+      "fg": "--color-warning-fg",
+      "bg": "--color-warning-bg",
+      "min": 4.5,
+      "note": "warning alert title, confidence badge, check status"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-warning-bg",
+      "min": 4.5,
+      "note": "warning alert body text"
+    },
+    {
+      "fg": "--color-warning-icon",
+      "bg": "--color-warning-bg",
+      "min": 3,
+      "note": "warning alert icon"
+    },
+    {
+      "fg": "--color-danger-fg",
+      "bg": "--color-danger-bg",
+      "min": 4.5,
+      "note": "danger alert title, confidence badge, check status"
+    },
+    {
+      "fg": "--color-fg-default",
+      "bg": "--color-danger-bg",
+      "min": 4.5,
+      "note": "danger alert body text"
+    },
+    {
+      "fg": "--color-danger-icon",
+      "bg": "--color-danger-bg",
+      "min": 3,
+      "note": "danger alert icon"
+    },
+    {
+      "fg": "--color-success-fg",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "success text on canvas (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-success-fg",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "success text on surface (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-success-fg",
+      "bg": "--color-bg-surface-raised",
+      "min": 4.5,
+      "note": "success text on surface-raised (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-warning-fg",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "warning text on canvas (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-warning-fg",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "warning text on surface (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-warning-fg",
+      "bg": "--color-bg-surface-raised",
+      "min": 4.5,
+      "note": "warning text on surface-raised (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-danger-fg",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "danger text on canvas (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-danger-fg",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "danger text on surface (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-danger-fg",
+      "bg": "--color-bg-surface-raised",
+      "min": 4.5,
+      "note": "danger text on surface-raised (field error, received arrow, warn copy)"
+    },
+    {
+      "fg": "--color-info-fg",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "info text on cards"
+    },
+    {
+      "fg": "--color-info-solid",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "info solid graphic (verdict mark) vs card"
+    },
+    {
+      "fg": "--color-info-solid",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "info solid graphic (verdict mark) vs page"
+    },
+    {
+      "fg": "--color-success-solid",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "success solid graphic (verdict mark) vs card"
+    },
+    {
+      "fg": "--color-success-solid",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "success solid graphic (verdict mark) vs page"
+    },
+    {
+      "fg": "--color-warning-solid",
+      "bg": "--color-bg-surface",
+      "min": 3,
+      "note": "warning solid graphic (verdict mark) vs card"
+    },
+    {
+      "fg": "--color-warning-solid",
+      "bg": "--color-bg-canvas",
+      "min": 3,
+      "note": "warning solid graphic (verdict mark) vs page"
+    },
+    {
+      "fg": "--color-fg-on-accent",
+      "bg": "--color-info-solid",
+      "min": 4.5,
+      "note": "label on solid info badge"
+    },
+    {
+      "fg": "--color-fg-on-danger",
+      "bg": "--color-danger-solid",
+      "min": 4.5,
+      "note": "count badge label"
+    },
+    {
+      "fg": "--color-fg-signal",
+      "bg": "--color-bg-canvas",
+      "min": 4.5,
+      "note": "Live label, sent-direction arrow on canvas"
+    },
+    {
+      "fg": "--color-fg-signal",
+      "bg": "--color-bg-surface",
+      "min": 4.5,
+      "note": "Live label, sent-direction arrow on surface"
+    },
+    {
+      "fg": "--color-fg-signal",
+      "bg": "--color-signal-subtle",
+      "min": 4.5,
+      "note": "open missing-tool pill"
+    },
+    {
+      "fg": "--color-signal",
+      "bg": "--color-bg-canvas",
+      "min": 1,
+      "note": "current-stage segment: decorative-redundant, the stage name is always in text beside it and the segment is taller (mocks README, open question 3)"
+    },
+    {
+      "fg": "--color-signal",
+      "bg": "--color-bg-surface",
+      "min": 1,
+      "note": "Live dot and the device dot in the mark: decorative, always beside the word Live or the wordmark"
+    },
+    {
+      "fg": "--color-border-default",
+      "bg": "--color-bg-surface",
+      "min": 1,
+      "note": "dividers and card edges: decorative, surfaces are also separated by background and spacing"
+    }
+  ]
+}
