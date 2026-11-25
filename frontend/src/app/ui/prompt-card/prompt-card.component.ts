@@ -56,8 +56,12 @@ const FREE_TEXT_LIMIT = 500;
             }
           </ol>
         }
-        @if (p.kind === 'question') {
-          <div class="replies" role="group" aria-label="Suggested answers">
+        @if (p.kind === 'question' || p.kind === 'checklist') {
+          <div
+            class="replies"
+            role="group"
+            [attr.aria-label]="p.kind === 'checklist' ? 'Available steps' : 'Suggested answers'"
+          >
             @for (answer of p.answers; track answer) {
               <button class="reply" type="button" (click)="choose(p, answer)">{{ answer }}</button>
             }

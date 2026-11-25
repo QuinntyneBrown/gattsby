@@ -19,10 +19,12 @@ export interface StoredInvestigation {
 
 export interface StoredStep {
   readonly n: number;
+  readonly id: string;
   readonly stage: string;
   readonly tool: string;
   readonly status: string;
   readonly decidedBy?: string;
+  readonly mode?: string;
   readonly result: {
     readonly ok: boolean;
     readonly data: unknown;

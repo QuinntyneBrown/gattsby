@@ -1,10 +1,9 @@
 import validateAction from '../../schemas/generated/agent-action-1.js';
-import toolInputs from '../../schemas/generated/tool-inputs.js';
 import type { AgentAction } from '../model/agent-action';
-import { capabilityAvailable } from '../tools/tool-list-generator';
 import { ToolError } from '../tools/tool-error';
 import type { ModelDecisionContext } from './model-decision-context';
 import type { RuleAction } from './rule-outcome';
+import { validateToolAction } from './validate-tool-action';
 
 export function validateModelAction(candidate: unknown, ctx: ModelDecisionContext): RuleAction {
   if (!validateAction(candidate)) {
@@ -23,20 +22,7 @@ export function validateModelAction(candidate: unknown, ctx: ModelDecisionContex
       'Only the person may approve a write or control call.',
     );
   }
-  if (
-    definition.requiredCapabilities.some((name) => !capabilityAvailable(name, ctx.capabilities))
-  ) {
-    throw new ToolError('UNSUPPORTED', `${tool} needs a capability this browser does not have.`);
-  }
-  if (!toolInputs[tool]?.(input)) {
-    throw new ToolError('INVALID_INPUT', `The input for ${tool} is incomplete or invalid.`);
-  }
-  const inputRefusal = definition.inputPrecondition?.(input, ctx.state);
-  if (inputRefusal) throw new ToolError('PRECONDITION_FAILED', inputRefusal);
-  const ids = input['evidence'];
-  if (Array.isArray(ids) && ids.some((id: string) => !ctx.resolves(id))) {
-    throw new ToolError('INVALID_INPUT', 'One or more evidence references could not be found.');
-  }
+  validateToolAction(tool, input, ctx.outcome.stage, ctx);
   if (
     tool === 'update_hypothesis' &&
     !ctx.outcome.options.some(

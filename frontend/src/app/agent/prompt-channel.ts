@@ -68,7 +68,8 @@ export class PromptChannel {
   }
 
   private armIdleTimer(): void {
-    if (this.prompt()?.kind !== 'action') return;
+    const kind = this.prompt()?.kind;
+    if (kind !== 'action' && kind !== 'checklist') return;
     this.cancelIdleTimer = this.clock.setTimeout(() => {
       this.cancelIdleTimer = null;
       this.idleSignal.set(true);

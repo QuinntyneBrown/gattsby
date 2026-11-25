@@ -1,6 +1,5 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { ConcludeDecider, Decider } from './agent/decider';
 import { BleLayer } from './ble/ble-layer';
 import { WebBluetoothBleLayer } from './ble/web-bluetooth-ble-layer';
 import { BrowserCapabilityDetector } from './environment/browser-capability-detector';
@@ -17,6 +16,5 @@ export const appConfig: ApplicationConfig = {
     { provide: BleLayer, useClass: WebBluetoothBleLayer },
     { provide: InvestigationStore, useClass: IndexedDbInvestigationStore },
     { provide: CapabilityDetector, useClass: BrowserCapabilityDetector },
-    { provide: Decider, useClass: ConcludeDecider },
   ],
 };

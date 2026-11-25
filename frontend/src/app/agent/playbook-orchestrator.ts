@@ -18,6 +18,7 @@ import { StoreError } from '../store/store-error';
 import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
+import type { ModeChange } from '../store/model/mode-change';
 import type { ModelDecision } from '../store/model/model-decision';
 import type { Observation } from '../store/model/observation';
 import type { Recording } from '../store/model/recording';
@@ -30,22 +31,24 @@ import { TOOL_CATALOG } from '../tools/tool-catalog';
 import { NotificationRecorder } from '../tools/listening/notification-recorder';
 import type { UpdateHypothesisInput } from '../tools/meta/update-hypothesis.tool';
 import type { NewMissingToolRequest, ToolContext } from '../tools/tool-context';
-import type { ToolError } from '../tools/tool-error';
+import { ToolError } from '../tools/tool-error';
 import { ToolRegistry } from '../tools/tool-registry';
 import { fail, type ToolResult } from '../tools/tool-result';
 import { applyStep, stateFrom, type DecisionState } from './decision-state';
 import { ConfirmationCheck } from './confirmation-check';
-import { Decider } from './decider';
+import { ChecklistDecider } from './checklist-decider';
 import { buildFeed } from './feed-builder';
 import type { FeedEntry } from './feed-entry';
 import { LOOP_CONFIG } from './loop-config';
-import { ModelDecider } from './model-decider';
-import { isBuiltStage, nextOutcome } from './playbook-rules';
+import type { ModelDecider } from './model-decider';
+import { ModelFailureRun } from './model-failure-run';
+import { checklistOptions, isBuiltStage, nextOutcome } from './playbook-rules';
 import { PromptChannel } from './prompt-channel';
 import type { RuleAction } from './rule-outcome';
 import { STAGE_NAMES } from './stage-names';
 import { checkStop } from './stop-conditions';
 import { executeTool, ToolDefect } from './tool-executor';
+import { validateToolAction } from './validate-tool-action';
 
 export type OrchestratorStatus =
   'loading' | 'running' | 'paused' | 'concluding' | 'concluded' | 'error';
@@ -79,8 +82,8 @@ export class PlaybookOrchestrator {
   private readonly capabilities = inject(CapabilityDetector);
   private readonly clock = inject(Clock);
   private readonly config = inject(LOOP_CONFIG);
-  private readonly decider = inject(Decider);
-  private readonly modelDecider = inject(ModelDecider);
+  private readonly checklistDecider = inject(ChecklistDecider);
+  private modelDecider: ModelDecider | null = null;
   private readonly modelSessions = inject(ModelSessions);
   private readonly router = inject(Router);
   readonly prompts = inject(PromptChannel);
@@ -98,8 +101,7 @@ export class PlaybookOrchestrator {
   private readonly observationKeys = new Set<string>();
   private noProgressRun = 0;
   private modelConsultations = 0;
-  private modelRefusals = 0;
-  private modelTimeouts = 0;
+  private readonly modelFailures = new ModelFailureRun();
   private refusedFinishes = 0;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
@@ -119,6 +121,7 @@ export class PlaybookOrchestrator {
   private readonly statusSignal = signal<OrchestratorStatus>('loading');
   private readonly errorSignal = signal<string | null>(null);
   private readonly modelThinkingSignal = signal(false);
+  private readonly choosingStage = signal<Stage | null>(null);
   readonly modelThinking = this.modelThinkingSignal.asReadonly();
 
   readonly investigation = this.investigationSignal.asReadonly();
@@ -126,8 +129,11 @@ export class PlaybookOrchestrator {
   readonly error = this.errorSignal.asReadonly();
   readonly connection = this.ble.connection;
   readonly state = computed<DecisionState>(() => stateFrom(this.steps()));
-  readonly stage = computed<Stage>(() => this.pending()?.action.stage ?? this.state().stage);
+  readonly stage = computed<Stage>(
+    () => this.pending()?.action.stage ?? this.choosingStage() ?? this.state().stage,
+  );
   readonly mode = computed(() => this.investigationSignal()?.mode ?? 'agent');
+  readonly modeChange = computed(() => this.investigationSignal()?.modeChanges?.at(-1) ?? null);
   readonly hypothesis = computed(() => this.hypotheses().at(-1) ?? null);
   readonly missingToolRequests = this.requests.asReadonly();
 
@@ -272,14 +278,49 @@ export class PlaybookOrchestrator {
   private async loop(): Promise<void> {
     const id = this.investigationSignal()!.id;
     while (!this.leaving && this.statusSignal() === 'running') {
-      const outcome = nextOutcome(this.ruleContext(), this.concludeNow);
+      const context = this.ruleContext();
+      const outcome = nextOutcome(context, this.concludeNow);
       if (!outcome) break;
       let action: RuleAction;
       let modelDecision: ModelDecision | undefined;
       let refusal: ToolError | undefined;
-      if (outcome.kind === 'ambiguous') {
-        const caps = this.steps().find((step) => step.tool === 'check_capabilities')?.result;
+      let chosenByPerson = false;
+      const caps = this.steps().find((step) => step.tool === 'check_capabilities')?.result;
+      const options =
+        this.mode() === 'checklist' && !this.concludeNow ? checklistOptions(outcome, context) : [];
+      if (options.length) {
+        const stage = outcome.kind === 'ambiguous' ? outcome.stage : outcome.action.stage;
+        this.choosingStage.set(stage);
+        const chosen = await this.checklistDecider.decide(
+          options,
+          (choice) => {
+            if (!caps?.ok)
+              throw new ToolError('UNSUPPORTED', 'Gattsby could not check this browser.');
+            validateToolAction(choice.tool, choice.input, stage, {
+              registry: this.registry,
+              state: this.state(),
+              capabilities: caps.data as Capabilities,
+              resolves: (evidence) => this.resolves(evidence),
+            });
+          },
+          this.abort.signal,
+        );
+        this.choosingStage.set(null);
+        if (this.leaving) return;
+        if (!chosen) {
+          this.concludeNow = true;
+          this.resetSignalAfterStop();
+          continue;
+        }
+        action = chosen;
+        chosenByPerson = true;
+      } else if (outcome.kind === 'ambiguous') {
         if (this.modelSession && caps?.ok) {
+          if (!this.modelDecider) {
+            const { ModelDecider } = await import('./model-decider');
+            this.modelDecider = new ModelDecider(this.clock);
+          }
+          if (this.leaving) return;
           this.modelConsultations++;
           this.modelThinkingSignal.set(true);
           const reply = await this.modelDecider.decide(
@@ -314,13 +355,14 @@ export class PlaybookOrchestrator {
             action = reply.action;
           }
         } else {
-          const chosen = await this.decider.decide(outcome);
-          if (this.leaving) return;
-          if (!chosen) {
-            this.concludeNow = true;
-            continue;
-          }
-          action = chosen;
+          refusal = new ToolError('MODEL_SESSION_FAILED', 'The on-device model session stopped.');
+          action = {
+            tool: 'model_decision',
+            input: {},
+            stage: outcome.stage,
+            ruleId: outcome.ruleId,
+            message: { text: refusal.message },
+          };
         }
       } else {
         action = outcome.action;
@@ -328,21 +370,8 @@ export class PlaybookOrchestrator {
       if (this.concludeNow && action.tool === 'finish' && this.stopReason === 'personStop') {
         action = { ...action, input: { ...action.input, verdict: 'stoppedByPerson' } };
       }
-      const done = await this.runStep(id, action, modelDecision, refusal);
+      const done = await this.runStep(id, action, modelDecision, refusal, chosenByPerson);
       if (done) return;
-      if (modelDecision) {
-        const result = this.steps().at(-1)?.result;
-        const code = result && !result.ok ? result.error.code : null;
-        this.modelTimeouts = code === 'TIMEOUT' ? this.modelTimeouts + 1 : 0;
-        this.modelRefusals = code ? this.modelRefusals + 1 : 0;
-        if (
-          !this.concludeNow &&
-          (code === 'CONTEXT_EXHAUSTED' || this.modelTimeouts >= 2 || this.modelRefusals >= 3)
-        ) {
-          this.stopReason = 'failure';
-          this.concludeNow = true;
-        }
-      }
       if (action.tool === 'finish' && ++this.refusedFinishes >= MAX_REFUSED_FINISHES) {
         throw new Error('The verdict was refused twice; no verdict is supported.');
       }
@@ -369,6 +398,7 @@ export class PlaybookOrchestrator {
     action: RuleAction,
     modelDecision?: ModelDecision,
     refusal?: ToolError,
+    chosenByPerson = false,
   ): Promise<boolean> {
     const kb = this.kbSignal()!;
     const tool = this.registry.get(action.tool);
@@ -463,7 +493,13 @@ export class PlaybookOrchestrator {
       stage: action.stage,
       tool: action.tool,
       input: action.input,
-      decidedBy: modelDecision ? 'model' : 'rules',
+      decidedBy: modelDecision
+        ? 'model'
+        : refusal
+          ? 'orchestrator'
+          : chosenByPerson
+            ? 'checklist'
+            : 'rules',
       ...(modelDecision ? { modelDecision } : {}),
       ruleId: action.ruleId,
       startedAt,
@@ -500,7 +536,7 @@ export class PlaybookOrchestrator {
       kb,
       this.config,
       Date.now(),
-      action.tool === 'update_hypothesis' && modelDecision && result.ok
+      action.tool === 'update_hypothesis' && (modelDecision || chosenByPerson) && result.ok
         ? (action.input as unknown as UpdateHypothesisInput)
         : undefined,
     );
@@ -568,6 +604,11 @@ export class PlaybookOrchestrator {
       return true;
     }
 
+    const modeChange = this.fallbackAfter(step, refusal);
+    const modePatch = modeChange && {
+      mode: modeChange.to,
+      modeChanges: [...(this.investigationSignal()?.modeChanges ?? []), modeChange],
+    };
     await this.store.commitStep({
       investigationId: id,
       step,
@@ -579,6 +620,7 @@ export class PlaybookOrchestrator {
       investigationPatch: {
         stage: action.stage,
         modelConsultations: this.modelConsultations,
+        ...modePatch,
         ...(newState.device?.name !== undefined ? { deviceName: newState.device.name } : {}),
       },
     });
@@ -586,11 +628,36 @@ export class PlaybookOrchestrator {
     this.observations.set(allObservations);
     this.requests.update((r) => [...r, ...requests]);
     if (hypothesis) this.hypotheses.update((h) => [...h, hypothesis]);
+    if (modePatch) {
+      this.releaseModel();
+      this.noProgressRun = 0;
+      this.investigationSignal.update((record) => record && { ...record, ...modePatch });
+    }
     this.pending.set(null);
-    if (this.stopReason && signal.aborted) {
+    this.resetSignalAfterStop();
+    return false;
+  }
+
+  private fallbackAfter(step: Step, refusal?: ToolError): ModeChange | null {
+    if (this.concludeNow || this.mode() !== 'agent' || (!step.modelDecision && !refusal))
+      return null;
+    const trigger = this.modelFailures.report(step.id, refusal?.code ?? null);
+    return (
+      trigger && {
+        ...trigger,
+        from: 'agent',
+        to: 'checklist',
+        at: step.endedAt,
+        stage: step.stage,
+        step: step.n,
+      }
+    );
+  }
+
+  private resetSignalAfterStop(): void {
+    if (this.stopReason && this.abort.signal.aborted) {
       this.abort = new AbortController();
     }
-    return false;
   }
 
   private ruleContext() {

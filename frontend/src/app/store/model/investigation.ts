@@ -1,4 +1,5 @@
 import type { OperatingMode } from './operating-mode';
+import type { ModeChange } from './mode-change';
 import type { Stage } from './stage';
 import type { Verdict } from './verdict';
 
@@ -9,6 +10,7 @@ export interface Investigation {
   readonly id: string;
   readonly startedAt: number;
   readonly mode: OperatingMode;
+  readonly modeChanges?: readonly ModeChange[];
   readonly appVersion: string;
   readonly kbVersion: string;
   readonly recordFormat: number;
@@ -29,6 +31,8 @@ export type InvestigationPatch = Partial<
   Pick<
     Investigation,
     | 'stage'
+    | 'mode'
+    | 'modeChanges'
     | 'status'
     | 'lastCommittedStep'
     | 'deviceName'

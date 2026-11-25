@@ -1,4 +1,3 @@
-import { inject, Injectable } from '@angular/core';
 import type { ModelSession } from '../model/model-session';
 import { Clock } from '../shared/clock';
 import type { ModelDecision } from '../store/model/model-decision';
@@ -11,9 +10,8 @@ import type { RuleAction } from './rule-outcome';
 
 const MAX_RESPONSE = 8192;
 
-@Injectable()
 export class ModelDecider {
-  private readonly clock = inject(Clock);
+  constructor(private readonly clock: Clock) {}
 
   async decide(
     session: ModelSession,
@@ -67,7 +65,7 @@ export class ModelDecider {
         error:
           error instanceof ToolError
             ? error
-            : new ToolError('UNSUPPORTED', 'The on-device model could not make this decision.'),
+            : new ToolError('MODEL_SESSION_FAILED', 'The on-device model session stopped.'),
       };
     } finally {
       stopTimer();

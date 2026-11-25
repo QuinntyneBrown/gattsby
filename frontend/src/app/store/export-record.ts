@@ -30,6 +30,7 @@ export async function buildRecordExport(
     appVersion,
     recordFormat,
     note,
+    modeChanges,
     ...header
   } = record.investigation;
   if (recordFormat !== 1)
@@ -47,8 +48,11 @@ export async function buildRecordExport(
       startedAt: iso(startedAt),
       endedAt: endedAt === null ? null : iso(endedAt),
       interruptedAt: interruptedAt === null ? null : iso(interruptedAt),
+      ...(modeChanges && {
+        modeChanges: modeChanges.map((change) => ({ ...change, at: iso(change.at) })),
+      }),
     },
-    steps: record.steps.map((step) => exportStep(step, header.mode)),
+    steps: record.steps.map((step) => exportStep(step, modeChanges?.[0]?.from ?? header.mode)),
     observations: record.observations.map(withoutInvestigationId),
     hypotheses: record.hypotheses.map(withoutInvestigationId),
     recordings: recordings.map(withoutInvestigationId),

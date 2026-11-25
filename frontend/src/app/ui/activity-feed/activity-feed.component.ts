@@ -40,7 +40,9 @@ import { ConfidenceBadgeComponent } from '../confidence-badge/confidence-badge.c
                     >{{ entry.text }}
                   </p>
                   @if (entry.why) {
-                    <p class="msg__why">Why: {{ entry.why }}</p>
+                    <p class="msg__why">
+                      {{ entry.speaker === 'checklist' ? 'Purpose' : 'Why' }}: {{ entry.why }}
+                    </p>
                   }
                 </div>
               </li>

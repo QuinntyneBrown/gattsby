@@ -24,6 +24,7 @@ export function buildFeed(
   let stage: string | null = null;
   const ordered = [...steps].sort((a, b) => a.n - b.n);
   ordered.forEach((step, index) => {
+    const stepSpeaker = step.mode ?? speaker;
     if (step.stage !== stage) {
       stage = step.stage;
       feed.push({
@@ -37,7 +38,7 @@ export function buildFeed(
       feed.push({
         kind: 'message',
         id: `say-${step.n}`,
-        speaker,
+        speaker: stepSpeaker,
         text: step.message.text,
         why: step.message.why ?? null,
       });
@@ -47,7 +48,7 @@ export function buildFeed(
       feed.push({
         kind: 'message',
         id: `ask-${step.n}`,
-        speaker,
+        speaker: stepSpeaker,
         text: step.exchange.prompt,
         why: step.exchange.why ?? null,
       });

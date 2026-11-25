@@ -10,12 +10,12 @@ interface PromptOptions {
 // The parts of a Prompt API session the model adapter uses. Each prompt takes the next scripted
 // response; a prompt beyond the script is reported as unexpected and rejected.
 export class FakeLanguageModelSession {
-  readonly inputQuota = 4096;
   inputUsage = 0;
 
   constructor(
     private readonly responses: ScriptedResponse[],
     private readonly report: Report,
+    readonly inputQuota: number,
   ) {}
 
   async prompt(input: unknown, options: PromptOptions = {}): Promise<string> {
@@ -55,7 +55,7 @@ export class FakeLanguageModelSession {
   async clone(options?: { signal?: AbortSignal }): Promise<FakeLanguageModelSession> {
     options?.signal?.throwIfAborted();
     this.report({ kind: 'model-call', method: 'clone' });
-    return new FakeLanguageModelSession(this.responses, this.report);
+    return new FakeLanguageModelSession(this.responses, this.report, this.inputQuota);
   }
 
   private unexpected(method: string): never {

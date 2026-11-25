@@ -31,7 +31,7 @@ Prompt API's shape is assumption A-13; the model is available only on desktop Ch
 
 The Investigation page shows
 ["Choosing the next step"](../../../mocks/pages/investigation/model-decision.html) while the
-model is answering. Journey 6 concludes with the supported verdict if the model cannot decide.
+model is answering. A fallback leaves the ambiguous step available to the person in checklist mode.
 Journey 7 adds the checklist fallback and its banner.
 
 The design introduces these building blocks in the Angular (pending ADR 0001) workspace under

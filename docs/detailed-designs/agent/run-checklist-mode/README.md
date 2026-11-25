@@ -20,13 +20,13 @@ recommendation first and the stage's other available steps after it
 The Readiness page on a phone ends in "Ready, in checklist mode." with "Start in checklist mode"
 (`docs/mocks/pages/readiness/checklist.html`). The Investigation page in checklist mode
 (`docs/mocks/pages/investigation/checklist.html`) reads "Checklist · Identify" in the app bar, shows
-the mode banner "Running as a checklist." ("You chose checklist mode, so no model is used. You pick
+the mode banner "Running as a checklist." ("The on-device model is off for this investigation. You pick
 each step; Gattsby runs it and explains the result.", `docs/mocks/notifications/mode-banner/info.html`),
 prefixes feed entries with "Checklist:" and "Purpose:" instead of "Agent:" and "Why:", and offers
-"Pick the next step" with "Recommended: read device information. It's read-only and takes a
-second." and the options "Read device information", "Match known profiles", "Record data for 10 s"
-and "Scan again". The composer offers "Add a note…" in place of "Ask, or tell Gattsby what to try…",
-since no model reads free text.
+"Pick the next step" with "Recommended: Read device information. It’s read-only and takes a
+second." and the options "Read device information" and "Match known profiles". Recording and
+scanning require their own prompts. Add a note below the prompt opens the investigation's note
+dialog. The person can dismiss the notice and still see the mode in the app bar.
 
 ## Description
 
@@ -35,9 +35,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 - **`ChecklistDecider`** (`agent/checklist-decider.ts`) — the `Decider` for checklist mode.
   `decide(state, signal)` calls `PlaybookRules.next(state)`. A decided person-facing action
-  (`ask_user`, `request_action`) is returned as it is: the question is itself the step. A decided
-  tool call becomes a checklist step whose first option is that call, marked recommended, followed by
-  up to 3 alternatives from `PlaybookRules.alternatives(state)`. An ambiguous outcome becomes a
+  (`ask_user`, `request_action`) is returned as it is: the question is itself the step. A tool that
+  starts immediately after a person's answer, such as a timed recording after Ready, also runs
+  directly. A checklist tool call offers the recommendation and up to three eligible alternatives
+  in the same stage. An ambiguous outcome becomes a
   checklist step from its options. The person's choice is returned as the candidate action.
 - **`PlaybookRules`** (`agent/playbook-rules.ts`) — the same rules as in full agent mode (see the
   apply-heuristics-first design). `alternatives(state)` lists the stage's other tools whose
@@ -45,7 +46,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - **`Playbook`** (`agent/playbook.ts`) — the plain-language option labels and purpose lines per tool
   ("Record data for 10 s"), as data, so a new tool's checklist label is a data entry (NFR-022).
 - **`PromptChannel`** (`agent/prompt-channel.ts`) — posts the checklist step as a `question`
-  `PersonPrompt` and awaits the choice. Its 2-minute inactivity timer leads to "Still there?"
+  `PersonPrompt` with kind `checklist` and awaits the choice. Its 2-minute inactivity timer leads to "Still there?"
   (FR-051).
 - **`PromptCard`** and **`AnswerButtons`** (`ui/prompt-card/prompt-card.component.ts`,
   `ui/answer-buttons/answer-buttons.component.ts`) — render the step and its options as 48 px buttons,
@@ -82,9 +83,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - An FTMS treadmill, following the recommended options: Prepare questions, chooser, connect, read the
   maker, match the profile, record while the person walks and changes speed, then "Connected — FTMS"
   with speed and distance confirmed by live data (FR-049 AC1, brief MVP criterion 4).
-- A device with only unknown services: the rules find no standard service and move to the Proprietary
-  path; the recommended options record an idle baseline and activity, then find varying bytes. The
-  verdict is "Partially decoded" or "Needs a missing tool" (FR-049 AC2).
+- Journey 13 adds the Proprietary path. It supplies the idle and activity recordings and the step
+  that finds varying bytes, which complete the unknown-services path in FR-049 AC2.
 
 ### Data shapes
 
@@ -92,7 +92,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 |---|---|
 | `ChecklistStep` | `stage`, `title` ("Pick the next step"), `recommendation` (purpose line), `options` (`RuleOption[]`, at most 4) |
 | `RuleOption` | `action`, `label`, `purpose`, `recommended` |
-| `PersonPrompt` (kind `question`) | `id`, `title`, `detail`, `answers` (option labels), `allowFreeText: false` |
+| `PersonPrompt` (kind `checklist`) | `id`, `title`, `detail`, `answers` (option labels), `allowFreeText: false` |
 
 ### Tests that prove it
 

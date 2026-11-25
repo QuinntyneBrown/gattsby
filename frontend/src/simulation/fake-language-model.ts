@@ -17,6 +17,7 @@ export class FakeLanguageModel {
   private status: ModelScript['availability'];
   private downloadFailures: number;
   private readonly createError?: string;
+  private readonly inputQuota: number;
 
   constructor(
     script: ModelScript,
@@ -26,6 +27,7 @@ export class FakeLanguageModel {
     this.status = script.availability;
     this.downloadFailures = script.downloadFailures ?? 0;
     this.createError = script.createError;
+    this.inputQuota = script.inputQuota ?? 4096;
   }
 
   async availability(): Promise<string> {
@@ -58,6 +60,6 @@ export class FakeLanguageModel {
       }
       this.status = 'available';
     }
-    return new FakeLanguageModelSession(this.responses, this.report);
+    return new FakeLanguageModelSession(this.responses, this.report, this.inputQuota);
   }
 }

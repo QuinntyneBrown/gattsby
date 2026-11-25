@@ -93,6 +93,41 @@
         "mode": {
           "enum": ["agent", "checklist"]
         },
+        "modeChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to", "reason", "stage", "step", "rejectedActionIds", "at"],
+            "properties": {
+              "from": { "const": "agent" },
+              "to": { "const": "checklist" },
+              "reason": {
+                "enum": ["sessionFailed", "twoTimeouts", "contextExhausted", "threeInvalidActions"]
+              },
+              "stage": {
+                "enum": [
+                  "prepare",
+                  "find",
+                  "identify",
+                  "standard",
+                  "proprietary",
+                  "control",
+                  "conclude"
+                ]
+              },
+              "step": { "type": "integer", "minimum": 1 },
+              "rejectedActionIds": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^s-[1-9][0-9]*$" }
+              },
+              "at": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$"
+              }
+            }
+          }
+        },
         "stage": {
           "type": "string"
         },
