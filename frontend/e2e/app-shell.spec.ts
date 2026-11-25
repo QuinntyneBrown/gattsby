@@ -2,7 +2,7 @@
 // The app shell opens in Chromium from the production build, drawn from the design system in the
 // person's theme, with self-hosted fonts.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/gattsby-test';
 import { HomePage } from './pages/home.page';
 import { Theme } from './pages/theme';
 

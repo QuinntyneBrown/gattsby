@@ -1,7 +1,7 @@
 // Requirements: FR-064, NFR-004
 // An address no route matches shows the Not found page (docs/mocks/pages/not-found/default.html).
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/gattsby-test';
 import { HomePage } from './pages/home.page';
 import { NotFoundPage } from './pages/not-found.page';
 

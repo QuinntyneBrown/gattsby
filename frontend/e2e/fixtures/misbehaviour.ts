@@ -108,6 +108,42 @@ export class Misbehaviour {
     }, markup);
   }
 
+  /** Returns true when the browser refused a policy name the CSP does not list. */
+  async createTrustedTypesPolicy(name: string): Promise<boolean> {
+    return this.page.evaluate((policyName) => {
+      try {
+        trustedTypes.createPolicy(policyName, { createHTML: (input: string) => input });
+        return false;
+      } catch {
+        return true;
+      }
+    }, name);
+  }
+
+  /**
+   * Returns true when the browser refused to evaluate the string. The probe runs from a task the
+   * page schedules, because Chrome exempts code that DevTools runs directly from the eval check.
+   */
+  async evaluateString(source: string): Promise<boolean> {
+    return this.page.evaluate(
+      (code) =>
+        new Promise<boolean>((resolve) => {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = () => {
+            try {
+              // eslint-disable-next-line no-new-func -- the probe the CSP must refuse
+              new Function(code)();
+              resolve(false);
+            } catch {
+              resolve(true);
+            }
+          };
+          channel.port2.postMessage(null);
+        }),
+      source,
+    );
+  }
+
   async askForLocation(): Promise<void> {
     await this.page.evaluate(() => navigator.geolocation.getCurrentPosition(() => undefined));
   }

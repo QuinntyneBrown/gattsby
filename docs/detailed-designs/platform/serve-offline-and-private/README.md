@@ -87,7 +87,7 @@ The design introduces these building blocks in the Angular workspace under `fron
 | `img-src` | `'self' blob:` | Photos shown from object URLs |
 | `font-src`, `worker-src`, `manifest-src` | `'self'` | Self-hosted fonts, the service worker, the manifest |
 | `object-src` | `'none'` | NFR-014 |
-| `base-uri` | `'none'` | Hardening |
+| `base-uri` | `'self'` | Hardening: no `<base>` may point off the app's origin. Not `'none'`, because Angular's router needs `<base href="/">` (ADR 0001) |
 | `frame-ancestors` | `'none'` | NFR-014 |
 | `require-trusted-types-for` | `'script'` | NFR-013; see the render-untrusted-text design |
 | `trusted-types` | `angular gattsby` | Angular's policy and Gattsby's own |
