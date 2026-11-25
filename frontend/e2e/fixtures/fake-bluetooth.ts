@@ -39,6 +39,15 @@ export class FakeBluetooth {
     private readonly recorder: SimulationRecorder,
   ) {}
 
+  async setAvailable(available: boolean): Promise<void> {
+    await this.page.evaluate((value) => {
+      const globals = globalThis as unknown as {
+        __gattsbyFakes: { setBluetoothAvailable(v: boolean): void };
+      };
+      globals.__gattsbyFakes.setBluetoothAvailable(value);
+    }, available);
+  }
+
   /** The person's effort: 0 = still, 1 = walking or pedalling, 2 = faster. */
   async setEffort(effort: number): Promise<void> {
     await this.page.evaluate(

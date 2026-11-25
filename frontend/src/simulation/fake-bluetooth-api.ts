@@ -12,6 +12,7 @@ export class FakeBluetoothApi extends EventTarget {
   private readonly devices: FakeBluetoothDevice[];
   private readonly chooser: ChooserStep[];
   private readonly granted = new Set<FakeBluetoothDevice>();
+  private available: boolean;
 
   constructor(
     scripted: readonly ScriptedDevice[],
@@ -19,6 +20,7 @@ export class FakeBluetoothApi extends EventTarget {
     private readonly report: Report,
   ) {
     super();
+    this.available = script.available ?? true;
     this.chooser = [...script.chooser];
     this.devices = scripted.map(
       (device) =>
@@ -43,7 +45,11 @@ export class FakeBluetoothApi extends EventTarget {
 
   async getAvailability(): Promise<boolean> {
     this.report({ kind: 'bluetooth-call', method: 'getAvailability', detail: '' });
-    return this.script.available ?? true;
+    return this.available;
+  }
+
+  setAvailable(available: boolean): void {
+    this.available = available;
   }
 
   async getDevices(): Promise<FakeBluetoothDevice[]> {

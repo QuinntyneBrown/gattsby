@@ -68,7 +68,7 @@ export class DeviceProfilePage {
     this.startFailed.set(false);
     try {
       const id = await this.starter.start();
-      await this.router.navigate(['/investigations', id]);
+      await this.router.navigate(id ? ['/investigations', id] : ['/start']);
     } catch {
       this.startFailed.set(true);
     } finally {

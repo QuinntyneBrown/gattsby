@@ -12,7 +12,11 @@ import type { Report, SimulationEvent } from './simulation-event';
 
 interface SimulationGlobals {
   __gattsbyReport?: (event: SimulationEvent) => unknown;
-  __gattsbyFakes?: { setEffort(effort: number): void; setIncline(percent: number): void };
+  __gattsbyFakes?: {
+    setEffort(effort: number): void;
+    setIncline(percent: number): void;
+    setBluetoothAvailable(available: boolean): void;
+  };
   LanguageModel?: unknown;
 }
 
@@ -45,11 +49,19 @@ function install(config: SimulationConfig): void {
   }
   Object.defineProperty(Navigator.prototype, 'bluetooth', {
     configurable: true,
-    get: () => bluetooth,
+    get: () => (config.bluetooth.absent ? undefined : bluetooth),
   });
+  const query = navigator.permissions.query.bind(navigator.permissions);
+  navigator.permissions.query = (descriptor) =>
+    String(descriptor.name) === 'bluetooth'
+      ? Promise.resolve({
+          state: config.bluetooth.blocked ? 'denied' : 'prompt',
+        } as PermissionStatus)
+      : query(descriptor);
   globals.__gattsbyFakes = {
     setEffort: (effort) => bluetooth.setEffort(effort),
     setIncline: (percent) => bluetooth.setIncline(percent),
+    setBluetoothAvailable: (available) => bluetooth.setAvailable(available),
   };
 
   delete globals.LanguageModel;

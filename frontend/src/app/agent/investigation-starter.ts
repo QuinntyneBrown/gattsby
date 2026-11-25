@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { APP_VERSION } from '../app-version';
 import { CapabilityDetector } from '../environment/capability-detector';
 import { ModeSelector } from '../environment/mode-selector';
+import { canStartInvestigation } from '../environment/readiness-issue';
 import { KnowledgeBase } from '../knowledge-base/knowledge-base';
 import { InvestigationStore } from '../store/investigation-store';
 
@@ -16,11 +17,12 @@ export class InvestigationStarter {
   private readonly store = inject(InvestigationStore);
   private readonly appVersion = inject(APP_VERSION);
 
-  async start(): Promise<string> {
+  async start(): Promise<string | null> {
     const [capabilities, kb] = await Promise.all([
       this.capabilities.detect(),
       this.knowledgeBase.load(),
     ]);
+    if (!canStartInvestigation(capabilities)) return null;
     const investigation = await this.store.create({
       mode: this.modes.select(capabilities),
       appVersion: this.appVersion,

@@ -79,11 +79,29 @@ function platform(): Capabilities['platform'] {
       };
     }
   ).userAgentData;
-  const chrome = data?.brands.find((b) => /Chrom/.test(b.brand));
+  const agent = navigator.userAgent;
+  const ios =
+    /iPhone|iPad|iPod/.test(agent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const firefox = /(?:Firefox|FxiOS)\/(\d+)/.exec(agent);
+  const chrome = /(?:Chrome|CriOS)\/(\d+)/.exec(agent);
+  const edge = /(?:Edg|EdgiOS|EdgA)\/(\d+)/.exec(agent);
+  const chromium = data?.brands.find((b) => /Chrom/.test(b.brand));
+  const browser = edge
+    ? 'Edge'
+    : firefox
+      ? 'Firefox'
+      : chrome || (chromium && !ios)
+        ? 'Chrome'
+        : /Safari\//.test(agent)
+          ? 'Safari'
+          : 'unknown';
   return {
-    os: data?.platform ?? navigator.platform ?? 'unknown',
-    browser: chrome?.brand ?? 'unknown',
-    version: chrome?.version ?? 'unknown',
-    mobile: data?.mobile ?? /Mobi/.test(navigator.userAgent),
+    os: ios
+      ? 'iOS'
+      : data?.platform || (/Android/.test(agent) ? 'Android' : navigator.platform) || 'unknown',
+    browser,
+    version: (edge ?? firefox ?? chrome)?.[1] ?? chromium?.version ?? 'unknown',
+    mobile: ios || (data?.mobile ?? /Mobi/.test(agent)),
   };
 }

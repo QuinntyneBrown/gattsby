@@ -72,11 +72,14 @@ export class WebBluetoothBleLayer extends BleLayer {
         getDevices: false,
       };
     }
-    const adapterAvailable = await bluetooth.getAvailability().catch(() => false);
+    const [adapterAvailable, blocked] = await Promise.all([
+      bluetooth.getAvailability().catch(() => false),
+      bluetoothBlocked(),
+    ]);
     return {
       api: true,
       adapterAvailable,
-      blocked: false,
+      blocked,
       watchAdvertisements: watchAdvertisementsAvailable(),
       requestLEScan: 'requestLEScan' in bluetooth && typeof bluetooth.requestLEScan === 'function',
       getDevices: 'getDevices' in bluetooth,
@@ -325,6 +328,22 @@ export class WebBluetoothBleLayer extends BleLayer {
 function watchAdvertisementsAvailable(): boolean {
   const device = (globalThis as { BluetoothDevice?: { prototype: object } }).BluetoothDevice;
   return !!device && 'watchAdvertisements' in device.prototype;
+}
+
+async function bluetoothBlocked(): Promise<boolean> {
+  const page = document as Document & {
+    featurePolicy?: { allowsFeature(name: string): boolean; features(): string[] };
+  };
+  const policy = page.featurePolicy;
+  if (policy?.features().includes('bluetooth') && !policy.allowsFeature('bluetooth')) return true;
+  try {
+    return (
+      (await navigator.permissions?.query({ name: 'bluetooth' as PermissionName }))?.state ===
+      'denied'
+    );
+  } catch {
+    return false;
+  }
 }
 
 function errorName(error: unknown): string {

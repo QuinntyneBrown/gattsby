@@ -1,5 +1,6 @@
 import type { Capabilities } from './capabilities';
 import type { CapabilityItem } from './capability-item';
+import { readinessIssue } from './readiness-issue';
 
 export function toCapabilityItems(c: Capabilities | null): CapabilityItem[] {
   if (!c) {
@@ -12,6 +13,7 @@ export function toCapabilityItems(c: Capabilities | null): CapabilityItem[] {
       'Storage',
     ].map((label) => ({ label, detail: 'Checking…', status: 'pending' }));
   }
+  const issue = readinessIssue(c);
   const browser = [
     c.platform.browser === 'unknown' ? 'Chrome' : c.platform.browser,
     c.platform.version !== 'unknown' ? c.platform.version : '',
@@ -21,13 +23,33 @@ export function toCapabilityItems(c: Capabilities | null): CapabilityItem[] {
   return [
     {
       label: 'Browser',
-      detail: `${browser} on ${c.platform.os} · Web Bluetooth ${c.bluetooth.api ? 'available' : 'unavailable'}`,
-      status: c.bluetooth.api ? 'ok' : 'na',
+      detail:
+        issue === 'insecure'
+          ? 'Bluetooth requires HTTPS'
+          : issue === 'unsupported'
+            ? `${browser} on ${c.platform.os} · Open in Chrome on a laptop or Android`
+            : issue === 'outdated'
+              ? `${browser} on ${c.platform.os} · Update to Chrome 148 or later`
+              : `${browser} on ${c.platform.os} · Web Bluetooth available`,
+      status: !c.secureContext || !c.bluetooth.api ? 'na' : issue === 'outdated' ? 'warn' : 'ok',
     },
     {
       label: 'Bluetooth',
-      detail: c.bluetooth.adapterAvailable ? 'On · adapter ready' : 'Turn on Bluetooth',
-      status: c.bluetooth.adapterAvailable ? 'ok' : 'warn',
+      detail: !c.secureContext
+        ? 'Needs HTTPS'
+        : !c.bluetooth.api
+          ? 'Not reachable from this browser'
+          : c.bluetooth.blocked
+            ? 'Allow Bluetooth for this site'
+            : c.bluetooth.adapterAvailable
+              ? 'On · adapter ready'
+              : 'Turn on Bluetooth',
+      status:
+        !c.secureContext || !c.bluetooth.api
+          ? 'na'
+          : c.bluetooth.adapterAvailable && !c.bluetooth.blocked
+            ? 'ok'
+            : 'warn',
     },
     {
       label: 'On-device model',

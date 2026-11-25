@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
 import { CapabilityDetector } from '../../environment/capability-detector';
 import { ModeSelector } from '../../environment/mode-selector';
@@ -11,7 +11,7 @@ import { BrandComponent } from '../../ui/brand/brand.component';
 // devices, past investigations and missing-tool requests join with journeys 11, 4, 15 and 14.
 @Component({
   selector: 'g-home-page',
-  imports: [BrandComponent],
+  imports: [BrandComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -22,6 +22,7 @@ import { BrandComponent } from '../../ui/brand/brand.component';
     <header class="appbar appbar--home">
       <g-brand />
       <div class="appbar__actions">
+        <a class="btn btn--ghost" routerLink="/start">Readiness</a>
         @if (mode(); as m) {
           <span class="mode-chip">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -101,7 +102,7 @@ export class HomePage implements OnInit {
     this.failed.set(false);
     try {
       const id = await this.starter.start();
-      await this.router.navigate(['/investigations', id]);
+      await this.router.navigate(id ? ['/investigations', id] : ['/start']);
     } catch {
       this.failed.set(true);
     } finally {
