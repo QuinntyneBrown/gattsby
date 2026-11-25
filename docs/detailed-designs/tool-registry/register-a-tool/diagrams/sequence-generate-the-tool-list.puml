@@ -1,0 +1,46 @@
+@startuml
+title UML sequence behaviour — Generate the model's tool list
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "DecisionStateBuilder" as builder
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ToolRegistry" as registry
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityService" as caps
+  participant "PromptApiModelAdapter" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "Gemini Nano" as nano
+end box
+
+orch -> builder : build(session) for this decision
+builder -> caps : Current CapabilityReport
+caps --> builder : watchAdvertisements false, bluetooth true, ...
+builder -> registry : listFor(identify, report) (FR-071)
+registry -> registry : Keep agentCallable tools whose stages include identify
+registry -> registry : Drop tools with a missing required capability (watch_advertisements)
+registry -> registry : No control tool at identify; order by group, then name
+registry --> builder : ModelToolDescriptor[] (name, description, inputSchema)
+builder -> builder : DecisionState.tools and call_tool name enum (FR-041, FR-042)
+builder --> orch : DecisionState
+orch -> model : prompt(state, responseConstraint, signal)
+model -> nano : prompt with the listed tools only
+nano --> model : One JSON action
+model --> orch : AgentAction for ActionValidator
+@enduml

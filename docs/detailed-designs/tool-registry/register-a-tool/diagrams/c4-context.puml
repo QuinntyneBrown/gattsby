@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Register a tool
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model via Chrome's Prompt API")
+System_Ext(host, "Static host", "Serves the app's files over HTTPS, including lazily loaded tool code")
+
+Rel(person, gattsby, "Reads each step's tool and plain description in the activity feed")
+Rel(gattsby, nano, "Offers only the tools allowed now", "Prompt API")
+Rel(gattsby, host, "Loads a tool's implementation on first use", "HTTPS")
+@enduml

@@ -1,0 +1,70 @@
+@startuml
+title UML sequence behaviour — Record the idle baseline and the activity levels
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as heur
+  participant "PromptChannel" as channel
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "NotificationRecorder" as rec
+  participant "SilenceCheck" as silence
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+heur -> heur : Build RecordingPlan: 0xFE01; idle, slow, fast; 10 s each (FR-028, A-09)
+heur -> executor : subscribe_and_record(0xFE01, 10 s, "idle")
+executor -> rec : record(0xFE01, 10, "idle")
+rec -> ble : subscribe(0xFE01)
+ble -> device : startNotifications
+loop 10 seconds
+  device --> ble : Notification
+  ble --> rec : RawLogEntry with timestamp (FR-073); kept as RecordedValue
+end
+rec -> ble : unsubscribe(0xFE01)
+rec -> store : saveRecording(idle)
+rec --> executor : ok; "20 packets at 2 Hz, 16 bytes each"
+loop For each level: slow, then fast
+  heur -> channel : post(action: "Walk slowly, then tap Ready", needsReady)
+  channel -> page : Show prompt; RecordingsPanel "waiting for Ready"
+  alt The person taps Ready
+    person -> page : Tap Ready (FR-051)
+    page --> channel : ready
+    channel --> heur : PromptResponse ready
+    heur -> executor : subscribe_and_record(0xFE01, 10 s, "slow")
+    executor -> rec : record(0xFE01, 10, "slow")
+    rec -> ble : subscribe, collect 10 s, unsubscribe
+    rec -> store : saveRecording(slow, levelIndex 1)
+    rec --> executor : ok
+  else The person taps Skip
+    person -> page : Tap Skip (FR-052)
+    page --> heur : skipped; record observation and continue
+  end
+end
+heur -> silence : silentIn(series)
+silence --> heur : Characteristics with no value in any recording
+heur -> store : commitStep with one silent observation per characteristic (FR-028)
+@enduml

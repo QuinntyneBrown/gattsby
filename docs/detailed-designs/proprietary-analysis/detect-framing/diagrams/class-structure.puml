@@ -1,0 +1,92 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Detect framing
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class DetectFramingTool {
+  +run(input: { recordingId: string; uuid: string }, ctx: ToolContext): Promise<ToolResult<FramingResult>>
+}
+
+class detectFraming <<pure helper>> {
+  +{static} detect(packets: Uint8Array[], threshold: number): FramingResult
+}
+
+class ChecksumAlgorithms <<pure helper>> {
+  +{static} sum8(bytes: Uint8Array): number
+  +{static} xor8(bytes: Uint8Array): number
+  +{static} crc8(bytes: Uint8Array): number
+  +{static} crc16Ccitt(bytes: Uint8Array): number
+  +{static} crc16Modbus(bytes: Uint8Array): number
+}
+
+class FramingResult {
+  +header?: HeaderElement
+  +length?: LengthElement
+  +counter?: CounterElement
+  +checksum?: ChecksumElement
+  +fit: number
+}
+class HeaderElement {
+  +offset: number
+  +bytes: Uint8Array
+  +fit: number
+}
+class LengthElement {
+  +offset: number
+  +includesHeader: boolean
+  +fit: number
+}
+class CounterElement {
+  +offset: number
+  +step: number
+  +fit: number
+}
+class ChecksumElement {
+  +offset: number
+  +algorithm: ChecksumAlgorithm
+  +range: ByteRange
+  +fit: number
+}
+class ByteRange {
+  +from: number
+  +to: number
+}
+enum ChecksumAlgorithm {
+  sum8
+  xor8
+  crc8
+  crc16Ccitt
+  crc16Modbus
+}
+
+class DeviceProfileBuilder {
+  +build(investigation: Investigation): DeviceProfile
+}
+
+Tool <|.. DetectFramingTool
+DetectFramingTool ..> detectFraming : delegates
+detectFraming ..> ChecksumAlgorithms : tests
+detectFraming ..> FramingResult : returns
+FramingResult *-- "0..1" HeaderElement
+FramingResult *-- "0..1" LengthElement
+FramingResult *-- "0..1" CounterElement
+FramingResult *-- "0..1" ChecksumElement
+ChecksumElement --> ChecksumAlgorithm
+ChecksumElement *-- ByteRange
+DeviceProfileBuilder ..> FramingResult : adds to decoding rule
+@enduml

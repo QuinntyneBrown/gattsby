@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Stop at an authentication barrier
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+  participant "AuthenticationGuard" as guard
+  participant "InvestigationSession" as session
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReadCharacteristicTool" as tool
+  participant "MissingToolRequests" as mtr
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+orch -> validator : read_characteristic(0xFE03)
+validator -> session : Is 0xFE03 blocked?
+session --> validator : No
+validator --> executor : Valid call
+executor -> tool : run(input, ctx)
+tool -> ble : read(0xFE03)
+ble -> device : readValue
+device --> ble : ATT error 0x05 Insufficient Authentication
+ble -> ble : Map to AUTH_REQUIRED; log the failed read; no retry
+ble --> tool : AUTH_REQUIRED
+tool --> executor : ok false, AUTH_REQUIRED, evidence [log entry]
+executor -> guard : onResult(call, result)
+guard -> guard : Record authRequired observation with the error as evidence (FR-033)
+guard -> mtr : raise("Authenticate with 0xFE03", reason, evidence, stage)
+mtr --> guard : Request recorded or merged (FR-058)
+guard -> session : Block 0xFE03
+executor -> store : commitStep(envelope, observation, request)
+... A later step ...
+orch -> validator : subscribe_and_record([0xFE03], 10 s)
+validator -> session : Is 0xFE03 blocked?
+session --> validator : Yes
+validator --> orch : PRECONDITION_FAILED; nothing reaches the BLE layer (FR-033)
+@enduml

@@ -1,0 +1,75 @@
+@startuml
+title UML sequence behaviour — Propose, approve and send a known handshake
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as heur
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReplayKnownHandshakeTool" as tool
+  participant "KnowledgeBase" as kbs
+  participant "DeviceProfileBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+heur -> heur : Vendor match with hasHandshake; every characteristic silent (FR-032)
+heur -> validator : replay_known_handshake({ vendor: V, handshakeId: h-1 })
+validator -> kbs : Entry h-1 for vendor V?
+kbs --> validator : HandshakeEntry (characteristic, steps, purpose, risk) with source
+validator --> executor : Valid call (unknown id would be INVALID_INPUT)
+executor -> gate : request(write: h-1)
+gate -> dialog : Purpose, "Will send" per step, risk; no stand-clear box
+dialog -> person : "Send the V start-up message?"
+note over dialog, person : Nothing has been written yet (FR-034)
+alt The person taps Send
+  person -> dialog : Tap Send
+  dialog --> gate : decision send
+  gate -> ledger : issue(request) listing every step's bytes in order
+  ledger --> gate : ApprovalToken a-21
+  gate --> executor : token a-21
+  executor -> tool : run(input, ctx with approvalId a-21)
+  loop For each step of h-1, in order
+    tool -> ble : write(entry characteristic, step bytes, a-21)
+    ble -> ledger : consume(a-21, characteristic, bytes) (NFR-018)
+    ledger --> ble : Next listed step; accepted
+    ble -> device : writeValueWithResponse(bytes)
+    device --> ble : Write response
+    ble -> ble : Log write with approvalId a-21 (FR-073)
+  end
+  tool -> ble : subscribe(listenOn) for 10 s (A-09)
+  device --> ble : Notifications start
+  tool --> executor : ok; sent [hex], dataStarted true
+  executor -> heur : Observation handshakeRequired; rerun the recording plan
+  builder -> builder : Profile requiredHandshake = h-1 (FR-032)
+else The person taps Don't send
+  person -> dialog : Tap Don't send
+  dialog --> gate : decision dontSend
+  gate --> executor : APPROVAL_DENIED; nothing written
+  executor -> heur : Do not propose h-1 again
+end
+@enduml

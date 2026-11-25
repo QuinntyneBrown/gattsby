@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Log raw traffic
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Machine or sensor under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Opens the evidence log")
+Rel(gattsby, chrome, "Scans, connects, reads, writes, subscribes; stores every entry", "Web Bluetooth, IndexedDB")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Find the bytes that vary (MVP)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as heur
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "FindVaryingBytesTool" as tool
+  participant "findVaryingBytes" as helper
+  participant "HypothesisTracker" as tracker
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "IndexedDbInvestigationStore" as store
+end box
+
+heur -> executor : find_varying_bytes({ recordingIds: [idle, slow, fast] }) (TOOL-016)
+executor -> tool : run(input, ctx)
+tool -> store : Load the three recordings
+store --> tool : Recordings with RecordedValues (rawLogEntryId, timestamp, bytes)
+alt Each recording holds at least 5 values
+  tool -> helper : classify(recordings)
+  helper -> helper : Group by characteristic and packet length (FR-029)
+  helper -> helper : Per offset: constant, counter, ranges per label
+  helper --> tool : 0xFE01 len 16: betweenLabels [5], withinLabel [15], constant [0, 1]
+  tool -> tool : One varyingField observation per between-label offset, evidence = recordings and log entries (FR-056)
+  tool --> executor : ok; "0xFE01 (16 bytes): byte 5 varies with effort; byte 15 counts up"
+  executor -> tracker : Observations
+  tracker --> executor : Hypothesis rescored
+else A recording holds fewer than 5 values
+  tool --> executor : INSUFFICIENT_DATA; nothing recorded
+end
+executor -> store : commitStep(envelope, observations) (FR-060)
+@enduml

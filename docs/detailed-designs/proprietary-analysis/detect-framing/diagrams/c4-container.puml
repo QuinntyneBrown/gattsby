@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Detect framing
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Framing detector, checksum functions, device profile builder")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Recordings, observations, profiles")
+}
+
+Rel(person, spa, "Reads the activity feed and the profile", "Touch or keyboard")
+Rel(spa, idb, "Reads packets; commits the framing observation")
+@enduml

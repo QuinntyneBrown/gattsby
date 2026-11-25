@@ -1,0 +1,98 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Return a result envelope
+
+class "ToolResult<T>" as ToolResult {
+  +ok: boolean
+  +summary: string
+  +data: T | null
+  +error: ToolError | null
+  +evidence: string[]
+}
+
+class ToolError {
+  +code: ToolErrorCode
+  +message: string
+}
+
+enum ToolErrorCode {
+  INVALID_INPUT
+  UNKNOWN_TOOL
+  NOT_ALLOWED_AT_STAGE
+  PRECONDITION_FAILED
+  UNSUPPORTED
+  BLE_UNAVAILABLE
+  USER_CANCELLED
+  NOT_CONNECTED
+  CONNECTION_FAILED
+  TIMEOUT
+  GATT_ERROR
+  SERVICE_NOT_PERMITTED
+  BLOCKLISTED
+  AUTH_REQUIRED
+  PROPERTY_MISSING
+  APPROVAL_REQUIRED
+  APPROVAL_DENIED
+  UNSAFE_VALUE
+  EMERGENCY_STOPPED
+  DEVICE_REJECTED
+  INSUFFICIENT_DATA
+  DECODE_ERROR
+  STORAGE_FULL
+  ABORTED
+}
+
+class ToolResults <<pure helper>> {
+  +{static} ok<T>(summary: string, data: T, evidence: string[]): ToolResult<T>
+  +{static} fail(code: ToolErrorCode, message: string, summary: string, evidence: string[]): ToolResult<never>
+}
+
+class SummaryLine <<pure helper>> {
+  +{static} MAX_LENGTH: 200
+  +{static} clamp(text: string): string
+}
+
+class ToolExecutor {
+  +run(call: ValidatedCall, ctx: ToolContext): Promise<ToolResult<unknown>>
+  -guard(tool: Tool, input: unknown, ctx: ToolContext): Promise<ToolResult<unknown>>
+}
+
+class ErrorMapping <<pure helper>> {
+  +{static} toToolError(thrown: unknown): ToolError
+}
+
+class ErrorCopy <<pure helper>> {
+  +{static} for(code: ToolErrorCode): ErrorCopyEntry
+}
+
+class ErrorCopyEntry {
+  +code: ToolErrorCode
+  +title: string
+  +nextStep: string
+}
+
+interface "Tool<I, O>" as Tool {
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+ToolResult *-- "0..1" ToolError
+ToolError --> ToolErrorCode
+ToolResults ..> ToolResult : builds
+ToolResults ..> SummaryLine : clamps
+Tool ..> ToolResults : returns via
+ToolExecutor ..> Tool : guards
+ToolExecutor ..> ErrorMapping : maps exceptions
+ErrorCopy ..> ErrorCopyEntry : returns
+ErrorCopyEntry --> ToolErrorCode
+@enduml

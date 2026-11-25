@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Record a baseline and activity levels
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Machine with only unknown services (Bluetooth LE)")
+
+Rel(person, gattsby, "Leaves the machine idle, then taps Ready at each activity level")
+Rel(person, device, "Walks or pedals slowly, then fast")
+Rel(gattsby, chrome, "Subscribes to notifications and indications", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

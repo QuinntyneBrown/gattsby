@@ -1,0 +1,61 @@
+@startuml
+title UML sequence behaviour — Return a result, a failure or a caught exception
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ToolExecutor" as executor
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ConnectTool" as tool
+  participant "ToolResults" as results
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  database "IndexedDbInvestigationStore" as store
+end box
+
+orch -> executor : run(connect { deviceId })
+executor -> tool : run(input, ctx) inside a guard
+tool -> ble : connect(deviceId, 10 s)
+alt The device answers
+  ble --> tool : connected; log entry log-0006
+  tool -> results : ok("Connected to HZN-T202-4F1A", { connected, at }, [log-0006])
+  results --> tool : Envelope, summary clamped to 200 (FR-072)
+  tool --> executor : ok true
+  executor -> executor : data matches output schema; evidence IDs resolve
+else The device does not answer
+  ble --> tool : TIMEOUT; log entry log-0007
+  tool -> results : fail(TIMEOUT, message, "No answer from the treadmill within 10 s.", [log-0007])
+  tool --> executor : ok false, error TIMEOUT
+else The tool throws unexpectedly
+  tool --> executor : Exception
+  executor -> executor : ErrorMapping: AbortError -> ABORTED, else code <TO SUPPLY>
+  executor -> executor : Envelope ok false; nothing escapes (FR-072)
+end
+executor -> store : commitStep(step, envelope) (FR-060)
+executor -> feed : Add entry: personDescription, summary, evidence
+feed -> page : Render as text (NFR-013)
+opt ok is false
+  page -> page : ErrorCopy(TIMEOUT): "Couldn't connect" with next step
+  page -> person : Try again / Choose another device
+end
+executor --> orch : Envelope for the next decision state
+@enduml

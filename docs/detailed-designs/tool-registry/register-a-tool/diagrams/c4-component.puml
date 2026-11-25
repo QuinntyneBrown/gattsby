@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Register a tool
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(entries, "TOOL_ENTRIES", "Multi-provider token", "One ToolEntry per tool, added in tool-catalogue.ts")
+  Component(defs, "Tool definitions", "*.definition.ts", "ToolDefinition per tool")
+  Component(impls, "Tool implementations", "*.tool.ts, lazy", "Tool<I, O>.run")
+  Component(registry, "ToolRegistry", "Service", "Validates entries; definition, instance, listFor")
+  Component(schema, "SchemaValidator", "Service", "JSON Schema checks without eval")
+  Component(caps, "CapabilityService", "Service", "CapabilityReport")
+  Component(builder, "DecisionStateBuilder", "Service", "Puts the tool list in DecisionState and responseConstraint")
+  Component(validator, "ActionValidator", "Service", "UNKNOWN_TOOL, NOT_ALLOWED_AT_STAGE, preconditions")
+  Component(pre, "PreconditionChecks", "Pure helpers", "Named checks on InvestigationSession")
+  Component(executor, "ToolExecutor", "Service", "Runs a tool instance")
+  Component(checklist, "ChecklistRunner", "Service", "Runs the playbook without a model")
+  Component(model, "PromptApiModelAdapter", "Model adapter", "The only code touching LanguageModel")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(entries, defs, "References")
+Rel(entries, impls, "load() via dynamic import")
+Rel(registry, entries, "Reads on start")
+Rel(registry, schema, "Compiles schemas")
+Rel(builder, registry, "listFor(stage, capabilities)")
+Rel(builder, caps, "Reads the report")
+Rel(builder, model, "DecisionState with the tool list")
+Rel(model, nano, "prompt with responseConstraint", "Prompt API")
+Rel(validator, registry, "definition(name)")
+Rel(validator, pre, "Runs preconditions")
+Rel(executor, registry, "instance(name)")
+Rel(checklist, registry, "Looks tools up by name")
+@enduml

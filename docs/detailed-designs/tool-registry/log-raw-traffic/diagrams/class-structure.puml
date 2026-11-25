@@ -1,0 +1,95 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Log raw traffic
+
+enum RawLogKind {
+  scan
+  connect
+  disconnect
+  read
+  write
+  notification
+  indication
+}
+
+enum RawLogDirection {
+  sent
+  received
+}
+
+class RawLogEntry {
+  +id: string
+  +investigationId: string
+  +stepIndex: number
+  +seq: number
+  +at: number
+  +kind: RawLogKind
+  +direction: RawLogDirection
+  +deviceId: string
+  +service?: string
+  +characteristic?: string
+  +bytes?: Uint8Array
+  +approvalId?: string
+  +errorCode?: ToolErrorCode
+}
+
+class RawTrafficLog {
+  -nextSeq: number
+  -unflushed: RawLogEntry[]
+  +append(draft: RawLogDraft): RawLogEntry
+  +recent: Signal<RawLogEntry[]>
+  +drainForCommit(stepIndex: number): RawLogEntry[]
+  +flush(): Promise<void>
+  +clear(): void
+}
+
+class "MemoryWindow<T>" as MemoryWindow {
+  +capacity: 2000
+  +push(item: T): void
+  +items(): T[]
+  +clear(): void
+}
+
+class RawLogFlusher {
+  +threshold: 2000
+  +flushEarly(batch: RawLogEntry[]): Promise<void>
+}
+
+abstract class BleLayer <<contract>> {
+  +read(characteristic: string): Promise<ToolResult<Uint8Array>>
+  +subscribe(characteristic: string, onValue: (entry: RawLogEntry) => void): Promise<Subscription>
+  +write(characteristic: string, bytes: Uint8Array, approvalId: string | null): Promise<ToolResult<void>>
+}
+
+class WebBluetoothBleLayer
+
+abstract class InvestigationStore <<contract>> {
+  +appendRawLog(entries: RawLogEntry[]): Promise<void>
+  +commitStep(commit: StepCommit): Promise<void>
+}
+
+class InvestigationSession {
+  +release(): Promise<void>
+}
+
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer --> RawTrafficLog : appends
+RawTrafficLog *-- MemoryWindow
+RawTrafficLog "1" o-- "*" RawLogEntry : unflushed
+RawTrafficLog --> RawLogFlusher : hands a full queue
+RawLogFlusher ..> InvestigationStore : appendRawLog
+RawLogEntry --> RawLogKind
+RawLogEntry --> RawLogDirection
+InvestigationSession ..> RawTrafficLog : flush, clear
+@enduml

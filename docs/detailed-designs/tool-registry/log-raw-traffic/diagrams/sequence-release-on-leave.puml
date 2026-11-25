@@ -1,0 +1,46 @@
+@startuml
+title UML sequence behaviour — Release memory when the person leaves
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "InvestigationSession" as session
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+  database "IndexedDbInvestigationStore" as store
+end box
+
+person -> page : Leave the Investigation screen (after the leave dialog)
+page -> page : DestroyRef callback
+page -> session : release() (NFR-005)
+session -> ble : Unsubscribe every notification; clear timers and AbortControllers
+session -> log : flush()
+log -> store : appendRawLog(unflushed)
+store --> log : Written
+session -> log : clear() window and queue
+session -> feed : Empty the feed window and live-metric buffers
+session -> session : Drop loaded recordings
+session --> page : Released
+... Later ...
+person -> page : Reopen the investigation
+page -> store : Read steps and raw log
+store --> page : Committed entries; an uncommitted step is discarded (NFR-007)
+@enduml

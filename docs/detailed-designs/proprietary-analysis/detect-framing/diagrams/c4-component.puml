@@ -1,0 +1,23 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Detect framing
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs the validated detect_framing call")
+  Component(tool, "DetectFramingTool", "Tool (read, P2)", "TOOL-019; at least 20 packets")
+  Component(det, "detectFraming", "Pure helper", "Header, checksum, length, counter; fit per element")
+  Component(crc, "ChecksumAlgorithms", "Pure helper", "sum8, xor8, crc8, crc16Ccitt, crc16Modbus")
+  Component(builder, "DeviceProfileBuilder", "Service", "Adds the frame to each decoding rule")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Recordings and observations")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "")
+
+Rel(executor, tool, "Runs")
+Rel(tool, store, "Loads the recording")
+Rel(tool, det, "Calls")
+Rel(det, crc, "Tests checksums")
+Rel(executor, store, "commitStep with framing observation")
+Rel(builder, store, "Reads framing observations")
+Rel(store, idb, "Transactions")
+@enduml

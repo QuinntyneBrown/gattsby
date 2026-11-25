@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Return a result envelope
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Tools, tool executor, activity feed, error copy")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps with their envelopes, raw log, observations")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Reads summaries; taps Evidence or Try again", "Touch or keyboard")
+Rel(spa, idb, "Commits each envelope with its step")
+Rel(spa, nano, "Summaries in the decision state")
+@enduml

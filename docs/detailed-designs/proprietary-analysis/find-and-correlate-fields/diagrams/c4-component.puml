@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Find and correlate fields
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs a validated analysis call; commits the step")
+  Component(fvbt, "FindVaryingBytesTool", "Tool (read, MVP)", "TOOL-016")
+  Component(cwat, "CorrelateWithActionTool", "Tool (read, P2)", "TOOL-017")
+  Component(gfet, "GuessFieldEncodingTool", "Tool (read, P2)", "TOOL-018")
+  Component(fvb, "findVaryingBytes", "Pure helper", "Constant, within-label and between-label offsets")
+  Component(cwa, "correlateWithAction", "Pure helper", "Spearman rank correlation; top 10")
+  Component(guess, "guessFieldEncoding", "Pure helper", "Types, byte orders, scales; 90 % coverage")
+  Component(kbs, "KnowledgeBase", "Service", "Typical metric ranges")
+  Component(tracker, "HypothesisTracker", "Service", "Scores FieldFinding observations")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Recordings and observations")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "")
+
+Rel(executor, fvbt, "Runs")
+Rel(executor, cwat, "Runs")
+Rel(executor, gfet, "Runs")
+Rel(fvbt, fvb, "Calls")
+Rel(cwat, cwa, "Calls")
+Rel(gfet, guess, "Calls")
+Rel(gfet, kbs, "Reads typical range when none given")
+Rel(fvbt, store, "Loads recordings")
+Rel(cwat, store, "Loads recordings")
+Rel(gfet, store, "Loads the series")
+Rel(executor, tracker, "Passes observations")
+Rel(executor, store, "commitStep")
+Rel(store, idb, "Transactions")
+@enduml

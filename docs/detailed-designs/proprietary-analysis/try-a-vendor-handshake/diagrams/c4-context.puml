@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Try a vendor handshake
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Machine matching a vendor signature, silent until initialised (Bluetooth LE)")
+
+Rel(person, gattsby, "Reads the handshake's purpose and bytes; taps Send or Don't send")
+Rel(gattsby, chrome, "Writes the approved handshake; never pairs", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

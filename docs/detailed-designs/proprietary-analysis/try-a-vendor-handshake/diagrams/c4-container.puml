@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Try a vendor handshake
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Playbook, approval gate, handshake tool, authentication guard, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, approvals, raw log, missing-tool requests")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Vendor signatures and their sourced handshakes")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Approves or declines the handshake", "Touch or keyboard")
+Rel(spa, kb, "Reads the handshake entry")
+Rel(spa, device, "Writes the approved bytes; listens for data", "Web Bluetooth")
+Rel(spa, idb, "Commits approval, writes, observations and requests")
+@enduml

@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Record a baseline and activity levels
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Recording plan, prompts, notification recorder, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Recordings, raw log, observations")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Taps Ready or Skip for each level", "Touch or keyboard")
+Rel(spa, device, "Subscribes and receives values", "Web Bluetooth")
+Rel(spa, idb, "Saves each labelled recording and its raw traffic")
+@enduml

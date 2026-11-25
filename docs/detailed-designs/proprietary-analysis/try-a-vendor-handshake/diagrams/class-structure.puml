@@ -1,0 +1,96 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Try a vendor handshake
+
+class VendorSignature {
+  +vendorId: string
+  +brand: SourcedFact<string>
+  +serviceUuids: SourcedFact<string[]>
+  +namePatterns: SourcedFact<string[]>
+  +manufacturerId?: SourcedFact<number>
+  +handshakes: SourcedFact<HandshakeEntry>[]
+}
+
+class HandshakeEntry {
+  +id: string
+  +characteristic: string
+  +steps: HandshakeStep[]
+  +purpose: string
+  +risk: string
+  +listenOn: string[]
+}
+
+class HandshakeStep {
+  +writeHex: string
+  +awaitNotification?: boolean
+}
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class ReplayKnownHandshakeTool {
+  +run(input: { vendor: string; handshakeId: string }, ctx: ToolContext): Promise<ToolResult<{ sent: string[]; dataStarted: boolean }>>
+}
+
+class ApprovalToken {
+  +id: string
+  +characteristic: string
+  +writes: Uint8Array[]
+  +nextIndex: number
+  +used: boolean
+}
+
+class ApprovalLedger {
+  +issue(request: ApprovalRequest): ApprovalToken
+  +consume(id: string, characteristic: string, bytes: Uint8Array): ApprovalToken | ToolError
+}
+
+class AuthenticationGuard {
+  +onResult(call: PendingCall, result: ToolResult<unknown>, session: InvestigationSession): Promise<void>
+}
+
+class AuthBarrier {
+  +operation: "read" | "subscribe" | "write"
+  +characteristic: string
+  +attError?: number
+  +message: string
+  +toolName: string
+  +stage: PlaybookStage
+}
+
+class InvestigationSession {
+  +blockedCharacteristics: Signal<Set<string>>
+}
+
+class ActionValidator {
+  +validate(action: AgentAction, session: InvestigationSession): ValidatedAction | ToolError
+}
+
+class MissingToolRequests {
+  +raise(capability: string, reason: string, evidence: string[], stage: PlaybookStage): Promise<MissingToolRequest>
+}
+
+VendorSignature "1" *-- "*" HandshakeEntry : handshakes
+HandshakeEntry "1" *-- "1..*" HandshakeStep
+Tool <|.. ReplayKnownHandshakeTool
+ReplayKnownHandshakeTool ..> HandshakeEntry : looks up
+ApprovalLedger "1" *-- "*" ApprovalToken
+AuthenticationGuard ..> AuthBarrier : records
+AuthenticationGuard ..> MissingToolRequests : raises
+AuthenticationGuard --> InvestigationSession : blocks characteristic
+ActionValidator ..> InvestigationSession : checks blocked
+ActionValidator ..> HandshakeEntry : checks id exists
+@enduml

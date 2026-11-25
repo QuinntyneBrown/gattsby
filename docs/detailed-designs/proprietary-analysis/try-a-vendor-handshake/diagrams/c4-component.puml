@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Try a vendor handshake
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(dialog, "ApprovalDialog", "Angular component", "Purpose, Will send, risk; Send and Don't send")
+  Component(heur, "PlaybookHeuristics", "Service", "Vendor match + all silent -> propose handshake")
+  Component(validator, "ActionValidator", "Service", "Known handshake; blocked characteristics")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated write call")
+  Component(gate, "ApprovalGate", "Service", "Builds the request; issues one token")
+  Component(tool, "ReplayKnownHandshakeTool", "Tool (write, P2)", "Writes the entry's writes; reports dataStarted")
+  Component(kbs, "KnowledgeBase", "Service", "VendorSignature and HandshakeEntry")
+  Component(guard, "AuthenticationGuard", "Service", "AUTH_REQUIRED -> observation, request, block")
+  Component(mtr, "MissingToolRequests", "Service", "Records and merges requests")
+  Component(ledger, "ApprovalLedger", "BLE layer", "Token listing every write in order")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Consumes token; writes; maps ATT auth errors")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(heur, validator, "Proposes replay_known_handshake")
+Rel(validator, kbs, "Checks handshakeId")
+Rel(validator, executor, "Passes the valid call")
+Rel(executor, gate, "Requests approval")
+Rel(gate, dialog, "Shows request")
+Rel(person, dialog, "Taps Send")
+Rel(gate, ledger, "Issues token")
+Rel(executor, tool, "Runs with approvalId")
+Rel(tool, kbs, "Reads the entry")
+Rel(tool, ble, "write(characteristic, bytes, approvalId)")
+Rel(ble, ledger, "consume")
+Rel(ble, device, "writeValueWithResponse", "Web Bluetooth")
+Rel(executor, guard, "Passes every result")
+Rel(guard, mtr, "Raises request")
+Rel(guard, validator, "Blocks characteristic via session")
+@enduml

@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Return a result envelope
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(nano, "Gemini Nano", "On-device model via Chrome's Prompt API")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+
+Rel(person, gattsby, "Reads each step's summary and opens its evidence")
+Rel(gattsby, nano, "Sends the last summaries, never raw bytes", "Prompt API")
+Rel(gattsby, chrome, "Stores each envelope with its step", "IndexedDB")
+@enduml

@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Compare a baseline with one action (baseline_vs_activity)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "BaselineVsActivityTool" as bva
+  participant "NotificationRecorder" as rec
+  participant "findVaryingBytes" as fvb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "IndexedDbInvestigationStore" as store
+end box
+
+executor -> bva : run({ characteristics: [0xFFF1], seconds: 10, action: "Pedal faster" }) (TOOL-014)
+bva -> rec : record([0xFFF1], 10, "idle")
+rec --> bva : baseline recording b-1
+bva -> channel : post(action: "Pedal faster", needsReady true)
+channel -> page : Show instruction with Ready and Skip
+alt The person taps Ready
+  person -> page : Tap Ready (FR-051)
+  page --> channel : ready
+  channel --> bva : PromptResponse ready
+  bva -> rec : record([0xFFF1], 10, "Pedal faster")
+  rec --> bva : activity recording a-1
+  bva -> fvb : findVaryingBytes([b-1, a-1])
+  fvb --> bva : 0xFFF1 length 8: betweenLabels [3]
+  bva --> executor : ok; changed [{ 0xFFF1, [3] }], unchanged []
+else The person skips
+  person -> page : Tap Skip
+  page --> channel : skipped
+  channel --> bva : PromptResponse skipped
+  bva --> executor : USER_CANCELLED; evidence names baseline b-1
+end
+executor -> store : commitStep(envelope, recordings, observations) (FR-060)
+@enduml

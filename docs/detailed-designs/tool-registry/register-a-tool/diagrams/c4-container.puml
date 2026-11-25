@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Register a tool
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Tool definitions, tool registry, agent orchestrator, lazily loaded tool implementations")
+  Container(sw, "Service worker", "Angular service worker", "Caches the app and tool chunks for offline use")
+}
+System_Ext(nano, "Gemini Nano", "Prompt API")
+
+Rel(person, spa, "Follows the activity feed", "Touch or keyboard")
+Rel(spa, sw, "Fetches tool chunks through")
+Rel(spa, nano, "Sends the generated tool list with each decision")
+@enduml

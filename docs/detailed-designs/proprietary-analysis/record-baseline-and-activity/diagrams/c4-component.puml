@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Record a baseline and activity levels
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Prompt card, activity feed, RecordingsPanel")
+  Component(heur, "PlaybookHeuristics", "Service", "Builds the RecordingPlan; proposes one recording at a time")
+  Component(plan, "RecordingPlan", "Pure helper", "Notifying characteristics; idle, slow, (medium), fast")
+  Component(channel, "PromptChannel", "Service", "Posts the action prompt; awaits Ready or Skip")
+  Component(executor, "ToolExecutor", "Service", "Runs subscribe_and_record and baseline_vs_activity")
+  Component(bva, "BaselineVsActivityTool", "Tool (listen)", "Idle, one action, diff")
+  Component(rec, "NotificationRecorder", "Tool helper", "Subscribes for N seconds; saves one Recording")
+  Component(fvb, "findVaryingBytes", "Pure helper", "Offsets that change between labels")
+  Component(silence, "SilenceCheck", "Pure helper", "Characteristics silent in every recording")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "subscribe and unsubscribe; logs every value")
+  Component(store, "IndexedDbInvestigationStore", "Store", "saveRecording, commitStep")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Recordings and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(heur, plan, "Builds")
+Rel(heur, channel, "Asks for each level")
+Rel(channel, page, "Renders prompt")
+Rel(person, page, "Taps Ready")
+Rel(heur, executor, "Proposes subscribe_and_record per label")
+Rel(executor, bva, "Runs")
+Rel(executor, rec, "Runs via subscribe_and_record")
+Rel(bva, rec, "Records idle and activity")
+Rel(bva, fvb, "Diffs the two recordings")
+Rel(heur, silence, "Checks the series")
+Rel(rec, ble, "subscribe(characteristic)")
+Rel(ble, device, "startNotifications", "Web Bluetooth")
+Rel(rec, store, "saveRecording")
+Rel(store, idb, "Transactions")
+@enduml

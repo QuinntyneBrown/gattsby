@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Log raw traffic
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(evidence, "EvidencePage", "Angular page", "Rows of time, direction, characteristic, hex, decoded")
+  Component(invpage, "InvestigationPage", "Angular page", "Calls release() on destroy")
+  Component(session, "InvestigationSession", "Service", "release(): frees memory of the investigation")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only caller of append")
+  Component(log, "RawTrafficLog", "BLE layer", "Stamps seq and time; window and unflushed queue")
+  Component(window, "MemoryWindow", "BLE layer", "Ring buffer of 2,000 entries")
+  Component(flusher, "RawLogFlusher", "BLE layer", "Writes a full queue early")
+  Component(store, "IndexedDbInvestigationStore", "Store", "appendRawLog, commitStep")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(ble, device, "GATT operations and events", "Web Bluetooth")
+Rel(ble, log, "append(draft)")
+Rel(log, window, "Keeps recent")
+Rel(log, flusher, "Full unflushed queue")
+Rel(flusher, store, "appendRawLog(batch)")
+Rel(store, idb, "Transactions")
+Rel(evidence, store, "Reads entries")
+Rel(person, evidence, "Reads, filters")
+Rel(invpage, session, "release()")
+Rel(session, log, "Flush and clear")
+@enduml

@@ -1,0 +1,49 @@
+@startuml
+title UML sequence behaviour — Load and validate the registry
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "App bootstrap" as boot
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ToolRegistry" as registry
+  participant "TOOL_ENTRIES" as entries
+  participant "SchemaValidator" as schema
+  participant "PreconditionChecks" as pre
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "Local diagnostics" as diag
+end box
+
+boot -> registry : Create (on first injection)
+registry -> entries : Read every ToolEntry
+entries --> registry : Definitions (implementations not loaded)
+loop For each entry
+  registry -> registry : Every FR-070 field present; name unique (FR-070)
+  registry -> registry : Phase not later than the build's release phase
+  registry -> schema : compile(inputSchema), compile(outputSchema)
+  schema --> registry : Compiled, without eval
+  registry -> pre : Every named precondition exists?
+  pre --> registry : Yes
+  registry -> registry : Safety invariants: write/control only in proprietary or control; n/a only person or meta
+  alt Entry valid
+    registry -> registry : Keep entry
+  else Entry refused
+    registry -> diag : RegistryDiagnostic(toolName, reason) (NFR-025)
+    registry -> registry : Leave entry out; the app keeps running
+  end
+end
+registry --> boot : Registry ready
+@enduml

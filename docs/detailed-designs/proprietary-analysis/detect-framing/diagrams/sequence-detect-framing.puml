@@ -1,0 +1,52 @@
+@startuml
+title UML sequence behaviour — Detect the frame of a characteristic
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "DetectFramingTool" as tool
+  participant "detectFraming" as det
+  participant "ChecksumAlgorithms" as crc
+  participant "DeviceProfileBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "IndexedDbInvestigationStore" as store
+end box
+
+orch -> executor : detect_framing({ recordingId: fast, uuid: 0xFE01 }) (TOOL-019)
+executor -> tool : run(input, ctx)
+tool -> store : Load packets of 0xFE01 in the recording
+store --> tool : 120 packets
+alt At least 20 packets
+  tool -> det : detect(packets, threshold)
+  det -> det : Header: longest constant run from offset 0 -> F0 at 0, fit 1
+  det -> crc : sum8, xor8, crc8, crc16 over 0..n-2 and after the header
+  crc --> det : sum8 over 0–14 matches byte 15 in 120 of 120
+  det -> det : Length: byte 2 equals packet length, fit 1
+  det -> det : Counter: no offset with a constant step
+  det --> tool : header, length, checksum, each with fit; overall fit 1 (FR-031)
+  tool -> tool : Record framing observation; evidence = recording and log entries
+  tool --> executor : ok; "0xFE01: header F0 at 0, length at 2, sum8 at 15; all 120 packets fit"
+else Fewer than 20 packets
+  tool --> executor : INSUFFICIENT_DATA
+end
+executor -> store : commitStep(envelope, observations) (FR-060)
+... At Conclude ...
+builder -> store : Read framing observation of 0xFE01
+builder -> builder : Add frame to each decoding rule on 0xFE01; drop frame offsets from metrics
+@enduml

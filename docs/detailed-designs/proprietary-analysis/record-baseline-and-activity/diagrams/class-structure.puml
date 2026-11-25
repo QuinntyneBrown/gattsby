@@ -1,0 +1,105 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Record a baseline and activity levels
+
+class RecordingPlan {
+  +seriesId: string
+  +characteristics: string[]
+  +levels: string[]
+  +secondsPerLevel: number
+  +{static} build(layout: GattLayout, deviceType: string, tools: ToolRegistry): RecordingPlan[]
+}
+
+class Recording {
+  +id: string
+  +investigationId: string
+  +stepId: string
+  +label: string
+  +characteristics: string[]
+  +startedAt: number
+  +endedAt: number
+  +interrupted: boolean
+  +seriesId: string
+  +levelIndex: number
+}
+
+class RecordedValue {
+  +rawLogEntryId: string
+  +characteristic: string
+  +timestamp: number
+  +bytes: Uint8Array
+}
+
+class NotificationRecorder {
+  +record(characteristics: string[], seconds: number, label: string, ctx: ToolContext): Promise<ToolResult<Recording>>
+}
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class BaselineVsActivityTool {
+  +run(input: BaselineVsActivityInput, ctx: ToolContext): Promise<ToolResult<BaselineVsActivityOutput>>
+}
+
+class SubscribeAndRecordTool {
+  +run(input: SubscribeAndRecordInput, ctx: ToolContext): Promise<ToolResult<SubscribeAndRecordOutput>>
+}
+
+class BaselineVsActivityOutput {
+  +baselineId: string
+  +activityId: string
+  +changed: ChangedCharacteristic[]
+  +unchanged: string[]
+}
+
+class ActivityInstructions {
+  +instructionFor(deviceType: string, level: string): string
+}
+
+class SilenceCheck <<pure helper>> {
+  +{static} silentIn(series: Recording[]): string[]
+}
+
+class PlaybookHeuristics {
+  +nextProprietaryStep(session: InvestigationSession): ProposedStep
+}
+
+abstract class BleLayer <<contract>> {
+  +subscribe(characteristic: string, onValue: (entry: RawLogEntry) => void): Promise<Subscription>
+}
+
+abstract class InvestigationStore <<contract>> {
+  +saveRecording(recording: Recording): Promise<void>
+}
+
+class RecordingsPanel <<component>> {
+  +statuses: input<RecordingStatus[]>
+}
+
+Tool <|.. BaselineVsActivityTool
+Tool <|.. SubscribeAndRecordTool
+BaselineVsActivityTool --> NotificationRecorder : records with
+SubscribeAndRecordTool --> NotificationRecorder : records with
+BaselineVsActivityTool ..> BaselineVsActivityOutput : returns
+NotificationRecorder ..> BleLayer : subscribes
+NotificationRecorder ..> InvestigationStore : saves
+NotificationRecorder ..> Recording : builds
+Recording "1" *-- "*" RecordedValue : values
+PlaybookHeuristics ..> RecordingPlan : builds
+PlaybookHeuristics ..> ActivityInstructions : words each level
+PlaybookHeuristics ..> SilenceCheck : checks the series
+RecordingPlan "1" o-- "*" Recording : series
+@enduml

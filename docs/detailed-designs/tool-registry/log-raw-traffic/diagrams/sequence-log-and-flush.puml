@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Log notifications and an approved write, and flush them
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+  participant "MemoryWindow" as window
+  participant "RawLogFlusher" as flusher
+  database "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+loop Each notification (up to 50 per second on 4 characteristics, NFR-003)
+  device --> ble : characteristicvaluechanged
+  ble -> log : append(notification, received, 0x2ACD, bytes)
+  log -> log : seq, at = timeOrigin + now() (FR-073)
+  log -> window : push (oldest dropped beyond 2,000) (NFR-005)
+  log --> ble : entry ID, passed on with the sample
+end
+executor -> ble : write(0x2AD9, 02 4E 02, a-17)
+ble -> ble : Consume approval token a-17 (NFR-018)
+ble -> device : writeValueWithResponse
+device --> ble : Write response
+ble -> log : append(write, sent, 0x2AD9, 02 4E 02, approvalId a-17)
+alt Unflushed queue reaches 2,000 entries during the step
+  log -> flusher : Full queue
+  flusher -> store : appendRawLog(batch) tagged with the open step
+  store --> flusher : Written
+else IndexedDB is full
+  store --> flusher : STORAGE_FULL
+  flusher --> executor : Stop recording; tell the person to free space (NFR-008)
+end
+executor -> log : drainForCommit(stepIndex) at the end of the step
+log --> executor : The step's unflushed entries
+executor -> store : commitStep(step, entries, observations) in one transaction (FR-060)
+@enduml

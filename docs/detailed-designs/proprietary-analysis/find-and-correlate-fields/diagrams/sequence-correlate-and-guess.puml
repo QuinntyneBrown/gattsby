@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Rank fields and guess an encoding (P2)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "CorrelateWithActionTool" as cwat
+  participant "correlateWithAction" as cwa
+  participant "GuessFieldEncodingTool" as gfet
+  participant "guessFieldEncoding" as guess
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  database "IndexedDbInvestigationStore" as store
+end box
+
+orch -> executor : correlate_with_action({ recordingIds, order: [idle, slow, medium, fast] }) (TOOL-017)
+executor -> cwat : run(input, ctx)
+cwat -> store : Load recordings
+cwat -> cwa : rank(recordings, order, 10)
+cwa -> cwa : 1-, 2- and 4-byte windows, LE and BE; Spearman against label rank (FR-030)
+cwa --> cwat : 1. 0xFE01 offset 5, width 2, LE, 0.98
+cwat --> executor : ok; "Bytes 5–6 of 0xFE01 (LE) follow effort, 0.98"
+orch -> page : ask_user "Roughly what speed were you walking at the fastest?"
+person -> page : "About 7 km/h" (expected 0–20 km/h)
+page --> orch : Answer
+orch -> executor : guess_field_encoding({ recordingId: fast, uuid: 0xFE01, offset: 5, width: 2, expected: speed km/h 0–20 }) (TOOL-018)
+executor -> gfet : run(input, ctx)
+gfet -> store : Load every recording of the series
+gfet -> guess : fits(values 300, 500, 700, expected)
+guess -> guess : Decode under each type, byte order and scale; keep coverage >= 90 %
+alt An encoding fits
+  guess --> gfet : uint16 LE x0.01 km/h, coverage 1.0
+  gfet --> executor : ok; "Bytes 5–6: uint16 LE x0.01 km/h fits 100 %"; FieldFinding recorded (likely)
+else No encoding reaches 90 %
+  guess --> gfet : []
+  gfet --> executor : ok; fits [] ; "No encoding fits 0–20 km/h" (FR-030)
+end
+executor -> store : commitStep(envelope, observations)
+@enduml

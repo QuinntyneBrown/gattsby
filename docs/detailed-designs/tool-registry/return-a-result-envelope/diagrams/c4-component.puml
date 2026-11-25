@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Return a result envelope
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Activity feed and error card")
+  Component(copy, "ErrorCopy", "Pure helper", "Code -> plain message and next step")
+  Component(feed, "ActivityFeed", "Service", "One entry per envelope")
+  Component(executor, "ToolExecutor", "Service", "Guards run; maps exceptions; checks output and evidence")
+  Component(mapping, "ErrorMapping", "Pure helper", "Exception -> shared code")
+  Component(builder, "DecisionStateBuilder", "Service", "Last 5 summaries")
+  Component(tool, "Any tool", "Tool<I, O>", "Returns a ToolResult")
+  Component(results, "ToolResults", "Pure helper", "ok() and fail()")
+  Component(summary, "SummaryLine", "Pure helper", "One line, at most 200 characters")
+  Component(schema, "SchemaValidator", "Service", "Output schema check")
+  Component(store, "IndexedDbInvestigationStore", "Store", "commitStep")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "")
+
+Rel(executor, tool, "run(input, ctx)")
+Rel(tool, results, "Builds envelope")
+Rel(results, summary, "Clamps summary")
+Rel(executor, mapping, "Maps a thrown error")
+Rel(executor, schema, "Validates data")
+Rel(executor, store, "commitStep(envelope)")
+Rel(executor, feed, "Adds entry")
+Rel(builder, feed, "Reads recent summaries")
+Rel(feed, page, "Rendered as text")
+Rel(page, copy, "Error card from code")
+Rel(person, page, "Reads; taps Evidence or Try again")
+Rel(store, idb, "Transactions")
+@enduml

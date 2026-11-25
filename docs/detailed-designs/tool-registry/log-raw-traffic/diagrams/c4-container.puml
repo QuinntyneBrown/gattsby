@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Log raw traffic
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "BLE layer, raw traffic log, memory window, flusher, Evidence screen")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Raw log entries, steps")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Filters and reads the evidence log", "Touch or keyboard")
+Rel(spa, device, "Every operation and event is logged", "Web Bluetooth")
+Rel(spa, idb, "Writes entries in batches; commits them with the step")
+@enduml

@@ -1,0 +1,109 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Find and correlate fields
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class FindVaryingBytesTool {
+  +run(input: { recordingIds: string[] }, ctx: ToolContext): Promise<ToolResult<VaryingBytesResult>>
+}
+class CorrelateWithActionTool {
+  +run(input: { recordingIds: string[]; order: string[] }, ctx: ToolContext): Promise<ToolResult<{ ranked: RankedField[] }>>
+}
+class GuessFieldEncodingTool {
+  +run(input: GuessInput, ctx: ToolContext): Promise<ToolResult<{ fits: EncodingFit[] }>>
+}
+
+class findVaryingBytes <<pure helper>> {
+  +{static} classify(recordings: Recording[]): VaryingBytesResult
+}
+class correlateWithAction <<pure helper>> {
+  +{static} rank(recordings: Recording[], order: string[], limit: number): RankedField[]
+}
+class guessFieldEncoding <<pure helper>> {
+  +{static} fits(values: Uint8Array[], expected: ExpectedRange): EncodingFit[]
+}
+
+class VaryingBytesResult {
+  +perCharacteristic: CharacteristicOffsets[]
+}
+class CharacteristicOffsets {
+  +uuid: string
+  +length: number
+  +betweenLabels: number[]
+  +withinLabel: number[]
+  +constant: number[]
+}
+class RankedField {
+  +uuid: string
+  +offset: number
+  +width: 1 | 2 | 4
+  +byteOrder: "le" | "be"
+  +correlation: number
+}
+class ExpectedRange {
+  +metric: string
+  +unit: string
+  +min: number
+  +max: number
+}
+class EncodingFit {
+  +type: IntegerType
+  +byteOrder: "le" | "be"
+  +scale: 1 | 0.1 | 0.01 | 0.001
+  +unit: string
+  +coverage: number
+}
+class FieldFinding {
+  +uuid: string
+  +length: number
+  +offset: number
+  +width: number
+  +byteOrder: "le" | "be"
+  +correlation?: number
+  +type?: IntegerType
+  +scale?: number
+  +unit?: string
+  +coverage?: number
+}
+enum IntegerType {
+  uint8
+  int8
+  uint16
+  int16
+  uint24
+  int24
+  uint32
+  int32
+}
+
+Tool <|.. FindVaryingBytesTool
+Tool <|.. CorrelateWithActionTool
+Tool <|.. GuessFieldEncodingTool
+FindVaryingBytesTool ..> findVaryingBytes : delegates
+CorrelateWithActionTool ..> correlateWithAction : delegates
+GuessFieldEncodingTool ..> guessFieldEncoding : delegates
+findVaryingBytes ..> VaryingBytesResult : returns
+VaryingBytesResult "1" *-- "*" CharacteristicOffsets
+correlateWithAction ..> RankedField : returns
+guessFieldEncoding ..> ExpectedRange : tests against
+guessFieldEncoding ..> EncodingFit : returns
+EncodingFit --> IntegerType
+FindVaryingBytesTool ..> FieldFinding : records
+CorrelateWithActionTool ..> FieldFinding : records
+GuessFieldEncodingTool ..> FieldFinding : completes
+@enduml

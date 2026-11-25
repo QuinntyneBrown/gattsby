@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Find and correlate fields
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Analysis tools and pure helpers, agent orchestrator, hypothesis tracker")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Recordings, observations, steps")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Typical ranges and units of metrics")
+}
+
+Rel(person, spa, "Answers the expected-range question", "Touch or keyboard")
+Rel(spa, idb, "Reads recordings; commits observations with the step")
+Rel(spa, kb, "Reads typical metric ranges")
+@enduml

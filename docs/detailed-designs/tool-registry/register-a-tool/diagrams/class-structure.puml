@@ -1,0 +1,122 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Register a tool
+
+enum SafetyClass {
+  read
+  listen
+  write
+  control
+  n/a
+}
+
+enum ToolGroup {
+  environment
+  discovery
+  connection
+  inspection
+  listening
+  analysis
+  control
+  person
+  meta
+}
+
+enum PlaybookStage {
+  prepare
+  find
+  identify
+  standard
+  proprietary
+  control
+  conclude
+}
+
+class ToolDefinition {
+  +name: string
+  +group: ToolGroup
+  +description: string
+  +personDescription: string
+  +inputSchema: JsonSchema
+  +outputSchema: JsonSchema
+  +safetyClass: SafetyClass
+  +preconditions: PreconditionName[]
+  +stages: PlaybookStage[]
+  +requiredCapabilities: CapabilityKey[]
+  +phase: "MVP" | "P2"
+  +agentCallable: boolean
+}
+
+class ToolEntry {
+  +definition: ToolDefinition
+  +load(): Promise<Type<Tool>>
+}
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+abstract class ToolRegistry <<contract>> {
+  +definition(name: string): ToolDefinition | undefined
+  +instance(name: string): Promise<Tool>
+  +all(): ToolDefinition[]
+  +listFor(stage: PlaybookStage, capabilities: CapabilityReport): ModelToolDescriptor[]
+  +diagnostics(): RegistryDiagnostic[]
+}
+
+class DefaultToolRegistry {
+  -entries: Map<string, ToolEntry>
+  -instances: Map<string, Tool>
+  -validate(entry: ToolEntry): RegistryDiagnostic | null
+}
+
+class ModelToolDescriptor {
+  +name: string
+  +description: string
+  +inputSchema: JsonSchema
+}
+
+class RegistryDiagnostic {
+  +toolName: string
+  +reason: string
+  +at: number
+}
+
+class SchemaValidator {
+  +compile(schema: JsonSchema): Validator
+  +validate(schema: JsonSchema, value: unknown): ValidationResult
+}
+
+class PreconditionChecks <<pure helpers>> {
+  +{static} run(name: PreconditionName, session: InvestigationSession): PreconditionResult
+}
+
+class DecisionStateBuilder {
+  +build(session: InvestigationSession): DecisionState
+}
+
+ToolDefinition --> SafetyClass
+ToolDefinition --> ToolGroup
+ToolDefinition --> PlaybookStage
+ToolEntry *-- ToolDefinition
+ToolEntry ..> Tool : loads
+ToolRegistry <|-- DefaultToolRegistry
+DefaultToolRegistry "1" *-- "*" ToolEntry
+DefaultToolRegistry ..> SchemaValidator : validates schemas
+DefaultToolRegistry ..> RegistryDiagnostic : records
+DefaultToolRegistry ..> ModelToolDescriptor : projects
+DecisionStateBuilder ..> ToolRegistry : listFor
+ToolDefinition ..> PreconditionChecks : names checks
+@enduml

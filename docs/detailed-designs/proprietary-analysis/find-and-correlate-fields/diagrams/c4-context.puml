@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Find and correlate fields
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "IndexedDB holding the recordings")
+System_Ext(nano, "Gemini Nano", "On-device model via the Prompt API (full agent mode only)")
+
+Rel(person, gattsby, "States the expected range of a metric; reads the findings")
+Rel(gattsby, chrome, "Reads recordings; writes observations", "IndexedDB")
+Rel(gattsby, nano, "Receives one-line summaries; chooses the next analysis tool")
+@enduml
