@@ -7,6 +7,7 @@ import { enumerateGattTool } from './inspection/enumerate-gatt.tool';
 import { matchKnownProfilesTool } from './inspection/match-known-profiles.tool';
 import { readCharacteristicTool } from './inspection/read-characteristic.tool';
 import { readDeviceInfoTool } from './inspection/read-device-info.tool';
+import { readSupportedRangesTool } from './inspection/read-supported-ranges.tool';
 import { subscribeAndRecordTool } from './listening/subscribe-and-record.tool';
 import { decodeStandardTool } from './analysis/decode-standard.tool';
 import { finishTool } from './meta/finish.tool';
@@ -27,6 +28,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   readDeviceInfoTool,
   readCharacteristicTool,
   matchKnownProfilesTool,
+  readSupportedRangesTool,
   subscribeAndRecordTool,
   decodeStandardTool,
   askUserTool,

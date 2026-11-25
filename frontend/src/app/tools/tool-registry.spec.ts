@@ -13,6 +13,7 @@ const MVP_TOOLS = [
   'read_device_info',
   'read_characteristic',
   'match_known_profiles',
+  'read_supported_ranges',
   'subscribe_and_record',
   'decode_standard',
   'ask_user',

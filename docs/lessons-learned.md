@@ -118,3 +118,11 @@ None; this is the first entry.
 - Keep the baseline and the first qualifying notification separately. Their raw log IDs let the
   investigation explain what changed without consulting the model or holding the action recording
   in memory.
+
+## Journey 3, slice 3: Read FTMS features and ranges
+
+- The existing Identify rules already read the FTMS feature and speed range individually. The new
+  acceptance test checks both the structured probe in the feed and the number of raw reads, so
+  adding the dedicated tool cannot accidentally read the same characteristics twice.
+- Read the ranges during Identify, before asking the person to move. The answers survive even if
+  they skip live confirmation.

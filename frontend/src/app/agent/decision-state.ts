@@ -33,6 +33,7 @@ export interface DecisionState {
   readonly candidates: readonly ProfileCandidate[] | null;
   readonly ambiguityResolved: boolean;
   readonly reads: readonly string[];
+  readonly rangesAttempted: boolean;
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
@@ -59,6 +60,7 @@ export const INITIAL_STATE: DecisionState = {
   candidates: null,
   ambiguityResolved: false,
   reads: [],
+  rangesAttempted: false,
   standardRecording: 'pending',
   speedAction: null,
   speedConfirmation: null,
@@ -157,6 +159,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       const input = step.input as { characteristic: string };
       return { ...next, reads: [...state.reads, input.characteristic] };
     }
+    case 'read_supported_ranges':
+      return { ...next, rangesAttempted: true };
     case 'disconnect':
       return { ...next, connected: false };
     case 'subscribe_and_record':

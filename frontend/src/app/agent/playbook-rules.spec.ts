@@ -157,11 +157,8 @@ describe('PlaybookRules (FR-046)', () => {
       candidates: [treadmill],
     };
     const outcome = next(matched);
-    expect(outcome?.kind === 'decided' && outcome.action.input).toEqual({
-      service: FTMS,
-      characteristic: '00002acc-0000-1000-8000-00805f9b34fb',
-    });
-    const identified = { ...matched, reads: ['00002acc-0000-1000-8000-00805f9b34fb'] };
+    expect(outcome?.kind === 'decided' && outcome.action.tool).toBe('read_supported_ranges');
+    const identified = { ...matched, rangesAttempted: true };
     expect(tool(identified)).toBe('request_action');
     expect(tool({ ...identified, standardRecording: 'skipped' })).toBe('finish');
   });
