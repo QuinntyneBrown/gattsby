@@ -48,7 +48,8 @@ The design introduces these building blocks in the Angular workspace under `fron
   `gattsby`, at bootstrap. It defines `createScriptURL` only, accepting same-origin URLs on an
   allowlist (the service worker script `/ngsw-worker.js`, and any worker a later design adds). It
   defines no `createHTML` and no `createScript`, so no Gattsby code can produce HTML or script from a
-  string. The allowlist check is a pure function, `isAllowedScriptUrl`, with unit tests. Whether
+  string. The allowlist check is a pure function, `isAllowedScriptUrl`
+  (`security/script-url-allowlist.ts`), with unit tests. Whether
   Angular's service worker registration passes through this policy or through Angular's own is
   settled by the work-offline journey, which adds the service worker; until then the allowlist
   holds `/ngsw-worker.js` only.

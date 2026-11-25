@@ -47,6 +47,9 @@ components and dialogs.
   `'unsafe-inline'` or `'unsafe-eval'`, as NFR-014 requires. Angular's critical-CSS inlining is
   turned off (`optimization.styles.inlineCritical: false`), because it adds an inline `onload`
   handler that `script-src 'self'` refuses.
+- **`base-uri 'self'`, not `'none'`:** Angular's router resolves routes and lazy chunks against
+  `<base href="/">`, which `base-uri 'none'` blocks. `'self'` still stops a `<base>` that points
+  off the app's origin.
 - **Styles come from the design system.** `docs/design-system/` is the source of the tokens and the
   component classes; the build reads `docs/design-system/tokens/tokens.css` and
   `docs/design-system/assets/components.css` directly (the `styles` of `angular.json`), so the app
