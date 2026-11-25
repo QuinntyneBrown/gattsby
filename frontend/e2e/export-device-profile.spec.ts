@@ -1,5 +1,5 @@
 // Acceptance Test
-// Traces to: FR-055, FR-062, NFR-012, NFR-013, NFR-024
+// Traces to: FR-055, FR-062, FR-063, NFR-012, NFR-013, NFR-024
 // Given an FTMS treadmill, when the investigation concludes, then its saved profile
 // conforms to the published schema and each metric points to evidence in the record.
 
@@ -7,9 +7,11 @@ import type { Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import Ajv from 'ajv';
 import schema from '../src/schemas/device-profile-1.schema.json';
+import recordSchema from '../src/schemas/investigation-record-1.schema.json';
 import type { FakeBluetooth } from './fixtures/fake-bluetooth';
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
+import { seedStoredPhoto, tinyPng } from './fixtures/stored-photo';
 import { StoredRecords } from './fixtures/stored-records';
 import { DeviceProfilePage } from './pages/device-profile.page';
 import { ExportDialogPage } from './pages/export.dialog.page';
@@ -139,4 +141,58 @@ test('saves one versioned device profile with evidence for each reading', async 
     expect(item.evidence.length).toBeGreaterThan(0);
     for (const evidence of item.evidence) expect(evidenceIds.has(evidence), evidence).toBe(true);
   }
+});
+
+// Given a completed investigation, when the person exports the record, then
+// it contains every recorded packet and answer. Private attachments are opt-in.
+test('exports the whole record with attachments excluded by default', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const id = await finishTreadmill(page, fakeBluetooth);
+  const records = new StoredRecords(page);
+  const verdict = new VerdictPage(page);
+  const dialog = new ExportDialogPage(page);
+  const validate = new Ajv({ strictRequired: false }).addSchema(schema).compile(recordSchema);
+  await seedStoredPhoto(page, id);
+
+  await verdict.exportRecord.click({ timeout: 3_000 });
+  await expect(dialog.includeNotesAndPhotos).not.toBeChecked();
+  const download = page.waitForEvent('download');
+  await dialog.fullRecord.click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/-record\.gattsby\.json$/);
+  const exported: unknown = JSON.parse(await readFile((await file.path())!, 'utf8'));
+  expect(validate(exported), JSON.stringify(validate.errors)).toBe(true);
+  expect(exported).toMatchObject({
+    investigation: { id },
+    profile: { investigationId: id },
+    rawLog: expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'notification',
+        hex: expect.any(String),
+        t: expect.any(Number),
+      }),
+    ]),
+    steps: expect.arrayContaining([
+      expect.objectContaining({ exchange: expect.objectContaining({ answer: 'Ready' }) }),
+    ]),
+    includesNotesAndPhotos: false,
+    omitted: { photos: 1 },
+  });
+  expect(exported).not.toHaveProperty('photos');
+  expect((exported as { rawLog: unknown[] }).rawLog).toHaveLength(await records.rawCount(id));
+  await dialog.done.click();
+
+  await verdict.exportRecord.click();
+  await dialog.includeNotesAndPhotos.check();
+  const optedIn = page.waitForEvent('download');
+  await dialog.fullRecord.click();
+  const withPhotos: unknown = JSON.parse(await readFile((await (await optedIn).path())!, 'utf8'));
+  expect(validate(withPhotos), JSON.stringify(validate.errors)).toBe(true);
+  expect(withPhotos).toMatchObject({
+    includesNotesAndPhotos: true,
+    photos: [{ id: 'ph-fixture', mediaType: 'image/png', dataBase64: tinyPng }],
+  });
+  expect(withPhotos).not.toHaveProperty('omitted');
 });

@@ -15,6 +15,10 @@ export class ExportDialogPage {
     return this.dialog.getByRole('button', { name: /^Device profile/ });
   }
 
+  get fullRecord() {
+    return this.dialog.getByRole('button', { name: /^Full investigation record/ });
+  }
+
   get success() {
     return this.dialog.getByRole('status');
   }

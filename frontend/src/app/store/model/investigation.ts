@@ -16,6 +16,8 @@ export interface Investigation {
   readonly status: InvestigationStatus;
   readonly lastCommittedStep: number;
   readonly deviceName: string | null;
+  readonly location?: string;
+  readonly note?: string;
   readonly endedAt: number | null;
   readonly interruptedAt: number | null;
   readonly verdict: Verdict | null;

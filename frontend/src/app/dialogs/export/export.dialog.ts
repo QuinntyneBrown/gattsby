@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   inject,
   input,
@@ -44,16 +45,23 @@ export class ExportDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly store = inject(InvestigationStore);
   private readonly exporter = inject(ExportService);
+  private readonly lifetime = new AbortController();
   protected readonly profile = resource({
     params: () => this.profileId(),
     loader: ({ params }) => this.store.getProfile(params),
   });
   protected readonly busy = signal(false);
+  protected readonly includeNotesAndPhotos = signal(false);
+  protected readonly availableRecord = resource({
+    params: () => (this.profile.hasValue() ? this.profile.value() : undefined),
+    loader: ({ params }) => this.exporter.hasRecord(params),
+  });
   protected readonly saved = signal<string | null>(null);
   protected readonly copied = signal(false);
   protected readonly failed = signal(false);
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.lifetime.abort());
     afterNextRender(() => this.dialog().nativeElement.showModal());
   }
 
@@ -64,17 +72,24 @@ export class ExportDialog {
     this.closed.emit();
   }
 
-  protected async run(kind: 'profile' | 'summary'): Promise<void> {
+  protected async run(kind: 'profile' | 'record' | 'summary'): Promise<void> {
     if (this.busy() || !this.profile.hasValue()) return;
     this.busy.set(true);
     this.failed.set(false);
     this.copied.set(false);
     try {
-      if (kind === 'profile') {
-        this.saved.set(await this.exporter.exportProfile(this.profile.value()));
-      } else {
+      if (kind === 'summary') {
         await this.exporter.copySummary(this.profile.value());
         this.copied.set(true);
+      } else {
+        const profile = this.profile.value();
+        const include = this.includeNotesAndPhotos();
+        const signal = this.lifetime.signal;
+        this.saved.set(
+          await (kind === 'profile'
+            ? this.exporter.exportProfile(profile, include, signal)
+            : this.exporter.exportRecord(profile, include, signal)),
+        );
       }
     } catch {
       this.failed.set(true);

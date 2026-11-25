@@ -130,6 +130,9 @@ import { verdictView, type VerdictView } from './verdict-view';
             <button class="btn btn--lg" type="button" (click)="exporting.set(profileId)">
               Export profile
             </button>
+            <button class="btn btn--lg" type="button" (click)="exporting.set(profileId)">
+              Export full record
+            </button>
           }
           <button
             class="btn btn--primary btn--lg"

@@ -35,4 +35,8 @@ export class VerdictPage {
   get exportProfile(): Locator {
     return this.page.getByRole('button', { name: 'Export profile' });
   }
+
+  get exportRecord(): Locator {
+    return this.page.getByRole('button', { name: 'Export full record' });
+  }
 }

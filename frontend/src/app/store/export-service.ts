@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { APP_VERSION } from '../app-version';
 import validateProfile from '../../schemas/generated/device-profile-1.js';
 import { exportFileName } from './file-namer';
+import { buildRecordExport } from './export-record';
 import { InvestigationStore } from './investigation-store';
 import type { DeviceProfile } from './model/device-profile';
 import { StoreError } from './store-error';
@@ -13,20 +14,48 @@ export class ExportService {
   private readonly document = inject(DOCUMENT);
   private readonly appVersion = inject(APP_VERSION);
 
-  async exportProfile(profile: DeviceProfile): Promise<string> {
-    const startedAt = await this.startTime(profile);
+  async exportProfile(
+    profile: DeviceProfile,
+    includeNotes: boolean,
+    signal: AbortSignal,
+  ): Promise<string> {
+    const header = await this.header(profile);
+    const startedAt = header?.startedAt ?? Date.parse(profile.createdAt);
     const payload = {
       ...profile,
       exportedAt: new Date().toISOString(),
       appVersion: this.appVersion,
+      ...(includeNotes && header?.note ? { notes: [header.note] } : {}),
     };
     if (!validateProfile(payload)) {
       throw new StoreError('UNREADABLE_PROFILE', 'The device profile couldn’t be exported.');
     }
     const name = exportFileName(profile.identity.displayName, startedAt, 'profile');
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    signal.throwIfAborted();
     this.save(blob, name);
     return name;
+  }
+
+  async exportRecord(
+    profile: DeviceProfile,
+    includeNotesAndPhotos: boolean,
+    signal: AbortSignal,
+  ): Promise<string> {
+    const { blob, startedAt } = await buildRecordExport(
+      this.store,
+      profile,
+      includeNotesAndPhotos,
+      signal,
+    );
+    const name = exportFileName(profile.identity.displayName, startedAt, 'record');
+    signal.throwIfAborted();
+    this.save(blob, name);
+    return name;
+  }
+
+  async hasRecord(profile: DeviceProfile): Promise<boolean> {
+    return (await this.header(profile)) !== null;
   }
 
   async copySummary(profile: DeviceProfile): Promise<void> {
@@ -42,12 +71,11 @@ export class ExportService {
     await clipboard.writeText(lines.join('\n'));
   }
 
-  private async startTime(profile: DeviceProfile): Promise<number> {
+  private async header(profile: DeviceProfile) {
     try {
-      return (await this.store.get(profile.investigationId)).investigation.startedAt;
+      return await this.store.getInvestigation(profile.investigationId);
     } catch (error) {
-      if (error instanceof StoreError && error.code === 'NOT_FOUND')
-        return Date.parse(profile.createdAt);
+      if (error instanceof StoreError && error.code === 'NOT_FOUND') return null;
       throw error;
     }
   }

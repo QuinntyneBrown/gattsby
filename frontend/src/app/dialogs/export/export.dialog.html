@@ -59,6 +59,19 @@
             </button>
           </li>
           <li>
+            <button
+              class="sheet-menu__item"
+              type="button"
+              [disabled]="!availableRecord.hasValue() || !availableRecord.value()"
+              (click)="run('record')"
+            >
+              <span class="sheet-menu__text">
+                <span class="sheet-menu__title">Full investigation record</span>
+                <span class="sheet-menu__detail">Every step, packet and answer</span>
+              </span>
+            </button>
+          </li>
+          <li>
             <button class="sheet-menu__item" type="button" (click)="run('summary')">
               <span class="sheet-menu__text"
                 ><span class="sheet-menu__title">Copy summary</span
@@ -68,7 +81,12 @@
           </li>
         </ul>
         <label class="check-row">
-          <input type="checkbox" />
+          <input
+            #include
+            type="checkbox"
+            [checked]="includeNotesAndPhotos()"
+            (change)="includeNotesAndPhotos.set(include.checked)"
+          />
           <span
             >Include notes and photos<span class="field__help"
               >Left out unless you tick this.</span

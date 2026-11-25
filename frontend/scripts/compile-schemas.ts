@@ -7,23 +7,32 @@ import { build } from 'esbuild';
 const schemas = new URL('../src/schemas/', import.meta.url);
 const generated = new URL('./generated/', schemas);
 await mkdir(generated, { recursive: true });
+const ajv = new Ajv({ code: { source: true }, strict: true, strictRequired: false });
+const validators = new Map<string, string>();
 for (const name of await readdir(schemas)) {
   if (!name.endsWith('.schema.json')) continue;
-  const validator = new Ajv({ code: { source: true }, strict: true });
   const schema = JSON.parse(await readFile(new URL(name, schemas), 'utf8'));
-  const outfile = new URL(name.replace('.schema.json', '.js'), generated);
+  ajv.addSchema(schema, name);
+  validators.set(name.replace('.schema.json', ''), name);
+}
+const record = validators.get('investigation-record-1');
+if (record) validators.set('raw-log-page-1', `${record}#/properties/rawLog`);
+
+for (const [module, key] of validators) {
+  const validate = ajv.getSchema(key);
+  if (!validate) throw new Error(`Missing schema: ${key}`);
   await build({
     stdin: {
-      contents: standaloneCode(validator, validator.compile(schema)),
+      contents: standaloneCode(ajv, validate),
       resolveDir: fileURLToPath(new URL('../', import.meta.url)),
     },
-    outfile: fileURLToPath(outfile),
+    outfile: fileURLToPath(new URL(`${module}.js`, generated)),
     bundle: true,
     format: 'esm',
     platform: 'browser',
   });
   await writeFile(
-    new URL(name.replace('.schema.json', '.d.ts'), generated),
-    'declare const validate: (value: unknown) => boolean;\nexport default validate;\n',
+    new URL(`${module}.d.ts`, generated),
+    'declare const validate: { (value: unknown): boolean; errors?: readonly { instancePath: string; keyword: string }[] | null };\nexport default validate;\n',
   );
 }

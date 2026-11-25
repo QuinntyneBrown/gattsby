@@ -8,6 +8,7 @@ import {
   upgrade,
 } from './database-schema';
 import type { Investigation, NewInvestigation } from './model/investigation';
+import type { InvestigationPhoto } from './model/investigation-photo';
 import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
@@ -17,6 +18,7 @@ import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
 
 const RECORD_FORMAT = 1;
+const EXPORT_PAGE_SIZE = 2000;
 
 // The investigation store on IndexedDB (save-as-the-investigation-runs design). Every write
 // resolves on the transaction's `complete` event, never on a request's `success`.
@@ -179,6 +181,15 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return (all as Investigation[]).reverse();
   }
 
+  async getInvestigation(id: string): Promise<Investigation> {
+    const db = await this.open();
+    const row = await request(
+      db.transaction('investigations').objectStore('investigations').get(id),
+    );
+    if (!row) throw new StoreError('NOT_FOUND', 'No investigation with that id.');
+    return row as Investigation;
+  }
+
   async rawLog(id: string): Promise<RawLogEntry[]> {
     const db = await this.open();
     const tx = db.transaction('rawLog', 'readonly');
@@ -199,6 +210,40 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
         ),
     );
     return rows.filter((row) => row !== undefined);
+  }
+
+  async *rawLogPages(id: string): AsyncIterable<RawLogEntry[]> {
+    const db = await this.open();
+    let lower: IDBValidKey = [id];
+    let lowerOpen = false;
+    for (;;) {
+      const range = IDBKeyRange.bound(lower, [id, []], lowerOpen);
+      const store = db.transaction('rawLog').objectStore('rawLog');
+      const rows = (await request(store.getAll(range, EXPORT_PAGE_SIZE))) as RawLogEntry[];
+      if (rows.length === 0) return;
+      yield rows;
+      if (rows.length < EXPORT_PAGE_SIZE) return;
+      lower = [id, rows[rows.length - 1].seq];
+      lowerOpen = true;
+    }
+  }
+
+  async recordings(id: string): Promise<Recording[]> {
+    const db = await this.open();
+    const store = db.transaction('recordings').objectStore('recordings');
+    return (await request(store.getAll(investigationRange(id)))) as Recording[];
+  }
+
+  async photos(id: string): Promise<InvestigationPhoto[]> {
+    const db = await this.open();
+    const store = db.transaction('photos').objectStore('photos');
+    return (await request(store.getAll(investigationRange(id)))) as InvestigationPhoto[];
+  }
+
+  async photoCount(id: string): Promise<number> {
+    const db = await this.open();
+    const store = db.transaction('photos').objectStore('photos');
+    return request(store.count(investigationRange(id)));
   }
 
   async getProfile(id: string): Promise<DeviceProfile> {
