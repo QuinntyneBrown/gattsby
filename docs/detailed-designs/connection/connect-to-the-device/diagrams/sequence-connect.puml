@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Connect and show the device
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ConnectionBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookHeuristics" as heur
+  participant "ToolExecutor" as executor
+  participant "InvestigationSession" as session
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ConnectTool" as connect
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+heur -> executor : connect({ deviceId: 4F1A }) — device chosen, not connected
+executor -> connect : run(input, ctx)
+connect -> connect : deviceId is this investigation's chosen device
+connect -> ble : connect(4F1A, 10000, signal)
+ble -> ble : Add gattserverdisconnected listener first (TOOL-006)
+ble -> ble : state connecting; start 10 s timer
+ble -> device : gatt.connect()
+device --> ble : connected
+ble -> ble : Clear timer; state connected; at = clock.now()
+ble -> log : Append connect entry, ok, timestamp (FR-073)
+ble --> connect : { connected: true, at }
+connect --> executor : ok; connected observation with at (FR-015)
+executor -> store : commitStep(connect step, observation, raw entries)
+ble --> session : connectionState connected
+session --> page : device name, state
+page -> person : App bar "HZN-T202-4F1A" (rendered as text)
+page -> banner : info "Connected to HZN-T202-4F1A"
+banner -> person : Shown; dismisses after 8 s
+page -> person : Emergency stop button appears
+@enduml

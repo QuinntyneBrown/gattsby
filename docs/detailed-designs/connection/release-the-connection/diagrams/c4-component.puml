@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Release the connection
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(guard, "leaveInvestigationGuard", "CanDeactivateFn", "Asks before leaving the screen")
+  Component(leave, "LeaveInvestigationDialog", "Angular component", "Stay / Leave and disconnect")
+  Component(stopdlg, "StopInvestigationDialog", "Angular component", "Keep going / Stop and get the verdict")
+  Component(orch, "AgentOrchestrator", "Service", "Ends the loop; pauses")
+  Component(watcher, "HiddenPageWatcher", "Service", "60 s hidden, no recording")
+  Component(life, "ConnectionLifecycle", "Service", "release(reason)")
+  Component(executor, "ToolExecutor", "Service", "Runs disconnect")
+  Component(disc, "DisconnectTool", "Tool", "disconnect")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Stops subscriptions; disconnects")
+  Component(subs, "SubscriptionRegistry", "BLE layer", "Active subscriptions")
+  Component(ledger, "ApprovalLedger", "BLE layer", "revokeAll() at the end")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Release step")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, leave, "Leave and disconnect")
+Rel(person, stopdlg, "Stop and get the verdict")
+Rel(guard, leave, "Opens")
+Rel(guard, life, "release(leftScreen)")
+Rel(stopdlg, orch, "stop()")
+Rel(orch, life, "release(finished or stopped)")
+Rel(watcher, life, "release(hiddenTooLong)")
+Rel(life, executor, "Runs disconnect")
+Rel(life, ledger, "revokeAll()")
+Rel(executor, disc, "run({ deviceId })")
+Rel(disc, ble, "disconnect(deviceId)")
+Rel(ble, subs, "Stops and clears")
+Rel(ble, device, "gatt.disconnect()", "Web Bluetooth")
+Rel(executor, idb, "Commits release step")
+@enduml

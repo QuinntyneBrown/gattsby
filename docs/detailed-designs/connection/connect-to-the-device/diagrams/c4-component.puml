@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Connect to the device
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Device name in the app bar; failure prompt")
+  Component(banner, "ConnectionBanner", "Angular component", "Connected to ...; dismisses after 8 s")
+  Component(estop, "EmergencyStopButton", "Angular component", "Shown while connected")
+  Component(session, "InvestigationSession", "Service", "Device, connectedAt, connection state")
+  Component(heur, "PlaybookHeuristics", "Service", "Proposes connect once a device is chosen")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated call_tool")
+  Component(connect, "ConnectTool", "Tool", "connect")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only code that calls gatt.connect()")
+  Component(clock, "Clock", "Service", "Timeout timer")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs each connect attempt")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(heur, executor, "Proposes connect")
+Rel(executor, connect, "run(input, ctx)")
+Rel(connect, ble, "connect(deviceId, timeoutMs, signal)")
+Rel(ble, clock, "Starts timeout")
+Rel(ble, log, "Appends connect entry")
+Rel(ble, device, "gatt.connect()", "Web Bluetooth")
+Rel(ble, session, "connectionState signal")
+Rel(session, page, "Device and state")
+Rel(page, banner, "Banner model")
+Rel(page, estop, "visible while connected")
+Rel(page, person, "Shows")
+Rel(executor, idb, "Commits step")
+@enduml

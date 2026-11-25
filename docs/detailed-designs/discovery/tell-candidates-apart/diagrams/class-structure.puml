@@ -1,0 +1,91 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Tell candidates apart
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class PowerCycleMatchTool {
+  +run(input: PowerCycleMatchInput, ctx: ToolContext): Promise<ToolResult<PowerCycleMatch>>
+  -runGuided(ctx: ToolContext): Promise<ToolResult<PowerCycleMatch>>
+  -runAutomatic(candidates: string[], ctx: ToolContext): Promise<ToolResult<PowerCycleMatch>>
+}
+
+class WatchAdvertisementsTool {
+  +run(input: WatchAdvertisementsInput, ctx: ToolContext): Promise<ToolResult<AdvertisementWatch>>
+}
+
+class PowerCycleMatchInput {
+  +candidates?: string[]
+  +mode: "guided" | "automatic"
+}
+
+class PowerCycleMatch {
+  +match: string | null
+  +method: "guided" | "automatic"
+  +confidence: number
+}
+
+class WatchAdvertisementsInput {
+  +deviceId: string
+  +seconds: number
+}
+
+class AdvertisementWatch {
+  +samples: AdvertisementSample[]
+  +count: number
+}
+
+class AdvertisementSample {
+  +t: number
+  +rssi: number
+  +txPower?: number
+  +manufacturerData: Record<string, string>
+  +serviceData: Record<string, string>
+}
+
+class PowerCycleDetector <<pure>> {
+  +detect(samples: Map<string, AdvertisementSample[]>, offAt: number, onAt: number): string | null
+}
+
+abstract class BleLayer <<contract>> {
+  +requestDevice(request: ScanRequest): Promise<ToolResult<ChosenDevice>>
+  +watchAdvertisements(deviceId: string, seconds: number, signal: AbortSignal): Promise<ToolResult<AdvertisementSample[]>>
+}
+
+class WebBluetoothBleLayer {
+  +watchAdvertisements(deviceId: string, seconds: number, signal: AbortSignal): Promise<ToolResult<AdvertisementSample[]>>
+  -toSample(event: BluetoothAdvertisingEvent): AdvertisementSample
+}
+
+class "toHex" as Hex <<pure>> {
+  +toHex(view: DataView): string
+}
+
+Tool <|.. PowerCycleMatchTool
+Tool <|.. WatchAdvertisementsTool
+PowerCycleMatchTool ..> PowerCycleMatchInput : input
+PowerCycleMatchTool ..> PowerCycleMatch : returns
+PowerCycleMatchTool ..> WatchAdvertisementsTool : automatic mode
+PowerCycleMatchTool ..> PowerCycleDetector : automatic mode
+PowerCycleMatchTool --> BleLayer : guided chooser
+WatchAdvertisementsTool ..> WatchAdvertisementsInput : input
+WatchAdvertisementsTool --> BleLayer
+WatchAdvertisementsTool ..> AdvertisementWatch : returns
+AdvertisementWatch "1" *-- "*" AdvertisementSample
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer ..> Hex : renders bytes
+@enduml

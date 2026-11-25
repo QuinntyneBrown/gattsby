@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Handle a device not found
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Find-stage rules, usual-cause prompts, assess_reachability, verdict")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Scan steps, cause answers, verdict and profile")
+}
+System_Ext(chrome, "Chrome", "Device chooser")
+
+Rel(person, spa, "Answers and taps", "Touch or keyboard")
+Rel(spa, chrome, "Opens the chooser", "Web Bluetooth")
+Rel(spa, idb, "Reads observations; commits answers and the verdict")
+@enduml

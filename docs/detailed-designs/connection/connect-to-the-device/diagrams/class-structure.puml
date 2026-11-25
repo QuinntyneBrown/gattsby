@@ -1,0 +1,100 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Connect to the device
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class ConnectTool {
+  +run(input: ConnectInput, ctx: ToolContext): Promise<ToolResult<ConnectResult>>
+}
+
+class ConnectInput {
+  +deviceId: string
+  +timeoutMs?: number
+}
+
+class ConnectResult {
+  +connected: true
+  +at: number
+}
+
+enum ConnectionState {
+  idle
+  connecting
+  connected
+  reconnecting
+  disconnected
+  failed
+}
+
+class ConnectionStatus {
+  +state: ConnectionState
+  +deviceId: string
+  +name: string
+  +connectedAt?: number
+  +attempt?: number
+  +reason?: string
+}
+
+class DisconnectEvent {
+  +deviceId: string
+  +at: number
+  +expected: boolean
+}
+
+abstract class BleLayer <<contract>> {
+  +connectionState: Signal<ConnectionStatus>
+  +disconnected$: Observable<DisconnectEvent>
+  +connect(deviceId: string, timeoutMs: number, signal: AbortSignal): Promise<ToolResult<ConnectResult>>
+}
+
+class WebBluetoothBleLayer {
+  -devices: Map<string, BluetoothDevice>
+  -onDisconnected(event: Event): void
+  +connect(deviceId: string, timeoutMs: number, signal: AbortSignal): Promise<ToolResult<ConnectResult>>
+}
+
+abstract class Clock <<contract>> {
+  +now(): number
+  +setTimeout(fn: () => void, ms: number): TimerHandle
+  +clearTimeout(handle: TimerHandle): void
+  +delay(ms: number, signal: AbortSignal): Promise<void>
+}
+
+class InvestigationSession {
+  +device: Signal<SessionDevice | null>
+  +connection: Signal<ConnectionStatus>
+}
+
+class ConnectionBanner <<component>> {
+  +model: input<ConnectionBannerModel>
+  +action: output<string>
+  +dismissed: output<void>
+}
+
+Tool <|.. ConnectTool
+ConnectTool ..> ConnectInput : input
+ConnectTool ..> ConnectResult : returns
+ConnectTool --> BleLayer
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer --> Clock : timeout
+WebBluetoothBleLayer "1" *-- "1" ConnectionStatus : owns
+WebBluetoothBleLayer ..> DisconnectEvent : emits
+ConnectionStatus --> ConnectionState
+InvestigationSession ..> BleLayer : reads connectionState
+ConnectionBanner ..> ConnectionStatus : rendered from
+@enduml

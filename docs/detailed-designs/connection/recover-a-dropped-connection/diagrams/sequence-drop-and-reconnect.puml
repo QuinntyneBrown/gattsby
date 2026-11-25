@@ -1,0 +1,68 @@
+@startuml
+title UML sequence behaviour — Drop, reconnect and repeat the step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ConnectionBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ConnectionSupervisor" as sup
+  participant "AgentOrchestrator" as orch
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReconnectTool" as reconnect
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "SubscriptionRegistry" as subs
+  participant "RawTrafficLog" as log
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+device --> ble : gattserverdisconnected (6 s into subscribe_and_record)
+ble -> log : Append disconnect, expected false, timestamp (FR-016)
+ble --> sup : disconnected$ { expected: false }
+sup -> sup : Not an early drop (FR-017 check)
+sup -> orch : pause(connectionLost)
+orch -> orch : Abort step; ABORTED; partial recording discarded (NFR-007)
+sup -> banner : warning "Connection dropped 6 s into the recording."
+sup -> executor : reconnect({ deviceId, attempts: 3 })
+executor -> reconnect : run(input, ctx)
+reconnect -> reconnect : wait 1 s on Clock
+reconnect -> ble : reconnect(deviceId) — attempt 1
+ble -> device : gatt.connect()
+device --> ble : fails
+ble -> log : Append connect attempt 1, failed
+reconnect --> sup : progress: attempt 2 of 3
+sup -> banner : "Reconnecting, attempt 2 of 3"
+reconnect -> reconnect : wait 2 s on Clock
+reconnect -> ble : reconnect(deviceId) — attempt 2
+ble -> device : gatt.connect()
+device --> ble : connected
+ble -> subs : restore(server)
+subs -> device : getPrimaryService, getCharacteristic, startNotifications x2
+subs --> ble : [0x2ACD, 0x2ADA]
+ble --> reconnect : restored subscriptions
+reconnect --> executor : connected, attempts 2, restoredSubscriptions (TOOL-007)
+executor -> store : commitStep(recovery: drop, attempts, restored) in one transaction
+sup -> banner : success "Reconnected after 2 tries."
+sup -> orch : resume({ repeatStep: true })
+orch -> executor : subscribe_and_record again, same input
+@enduml

@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Handle a device not found
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Device chooser and Web Bluetooth")
+System_Ext(device, "Device", "Machine that never appears over Bluetooth LE (may use Classic, ANT+, Wi-Fi or USB)")
+
+Rel(person, gattsby, "Answers the usual-cause questions; taps to scan")
+Rel(gattsby, chrome, "Opens the chooser for each scan", "Web Bluetooth")
+Rel(person, device, "Wakes the console; moves within 2 metres")
+Rel(device, chrome, "Not seen", "Bluetooth LE")
+@enduml

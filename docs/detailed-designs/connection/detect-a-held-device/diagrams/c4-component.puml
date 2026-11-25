@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Detect a held device
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Disconnect other apps and watches; Done; Stop")
+  Component(channel, "PromptChannel", "Service", "Posts the action prompt")
+  Component(sup, "ConnectionSupervisor", "Service", "Asks before reconnecting after a drop")
+  Component(detector, "HeldDeviceDetector", "Service", "Connection episodes; HeldDecision")
+  Component(rules, "HeldDeviceRules", "Pure helper", "Early drop under 5 s; second early drop; refusal")
+  Component(flow, "HeldDeviceFlow", "Service", "Records the suspicion; prompts; reconnects")
+  Component(orch, "AgentOrchestrator", "Service", "Pauses and resumes the loop")
+  Component(executor, "ToolExecutor", "Service", "Runs connect and assess_reachability")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Connection events")
+  Component(store, "IndexedDbInvestigationStore", "Store", "commitStep")
+}
+
+Rel(ble, sup, "disconnected$")
+Rel(sup, detector, "onDrop(event)")
+Rel(executor, detector, "onConnected / onConnectFailed")
+Rel(detector, rules, "decide(episodes, event)")
+Rel(detector, flow, "suspectHeld")
+Rel(flow, orch, "pause / resume")
+Rel(flow, store, "commitStep(heldSuspected)")
+Rel(flow, channel, "Posts the prompt")
+Rel(channel, card, "Renders")
+Rel(person, card, "Done or Stop")
+Rel(flow, executor, "connect after Done")
+@enduml

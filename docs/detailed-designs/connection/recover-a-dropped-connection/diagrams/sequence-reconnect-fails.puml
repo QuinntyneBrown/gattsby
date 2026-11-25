@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Every reconnect attempt fails
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ConnectionBanner" as banner
+  participant "StopInvestigationDialog" as stopdlg
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ConnectionSupervisor" as sup
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ReconnectTool" as reconnect
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+sup -> executor : reconnect({ deviceId, attempts: 3 })
+executor -> reconnect : run(input, ctx)
+loop attempts 1, 2, 3 after 1, 2 and 4 s
+  reconnect -> ble : reconnect(deviceId)
+  ble -> device : gatt.connect()
+  device --> ble : fails or times out after 10 s
+  ble --> reconnect : CONNECTION_FAILED
+end
+reconnect --> executor : CONNECTION_FAILED, attempts 3
+executor -> store : commitStep(recovery: drop and 3 failed attempts)
+sup -> banner : danger "Couldn't reconnect after 3 tries." (FR-016)
+banner -> person : Check the treadmill is on and within a few metres. Try again / Stop
+alt Try again
+  person -> banner : Try again
+  banner --> sup : action tryAgain
+  sup -> executor : reconnect({ deviceId, attempts: 3 })
+else Stop
+  person -> banner : Stop
+  banner --> sup : action stop
+  sup -> stopdlg : Open (FR-009)
+end
+@enduml

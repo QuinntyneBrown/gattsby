@@ -1,0 +1,68 @@
+@startuml
+title UML sequence behaviour — Guided power-cycle match
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "PowerCycleMatchTool" as match
+  participant "ScanFilterBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome chooser" as chrome
+  participant "Device" as device
+end box
+
+executor -> match : run({ mode: guided })
+match -> builder : build(filtered, hints)
+builder --> match : ScanRequest
+match -> channel : post(deviceChooser: "Pick the one that comes back")
+channel -> card : Find the device / Skip
+person -> card : Tap Find the device
+card --> channel : chooserTapped
+channel --> match : PromptResponse
+match -> ble : requestDevice(scanRequest)
+ble -> chrome : requestDevice(options)
+person -> device : Switch off for about 5 s, then on
+device --> chrome : HZN-T202-4F1A leaves the list, then returns
+alt The person picks the entry that came back
+  person -> chrome : Pick HZN-T202-4F1A
+  chrome --> ble : BluetoothDevice
+  ble --> match : ChosenDevice
+  match --> executor : match 4F1A, method guided (FR-013)
+  executor --> executor : Commit step with powerCycleMatch observation
+else The person closes the chooser
+  chrome --> ble : NotFoundError
+  ble --> match : USER_CANCELLED
+  match -> channel : post(question: "Which name disappeared and came back?")
+  person -> card : Type "HZN-T202-4F1A"
+  card --> channel : answer
+  channel --> match : freeText
+  match --> executor : match "HZN-T202-4F1A" (a name), method guided
+else The person taps Skip
+  card --> channel : skipped
+  channel --> match : skipped
+  match --> executor : match null; skip recorded (FR-052)
+end
+@enduml

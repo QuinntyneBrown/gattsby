@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Connect to the device
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(gattsby, person, "Shows the device's name and Connected, or why it failed")
+Rel(gattsby, chrome, "gatt.connect(); listens for gattserverdisconnected", "Web Bluetooth")
+Rel(chrome, device, "Opens a GATT connection", "Bluetooth LE")
+@enduml

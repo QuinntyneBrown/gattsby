@@ -1,0 +1,30 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Handle a device not found
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Usual-cause questions and the stand-within-2-metres action")
+  Component(channel, "PromptChannel", "Service", "Posts question and action prompts")
+  Component(rules, "Find-stage rules", "Pure helper", "Counts unrecognised scans; orders the next step")
+  Component(cause, "UsualCause", "Data", "Ordered causes with prompts and answers")
+  Component(executor, "ToolExecutor", "Service", "Runs scan_all_devices and assess_reachability")
+  Component(assess, "AssessReachabilityTool", "Tool", "assess_reachability")
+  Component(reach, "ReachabilityRules", "Pure helper", "Elimination rules of FR-014")
+  Component(verdict, "VerdictService", "Service", "Issues Not connectable with reasons")
+  Component(session, "InvestigationSession", "Service", "Observations so far")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and observations")
+
+Rel(rules, cause, "Reads order")
+Rel(rules, channel, "Posts the next open cause")
+Rel(channel, card, "Renders")
+Rel(person, card, "Answers")
+Rel(rules, executor, "Third scan; then assess_reachability")
+Rel(executor, assess, "run({}, ctx)")
+Rel(assess, session, "Reads observations")
+Rel(assess, reach, "assess(observations)")
+Rel(executor, verdict, "finish: Not connectable")
+Rel(executor, idb, "Commits each step")
+@enduml

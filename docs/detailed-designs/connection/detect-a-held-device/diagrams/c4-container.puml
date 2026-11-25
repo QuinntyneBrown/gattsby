@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Detect a held device
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Held-device detector and flow, prompts, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "heldSuspected observation and its raw-log evidence")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(spa, person, "Disconnect other apps and watches", "Screen")
+Rel(person, spa, "Done or Stop", "Touch or keyboard")
+Rel(spa, device, "Connects again after Done", "Web Bluetooth")
+Rel(spa, idb, "Commits the suspicion step")
+@enduml

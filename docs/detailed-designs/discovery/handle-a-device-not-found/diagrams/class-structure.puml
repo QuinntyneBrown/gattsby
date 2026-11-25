@@ -1,0 +1,83 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Handle a device not found
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class AssessReachabilityTool {
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<Reachability>>
+}
+
+class ReachabilityRules <<pure>> {
+  +assess(observations: Observation[]): Reachability
+  -unrecognisedScans(observations: Observation[]): number
+  -openCauses(observations: Observation[]): UsualCauseId[]
+}
+
+class Reachability {
+  +reachable: "yes" | "no" | "unknown"
+  +likelyCauses: string[]
+  +ruledOut: string[]
+}
+
+enum UsualCauseId {
+  poweredOn
+  noOtherConnection
+  withinRange
+}
+
+class UsualCause {
+  +id: UsualCauseId
+  +order: number
+  +prompt: PersonPrompt
+  +answers: string[]
+  +ruledOutBy: string[]
+}
+
+class UsualCauseCheck {
+  +cause: UsualCauseId
+  +state: "ruledOut" | "open"
+  +answer: string
+  +stepId: string
+}
+
+class Observation {
+  +id: string
+  +kind: string
+  +stepId: string
+  +data: unknown
+}
+
+class FindStageRules <<pure>> {
+  +nextFindStep(observations: Observation[]): FindStep
+}
+
+class VerdictService {
+  +issue(reason: StopReason, observations: Observation[]): Verdict
+}
+
+Tool <|.. AssessReachabilityTool
+AssessReachabilityTool ..> ReachabilityRules : delegates
+ReachabilityRules ..> Observation : reads
+ReachabilityRules ..> Reachability : returns
+Observation ..> UsualCauseCheck : data of kind usualCauseChecked
+UsualCauseCheck --> UsualCauseId
+UsualCause --> UsualCauseId
+FindStageRules ..> UsualCause : reads order
+FindStageRules ..> Observation : reads
+VerdictService ..> Reachability : reasons
+@enduml

@@ -1,0 +1,65 @@
+@startuml
+title UML sequence behaviour — Widen to all devices
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+  participant "Find-stage rules" as rules
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ScanAllDevicesTool" as scanall
+  participant "ScanFilterBuilder" as builder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome chooser" as chrome
+end box
+
+alt The person said the machine was not listed
+  person -> card : Answer "It wasn't listed"
+  card --> channel : answer
+  channel --> rules : answer recorded as observation
+  rules --> executor : Explain unfamiliar names; offer Show all nearby devices or Scan again (FR-012)
+  executor -> scanall : run({})
+  scanall -> scanall : scan_devices ran in this investigation (TOOL-003)
+  scanall -> builder : build(all)
+  builder --> scanall : acceptAllDevices true, full optionalServices
+  scanall -> channel : post(deviceChooser: "Show all nearby devices")
+  person -> card : Tap Show all nearby devices
+  card --> channel : chooserTapped
+  channel --> scanall : PromptResponse
+  scanall -> ble : requestDevice(acceptAllDevices, optionalServices)
+  ble -> chrome : navigator.bluetooth.requestDevice(options)
+  person -> chrome : Pick a device
+  chrome --> ble : BluetoothDevice
+  ble --> scanall : ChosenDevice
+  scanall --> executor : ok
+else The agent calls scan_all_devices before any filtered scan
+  executor -> scanall : run({})
+  scanall --> executor : PRECONDITION_FAILED; no chooser opens
+else No tap within 2 minutes
+  executor -> scanall : run({})
+  scanall -> channel : post(deviceChooser)
+  channel --> scanall : expired after 2 minutes
+  scanall --> executor : TIMEOUT "The scan needs a tap by the person" (FR-011)
+end
+@enduml

@@ -1,0 +1,61 @@
+@startuml
+title UML sequence behaviour — Conclude Not connectable
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as vpage
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ScanAllDevicesTool" as scanall
+  participant "AssessReachabilityTool" as assess
+  participant "ReachabilityRules" as reach
+  participant "VerdictService" as verdict
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome chooser" as chrome
+end box
+
+rules -> executor : Find-stage rules: scan_all_devices (third scan)
+executor -> scanall : run({}) on the person's tap
+scanall -> ble : requestDevice(acceptAllDevices)
+ble -> chrome : navigator.bluetooth.requestDevice(options)
+person -> chrome : Close; machine not listed
+chrome --> ble : NotFoundError
+ble --> scanall : USER_CANCELLED
+scanall --> executor : USER_CANCELLED; answer "It wasn't listed"
+rules -> executor : assess_reachability
+executor -> assess : run({})
+assess -> reach : assess(observations)
+alt All three usual causes ruled out
+  reach --> assess : no; Bluetooth Classic, ANT+, Wi-Fi, USB; ruledOut 3 (TOOL-034)
+  assess --> executor : Reachability
+  executor -> verdict : finish(Not connectable, reasons, evidence) (FR-014)
+else A cause is still "Don't know" after a second ask
+  reach --> assess : unknown; likely cause: console asleep
+  assess --> executor : Reachability
+  executor -> verdict : finish(Not connectable, open cause as reason; no elimination note)
+end
+verdict --> executor : Verdict
+executor -> vpage : Navigate to /investigations/:id/verdict
+vpage -> person : "Not connectable" with reasons and evidence links (FR-056)
+@enduml

@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Recover a dropped connection
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, IndexedDB")
+System_Ext(device, "Device", "Machine under investigation that dropped the link (Bluetooth LE)")
+
+Rel(device, chrome, "Link drops", "Bluetooth LE")
+Rel(chrome, gattsby, "gattserverdisconnected", "Web Bluetooth")
+Rel(gattsby, chrome, "Reconnects; restarts notifications", "Web Bluetooth")
+Rel(gattsby, person, "Shows reconnecting, reconnected or check the device")
+Rel(person, gattsby, "Taps Try again or Stop")
+@enduml

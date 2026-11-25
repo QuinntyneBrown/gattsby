@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Connect to the device
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Investigation page, connection banner, connect tool, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Connection step, connection time and raw-log entry")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(spa, person, "Shows name and connection state")
+Rel(person, spa, "Taps Try again or Choose another device", "Touch or keyboard")
+Rel(spa, device, "Connects to the GATT server", "Web Bluetooth")
+Rel(spa, idb, "Commits the connect step")
+@enduml

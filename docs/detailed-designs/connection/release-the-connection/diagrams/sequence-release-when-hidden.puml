@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Release a hidden page
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "HiddenPageWatcher" as watcher
+  participant "InvestigationSession" as session
+  participant "AgentOrchestrator" as orch
+  participant "ConnectionLifecycle" as life
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "Clock" as clock
+end box
+box "Browser and device" #F2F4F7
+  participant "Document" as doc
+end box
+
+person -> doc : Locks the phone
+doc --> watcher : visibilitychange, hidden
+watcher -> clock : setTimeout(60 s)
+alt Shown again within 60 s
+  doc --> watcher : visibilitychange, visible
+  watcher -> clock : clearTimeout
+else Still hidden at 60 s
+  clock --> watcher : timer fires
+  watcher -> session : recording running?
+  alt No recording running
+    session --> watcher : no
+    watcher -> orch : pause(hiddenTooLong)
+    watcher -> life : release(hiddenTooLong) (FR-018)
+  else subscribe_and_record is running
+    session --> watcher : yes
+    watcher -> watcher : Wait for the recording to end
+    session --> watcher : recording ended; page still hidden
+    watcher -> orch : pause(hiddenTooLong)
+    watcher -> life : release(hiddenTooLong)
+  end
+  person -> doc : Unlocks the phone
+  doc --> page : visible
+  page -> person : Paused; Resume reconnects first
+end
+@enduml

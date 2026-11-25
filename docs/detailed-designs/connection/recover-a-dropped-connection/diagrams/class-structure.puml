@@ -1,0 +1,102 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Recover a dropped connection
+
+class ConnectionSupervisor {
+  -subscription: Subscription
+  +start(investigationId: string): void
+  +stop(): void
+  -onDisconnected(event: DisconnectEvent): Promise<void>
+  +tryAgain(): Promise<void>
+}
+
+class AgentOrchestrator {
+  +pause(reason: PauseReason): void
+  +resume(options: { repeatStep: boolean }): void
+}
+
+interface "Tool<I, O>" as Tool {
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class ReconnectTool {
+  +run(input: ReconnectInput, ctx: ToolContext): Promise<ToolResult<ReconnectResult>>
+}
+
+class ReconnectPolicy <<pure>> {
+  +delayBefore(attempt: 1 | 2 | 3): number
+}
+
+class ReconnectResult {
+  +connected: boolean
+  +attempts: number
+  +restoredSubscriptions: string[]
+}
+
+abstract class BleLayer <<contract>> {
+  +disconnected$: Observable<DisconnectEvent>
+  +reconnect(deviceId: string, signal: AbortSignal): Promise<ToolResult<string[]>>
+}
+
+class WebBluetoothBleLayer {
+  +reconnect(deviceId: string, signal: AbortSignal): Promise<ToolResult<string[]>>
+}
+
+class SubscriptionRegistry {
+  -entries: Map<string, Subscription>
+  +add(sub: Subscription): void
+  +remove(characteristicUuid: string): void
+  +restore(server: BluetoothRemoteGATTServer): Promise<string[]>
+  +clear(): void
+}
+
+class Subscription {
+  +serviceUuid: string
+  +characteristicUuid: string
+  +listener: (event: Event) => void
+  +startedAt: number
+}
+
+class ConnectionRecovery {
+  +dropAt: number
+  +interruptedStepId: string
+  +attempts: Attempt[]
+  +restoredSubscriptions: string[]
+}
+
+abstract class Clock <<contract>> {
+  +now(): number
+  +setTimeout(fn: () => void, ms: number): TimerHandle
+  +clearTimeout(handle: TimerHandle): void
+  +delay(ms: number, signal: AbortSignal): Promise<void>
+}
+
+class InvestigationRecordValidator <<pure>> {
+  +validate(record: Investigation): ValidationResult
+  +discardUnreferenced(record: Investigation): Investigation
+}
+
+ConnectionSupervisor ..> BleLayer : listens to disconnected$
+ConnectionSupervisor --> AgentOrchestrator : pause and resume
+ConnectionSupervisor ..> ReconnectTool : via ToolExecutor
+ConnectionSupervisor ..> ConnectionRecovery : commits
+Tool <|.. ReconnectTool
+ReconnectTool ..> ReconnectPolicy
+ReconnectTool --> Clock
+ReconnectTool --> BleLayer
+ReconnectTool ..> ReconnectResult : returns
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer "1" *-- "1" SubscriptionRegistry
+SubscriptionRegistry "1" *-- "*" Subscription
+@enduml

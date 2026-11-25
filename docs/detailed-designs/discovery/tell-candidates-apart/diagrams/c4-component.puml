@@ -1,0 +1,33 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Tell candidates apart
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Pick the one that comes back; It's off; It's on; Skip")
+  Component(channel, "PromptChannel", "Service", "Posts deviceChooser, action and question prompts")
+  Component(rules, "Find-stage rules", "Pure helper", "Chooses automatic or guided; falls back to guided")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated call_tool")
+  Component(match, "PowerCycleMatchTool", "Tool", "power_cycle_match")
+  Component(watch, "WatchAdvertisementsTool", "Tool", "watch_advertisements (P2)")
+  Component(detector, "PowerCycleDetector", "Pure helper", "Names the candidate that stopped and resumed")
+  Component(caps, "CapabilityService", "Adapter", "Reports advertisement watching")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "requestDevice, watchAdvertisements, requestLEScan")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs scans and advertisement samples")
+}
+System_Ext(chrome, "Chrome", "Chooser and advertisement events")
+
+Rel(rules, caps, "Reads capability")
+Rel(rules, executor, "Proposes power_cycle_match with a mode")
+Rel(executor, match, "run(input, ctx)")
+Rel(match, channel, "Posts prompts")
+Rel(channel, card, "Renders")
+Rel(person, card, "Taps")
+Rel(match, watch, "Watches each candidate (automatic)")
+Rel(match, detector, "detect(samples, offAt, onAt)")
+Rel(match, ble, "requestDevice (guided)")
+Rel(watch, ble, "watchAdvertisements(deviceId, seconds)")
+Rel(ble, log, "Appends entries")
+Rel(ble, chrome, "Web Bluetooth calls", "Web Bluetooth")
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Scan for the device
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Find the device button; Show all nearby devices; Scan again")
+  Component(channel, "PromptChannel", "Service", "Posts the deviceChooser prompt; resolves it on the tap")
+  Component(rules, "Find-stage rules", "Pure helper", "Next step after a scan: question, widen, match or cause checks")
+  Component(executor, "ToolExecutor", "Service", "Runs a validated call_tool")
+  Component(scan, "ScanDevicesTool / ScanAllDevicesTool", "Tool", "scan_devices and scan_all_devices")
+  Component(permitted, "GetPermittedDevicesTool", "Tool", "get_permitted_devices (P2)")
+  Component(builder, "ScanFilterBuilder", "Pure helper", "Filters, optional services, excluded UUIDs")
+  Component(kb, "KnowledgeBase", "Service", "Known UUIDs, name prefixes, blocklist")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "The only code that calls requestDevice and getDevices")
+  Component(mapper, "BleErrorMapper", "Pure helper", "DOMException to ToolErrorCode")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs each scan")
+}
+System_Ext(chrome, "Chrome", "Device chooser")
+
+Rel(rules, executor, "Proposes the next Find step")
+Rel(executor, scan, "run(input, ctx)")
+Rel(executor, permitted, "run on resume")
+Rel(scan, builder, "build(mode, hints)")
+Rel(builder, kb, "Reads lists")
+Rel(scan, channel, "Posts deviceChooser prompt")
+Rel(channel, card, "Renders")
+Rel(person, card, "Taps Find the device")
+Rel(scan, ble, "requestDevice(scanRequest)")
+Rel(permitted, ble, "getPermittedDevices()")
+Rel(ble, mapper, "Maps errors")
+Rel(ble, log, "Appends scan entry")
+Rel(ble, chrome, "requestDevice, getDevices", "Web Bluetooth")
+@enduml

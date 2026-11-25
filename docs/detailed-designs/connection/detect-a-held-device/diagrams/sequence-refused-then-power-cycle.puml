@@ -1,0 +1,61 @@
+@startuml
+title UML sequence behaviour — Refused, then power-cycle
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "HeldDeviceDetector" as detector
+  participant "HeldDeviceFlow" as flow
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ConnectTool" as connect
+  participant "AssessReachabilityTool" as assess
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+executor -> connect : run({ deviceId })
+connect --> executor : CONNECTION_FAILED
+executor -> detector : onConnectFailed(CONNECTION_FAILED)
+detector --> executor : suspectHeld (refused)
+executor -> flow : start(trigger refused)
+flow -> store : commitStep(heldSuspected)
+flow -> card : "Disconnect other apps and watches"
+person -> card : Done
+flow -> executor : connect({ deviceId })
+executor -> connect : run(input, ctx)
+connect --> executor : CONNECTION_FAILED again
+executor --> flow : CONNECTION_FAILED again
+flow -> card : "Switch the treadmill off for about 5 seconds, then on, then tap Done." (FR-017)
+person -> card : Done
+flow -> executor : connect({ deviceId })
+executor -> connect : run(input, ctx)
+alt Connected
+  connect --> executor : ok
+executor --> flow : ok
+  flow -> flow : Resume the loop
+else Still refused or dropped early
+  connect --> executor : CONNECTION_FAILED
+executor --> flow : CONNECTION_FAILED
+  flow -> executor : assess_reachability
+  executor -> assess : run({})
+  assess --> executor : no; likely cause "held by another central" (TOOL-034)
+end
+@enduml

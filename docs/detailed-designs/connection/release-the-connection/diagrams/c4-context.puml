@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Release the connection
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, page visibility")
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, gattsby, "Finishes, stops or leaves the investigation; hides the page")
+Rel(gattsby, chrome, "stopNotifications(); gatt.disconnect()", "Web Bluetooth")
+Rel(chrome, device, "Closes the GATT connection", "Bluetooth LE")
+@enduml

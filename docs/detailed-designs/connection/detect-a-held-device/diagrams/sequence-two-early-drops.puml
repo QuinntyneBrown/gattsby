@@ -1,0 +1,62 @@
+@startuml
+title UML sequence behaviour — Two early drops, then Done
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ConnectionSupervisor" as sup
+  participant "HeldDeviceDetector" as detector
+  participant "HeldDeviceFlow" as flow
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> ble : connect(4F1A)
+ble -> device : gatt.connect()
+device --> ble : connected
+executor -> detector : onConnected(t0)
+device --> ble : drop at t0 + 3 s
+ble --> sup : disconnected$ { expected: false }
+sup -> detector : onDrop(event)
+detector --> sup : reconnect (first early drop)
+sup -> ble : reconnect (FR-016)
+ble -> device : gatt.connect()
+device --> ble : connected at t1
+device --> ble : drop at t1 + 2 s
+ble --> sup : disconnected$ { expected: false }
+sup -> detector : onDrop(event)
+detector --> sup : suspectHeld (second early drop, FR-017)
+sup -> flow : start(trigger twoEarlyDrops)
+flow -> store : commitStep(heldSuspected, likely, evidence: connect and drop entries)
+flow -> card : "Disconnect other apps and watches" — 3 steps, Done, Stop
+person -> card : Closes the gym app; turns watch Bluetooth off; taps Done
+card --> flow : done
+flow -> executor : connect(4F1A) (FR-017 AC2)
+executor -> ble : connect(4F1A)
+ble -> device : gatt.connect()
+device --> ble : connected, stays up
+executor --> flow : ok
+flow -> detector : reset()
+flow -> flow : Resume the loop
+@enduml

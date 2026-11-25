@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Check the usual causes
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as rules
+  participant "PromptChannel" as channel
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "UsualCause" as cause
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+rules -> rules : Find-stage rules: 2 unrecognised scans (FR-014)
+rules -> cause : first open cause
+cause --> rules : poweredOn
+rules -> channel : question "Is the console switched on and awake?"
+channel -> card : Answers + Don't know
+alt The person answers "No"
+  person -> card : No
+  rules -> channel : action "Switch the console on, then tap Done"
+  person -> card : Done
+end
+card --> channel : answer
+channel --> rules : poweredOn ruled out
+rules -> store : commitStep(usualCauseChecked poweredOn)
+rules -> cause : next open cause
+cause --> rules : noOtherConnection
+rules -> channel : question "Is any other app, phone or watch connected to it?"
+person -> card : "I disconnected one"
+channel --> rules : noOtherConnection ruled out
+rules -> store : commitStep(usualCauseChecked noOtherConnection)
+rules -> channel : action "Stand within 2 metres of the console, then tap Done."
+person -> card : Done
+channel --> rules : withinRange ruled out
+rules -> store : commitStep(usualCauseChecked withinRange)
+rules -> rules : Next: third scan (scan_all_devices)
+@enduml

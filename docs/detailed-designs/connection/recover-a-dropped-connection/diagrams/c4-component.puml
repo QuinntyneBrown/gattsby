@@ -1,0 +1,39 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Recover a dropped connection
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(banner, "ConnectionBanner", "Angular component", "Warning, success and danger tones")
+  Component(sup, "ConnectionSupervisor", "Service", "Reacts to unexpected disconnects")
+  Component(held, "HeldDeviceDetector", "Service", "Early-drop check (FR-017)")
+  Component(orch, "AgentOrchestrator", "Service", "pause(), resume({ repeatStep })")
+  Component(executor, "ToolExecutor", "Service", "Runs reconnect")
+  Component(reconnect, "ReconnectTool", "Tool", "reconnect with backoff")
+  Component(policy, "ReconnectPolicy", "Pure helper", "1, 2 and 4 s")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "disconnected$, reconnect()")
+  Component(subs, "SubscriptionRegistry", "BLE layer", "Restores notifications")
+  Component(log, "RawTrafficLog", "BLE layer", "Drop and attempt entries")
+  Component(store, "IndexedDbInvestigationStore", "Store", "commitStep in one transaction")
+  Component(validator, "InvestigationRecordValidator", "Pure helper", "Discards unreferenced data on reopen")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(ble, sup, "disconnected$ (unexpected)")
+Rel(sup, held, "Early drop?")
+Rel(sup, orch, "pause / resume")
+Rel(sup, executor, "Runs reconnect")
+Rel(sup, banner, "Banner model")
+Rel(person, banner, "Try again / Stop")
+Rel(executor, reconnect, "run(input, ctx)")
+Rel(reconnect, policy, "delayBefore(attempt)")
+Rel(reconnect, ble, "reconnect(deviceId)")
+Rel(ble, subs, "restore(server)")
+Rel(ble, log, "Appends entries")
+Rel(ble, device, "gatt.connect(); startNotifications()", "Web Bluetooth")
+Rel(executor, store, "commitStep(recovery)")
+Rel(store, validator, "Validates on reopen")
+Rel(store, idb, "One transaction per step")
+@enduml

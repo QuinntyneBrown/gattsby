@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Release the connection
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Connection lifecycle, leave guard, hidden-page watcher, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Release step with its reason; raw log")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Stop, Leave and disconnect, or hides the page", "Touch or keyboard")
+Rel(spa, device, "Stops notifications and disconnects", "Web Bluetooth")
+Rel(spa, idb, "Commits the release step")
+@enduml

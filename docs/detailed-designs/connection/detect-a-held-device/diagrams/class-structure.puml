@@ -1,0 +1,69 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Detect a held device
+
+class HeldDeviceDetector {
+  -episodes: ConnectionEpisode[]
+  +onConnected(at: number): HeldDecision
+  +onDrop(event: DisconnectEvent): HeldDecision
+  +onConnectFailed(code: ToolErrorCode): HeldDecision
+  +reset(): void
+}
+
+class HeldDeviceRules <<pure>> {
+  +EARLY_DROP_MS = 5000
+  +decide(episodes: ConnectionEpisode[], event: ConnectionEvent): HeldDecision
+}
+
+class ConnectionEpisode {
+  +connectedAt: number
+  +droppedAt?: number
+  +refused: boolean
+}
+
+enum HeldDecision {
+  none
+  reconnect
+  suspectHeld
+}
+
+class HeldSuspicion {
+  +trigger: "refused" | "twoEarlyDrops" | "notSeenWhileOn"
+  +episodes: ConnectionEpisode[]
+  +evidence: string[]
+  +at: number
+}
+
+class HeldDeviceFlow {
+  -stage: "disconnectOthers" | "powerCycle" | "handedOver"
+  +start(suspicion: HeldSuspicion): Promise<void>
+  -afterDone(): Promise<void>
+}
+
+class ConnectionSupervisor {
+  -onDisconnected(event: DisconnectEvent): Promise<void>
+}
+
+class PromptChannel {
+  +post(prompt: PersonPrompt): Promise<PromptResponse>
+}
+
+HeldDeviceDetector "1" *-- "*" ConnectionEpisode
+HeldDeviceDetector ..> HeldDeviceRules : delegates
+HeldDeviceRules ..> HeldDecision : returns
+HeldDeviceDetector ..> HeldDeviceFlow : starts on suspectHeld
+HeldDeviceFlow ..> HeldSuspicion : records
+HeldDeviceFlow ..> PromptChannel : posts action prompts
+ConnectionSupervisor --> HeldDeviceDetector : asks before reconnecting
+@enduml

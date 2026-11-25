@@ -1,0 +1,65 @@
+@startuml
+title UML sequence behaviour — Release on a verdict or a stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "StopInvestigationDialog" as stopdlg
+  participant "VerdictPage" as vpage
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+  participant "ConnectionLifecycle" as life
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "VerdictService" as verdict
+  participant "DisconnectTool" as disc
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "ApprovalLedger" as ledger
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+alt The loop ends (finish or another stop condition)
+  orch -> verdict : issue verdict (FR-045)
+else The person stops
+  person -> stopdlg : Stop and get the verdict
+  stopdlg -> stopdlg : busy "Disconnecting… this takes up to 2 seconds."
+  stopdlg -> orch : stop() (FR-009)
+  orch -> orch : Abort the current step; no further tool runs
+  orch -> verdict : issue Stopped by the person
+end
+orch -> life : release(finished or stopped)
+life -> executor : disconnect({ deviceId })
+executor -> disc : run(input, ctx)
+disc -> ble : disconnect(deviceId)
+ble -> ble : Mark the coming disconnect expected
+ble -> device : stopNotifications() per subscription, each bounded
+ble -> ble : Remove listeners; clear SubscriptionRegistry
+ble -> device : gatt.disconnect()
+ble -> ble : Abort pending reads; state disconnected
+ble --> disc : disconnected
+disc --> executor : { disconnected: true } (TOOL-008)
+executor -> store : commitStep(release, reason)
+life -> ledger : revokeAll()
+life --> orch : released
+orch -> vpage : Navigate to the verdict (FR-018 AC1)
+vpage -> person : Verdict, device already disconnected
+@enduml

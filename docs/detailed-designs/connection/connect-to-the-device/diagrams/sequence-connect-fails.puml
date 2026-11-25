@@ -1,0 +1,62 @@
+@startuml
+title UML sequence behaviour — Connection times out or is refused
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "HeldDeviceDetector" as held
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ConnectTool" as connect
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "BleErrorMapper" as mapper
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> connect : run({ deviceId: 4F1A })
+connect -> ble : connect(4F1A, 10000, signal)
+ble -> device : gatt.connect()
+alt No answer within 10 s
+  ble -> ble : Timer fires
+  ble -> device : gatt.disconnect() to cancel the attempt
+  ble -> ble : state failed, reason timeout
+  ble --> connect : TIMEOUT
+  connect --> executor : ok false, TIMEOUT (TOOL-006)
+  executor -> page : Feed "No answer from the treadmill within 10 s"
+  page -> person : "Couldn't connect" — Try again / Choose another device
+  alt Try again
+    person -> page : Try again
+    page -> executor : connect again
+  else Choose another device
+    person -> page : Choose another device
+    page -> executor : scan_devices on the tap
+  end
+else The device refuses the connection
+  device --> ble : NetworkError
+  ble -> mapper : map(error)
+  mapper --> ble : CONNECTION_FAILED
+  ble --> connect : CONNECTION_FAILED, message as text
+  connect --> executor : ok false, CONNECTION_FAILED
+  executor -> held : onConnectFailed() (FR-017)
+end
+@enduml

@@ -1,0 +1,89 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Release the connection
+
+enum ReleaseReason {
+  finished
+  stopped
+  leftScreen
+  hiddenTooLong
+}
+
+class ConnectionLifecycle {
+  +release(reason: ReleaseReason): Promise<void>
+}
+
+class HiddenPageWatcher {
+  -timer: TimerHandle | null
+  +start(): void
+  +stop(): void
+  -onVisibilityChange(): void
+  -onRecordingEnded(): void
+}
+
+class leaveInvestigationGuard <<CanDeactivateFn>> {
+  +canDeactivate(page: InvestigationPage): Promise<boolean>
+}
+
+class LeaveInvestigationDialog <<component>> {
+  +deviceName: input<string>
+  +busy: input<boolean>
+  +choice: output<"stay" | "leave">
+}
+
+interface "Tool<I, O>" as Tool {
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class DisconnectTool {
+  +run(input: DisconnectInput, ctx: ToolContext): Promise<ToolResult<DisconnectResult>>
+}
+
+class ReleaseRecord {
+  +reason: ReleaseReason
+  +at: number
+  +stoppedSubscriptions: string[]
+}
+
+abstract class BleLayer <<contract>> {
+  +disconnect(deviceId: string): Promise<ToolResult<DisconnectResult>>
+}
+
+class WebBluetoothBleLayer {
+  -expectedDisconnect: boolean
+  +disconnect(deviceId: string): Promise<ToolResult<DisconnectResult>>
+}
+
+class SubscriptionRegistry {
+  +stopAll(boundMs: number): Promise<string[]>
+  +clear(): void
+}
+
+class ApprovalLedger {
+  +revokeAll(): void
+}
+
+ConnectionLifecycle ..> DisconnectTool : via ToolExecutor
+ConnectionLifecycle ..> ReleaseRecord : commits
+ConnectionLifecycle --> ApprovalLedger : revokeAll at the end
+ConnectionLifecycle --> HiddenPageWatcher : stops
+HiddenPageWatcher ..> ConnectionLifecycle : release(hiddenTooLong)
+leaveInvestigationGuard ..> LeaveInvestigationDialog : opens
+leaveInvestigationGuard ..> ConnectionLifecycle : release(leftScreen)
+ReleaseRecord --> ReleaseReason
+Tool <|.. DisconnectTool
+DisconnectTool --> BleLayer
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer "1" *-- "1" SubscriptionRegistry
+@enduml

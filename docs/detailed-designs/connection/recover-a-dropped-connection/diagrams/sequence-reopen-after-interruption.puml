@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Reopen after an interruption
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "AgentOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "InvestigationRecordValidator" as validator
+end box
+box "Browser and device" #F2F4F7
+  participant "IndexedDB" as idb
+end box
+
+note over orch, idb : Step 7 committed in one transaction; step 8 was running when the tab closed (FR-060)
+person -> home : Reopen Gattsby
+home -> store : listInvestigations()
+store -> idb : read investigation, steps 1–7, raw log, recordings
+idb --> store : record
+store -> validator : validate(record)
+validator -> validator : Schema check passes
+validator -> validator : Recording of step 8 has no committed step
+validator --> store : discardUnreferenced → steps 1–7 intact (NFR-007)
+store -> idb : delete unreferenced recording
+store --> home : Investigation, resumable from step 7
+home -> person : "Resume" card
+person -> home : Resume
+home -> orch : resume(investigationId)
+orch -> orch : Reconnect first, then run step 8 again (FR-009)
+@enduml

@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Detect a held device
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack")
+System_Ext(device, "Device", "Machine that accepts one central at a time (Bluetooth LE)")
+System_Ext(other, "Other central", "Gym or console app on a phone, or a paired watch")
+
+Rel(other, device, "Holds the only connection", "Bluetooth LE")
+Rel(gattsby, chrome, "Connects; receives refusals and drops", "Web Bluetooth")
+Rel(chrome, device, "GATT connection attempts", "Bluetooth LE")
+Rel(gattsby, person, "Asks to disconnect other apps and watches, then to power-cycle")
+Rel(person, other, "Closes the app; turns watch Bluetooth off")
+@enduml

@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Tell candidates apart
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Device chooser, Web Bluetooth, advertisement watching (experimental)")
+System_Ext(device, "Device", "One of several look-alike machines (Bluetooth LE)")
+
+Rel(person, device, "Switches it off and on")
+Rel(person, gattsby, "Taps Find the device, It's off, It's on")
+Rel(person, chrome, "Watches the chooser; picks the entry that came back")
+Rel(gattsby, chrome, "Reopens the chooser or watches advertisements", "Web Bluetooth")
+Rel(device, chrome, "Advertises, stops, advertises again", "Bluetooth LE")
+@enduml

@@ -1,0 +1,71 @@
+@startuml
+title UML sequence behaviour — Filtered scan from a tap
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "PromptChannel" as channel
+  participant "Find-stage rules" as rules
+end box
+box "Frontend — Gattsby web app: tools, analysis and knowledge base" #ECFDF3
+  participant "ScanDevicesTool" as scan
+  participant "ScanFilterBuilder" as builder
+  participant "KnowledgeBase" as kb
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome chooser" as chrome
+end box
+
+executor -> scan : run({ machineType: treadmill, brand: Horizon })
+scan -> builder : build(filtered, hints)
+builder -> kb : scanFilterServices(), namePrefixes(), knownServiceUuids()
+kb --> builder : 0x1826, 0x1818, ... ; prefixes ; known UUIDs
+builder -> builder : Order Horizon and treadmill filters first; drop none (TOOL-002)
+builder -> builder : Move blocklisted UUIDs to excluded (FR-067)
+builder --> scan : ScanRequest
+scan -> channel : post(deviceChooser: "Find the device")
+channel -> card : Show prompt
+note over card, person : No chooser opens until the person taps (FR-011, NFR-016)
+person -> card : Tap Find the device
+card --> channel : chooserTapped
+channel --> scan : PromptResponse (inside the tap's activation)
+scan -> ble : requestDevice(filters incl. 0x1826, optionalServices)
+ble -> chrome : navigator.bluetooth.requestDevice(options)
+alt The person picks a device
+  person -> chrome : Pick HZN-T202-4F1A
+  chrome --> ble : BluetoothDevice
+  ble -> ble : Keep device by deviceId
+  ble -> log : Append scan entry with options and result (FR-073)
+  ble --> scan : ChosenDevice
+  scan --> executor : ok; serviceUnreachable observations for excluded UUIDs
+else The person closes the chooser
+  person -> chrome : Close
+  chrome --> ble : NotFoundError
+  ble -> ble : getAvailability() is true, so USER_CANCELLED
+  ble -> log : Append scan entry, cancelled
+  ble --> scan : USER_CANCELLED
+  scan --> executor : ok false, USER_CANCELLED
+  executor -> rules : nextFindStep(observations)
+  rules --> executor : ask_user "Was your machine in the list?" (FR-011)
+end
+@enduml

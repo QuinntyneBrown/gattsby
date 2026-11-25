@@ -1,0 +1,112 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Scan for the device
+
+interface "Tool<I, O>" as Tool {
+  +definition: ToolDefinition
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class ScanDevicesTool {
+  +run(input: ScanHints, ctx: ToolContext): Promise<ToolResult<ChosenDevice>>
+}
+
+class ScanAllDevicesTool {
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<ChosenDevice>>
+  -filteredScanRan(ctx: ToolContext): boolean
+}
+
+class GetPermittedDevicesTool {
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<PermittedDevices>>
+}
+
+class ScanHints {
+  +machineType?: string
+  +brand?: string
+}
+
+class ScanFilterBuilder <<pure>> {
+  +build(mode: "filtered" | "all", hints: ScanHints, kb: KnowledgeBase): ScanRequest
+}
+
+class ScanRequest {
+  +mode: "filtered" | "all"
+  +filters: ScanFilter[]
+  +acceptAllDevices: boolean
+  +optionalServices: string[]
+  +excluded: ExcludedUuid[]
+}
+
+class ScanFilter {
+  +services?: string[]
+  +namePrefix?: string
+}
+
+class ExcludedUuid {
+  +uuid: string
+  +reason: "BLOCKLISTED"
+}
+
+class ChosenDevice {
+  +deviceId: string
+  +name: string
+  +advertisedServices: string[]
+}
+
+class KnowledgeBase {
+  +knownServiceUuids(): string[]
+  +scanFilterServices(): string[]
+  +namePrefixes(): NamePrefix[]
+  +isBlocklisted(uuid: string): boolean
+}
+
+abstract class BleLayer <<contract>> {
+  +requestDevice(request: ScanRequest): Promise<ToolResult<ChosenDevice>>
+  +getPermittedDevices(): Promise<ToolResult<PermittedDevices>>
+}
+
+class WebBluetoothBleLayer {
+  -devices: Map<string, BluetoothDevice>
+  +requestDevice(request: ScanRequest): Promise<ToolResult<ChosenDevice>>
+  +getPermittedDevices(): Promise<ToolResult<PermittedDevices>>
+}
+
+class BleErrorMapper <<pure>> {
+  +map(error: unknown, bluetoothAvailable: boolean): ToolErrorCode
+}
+
+class PromptChannel {
+  +post(prompt: PersonPrompt): Promise<PromptResponse>
+  +respond(promptId: string, response: PromptResponse): void
+}
+
+Tool <|.. ScanDevicesTool
+Tool <|.. ScanAllDevicesTool
+Tool <|.. GetPermittedDevicesTool
+ScanDevicesTool ..> ScanFilterBuilder : builds request
+ScanAllDevicesTool ..> ScanFilterBuilder : builds request
+ScanDevicesTool ..> PromptChannel : waits for the tap
+ScanAllDevicesTool ..> PromptChannel : waits for the tap
+ScanDevicesTool --> BleLayer
+ScanAllDevicesTool --> BleLayer
+GetPermittedDevicesTool --> BleLayer
+ScanDevicesTool ..> ScanHints : input
+ScanFilterBuilder ..> KnowledgeBase : reads
+ScanFilterBuilder ..> ScanRequest : returns
+ScanRequest "1" *-- "*" ScanFilter
+ScanRequest "1" *-- "*" ExcludedUuid
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer ..> BleErrorMapper : maps errors
+WebBluetoothBleLayer ..> ChosenDevice : returns
+@enduml
