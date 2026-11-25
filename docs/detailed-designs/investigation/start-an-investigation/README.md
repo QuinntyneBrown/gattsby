@@ -60,7 +60,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   answer (see [ask-a-question](../../person-interaction/ask-a-question/README.md) and
   [request-a-physical-action](../../person-interaction/request-a-physical-action/README.md)).
 - **`KnowledgeBase.brandSuggestions(machineType)`** (`knowledge-base/knowledge-base.ts`) — returns
-  brands from `vendors.json` that make that type of machine, most specific first.
+  brands from the vendor files (`knowledge-base/data/vendors/<vendor-id>.json`) that make that type of machine, most specific first.
 - **`PromptCard`** (`ui/prompt-card/prompt-card.ts`) — presentation component that renders the
   question, suggested answers, the free-text field and "Done", and emits the `PromptResponse`.
 

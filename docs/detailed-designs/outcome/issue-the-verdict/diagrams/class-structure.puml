@@ -22,12 +22,12 @@ enum VerdictKind {
 }
 
 enum StopReason {
-  finish
-  finishThreshold
+  finished
+  confident
   stepBudget
   noProgress
   personStopped
-  emergencyStop
+  emergencyStopped
 }
 
 class Verdict {

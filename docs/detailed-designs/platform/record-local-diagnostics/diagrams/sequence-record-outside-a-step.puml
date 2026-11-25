@@ -41,9 +41,9 @@ alt Storage refuses the write
   person -> page : Tap "Try saving again"
   page -> store : commitStep(final step, verdict, pending diagnostics)
 else An uncaught error
-  handler -> recorder : record(UNEXPECTED_ERROR, current tool and stage if any)
+  handler -> recorder : record(INTERNAL_ERROR, current tool and stage if any)
   recorder -> store : Commit with the next step, or keep in the bounded window
-  recorder -> messages : messageFor(UNEXPECTED_ERROR)
+  recorder -> messages : messageFor(INTERNAL_ERROR)
   recorder -> toast : danger toast, role=alert, no auto-dismiss
   toast -> person : Plain message and what to do next
 end

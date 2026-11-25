@@ -61,7 +61,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   `InvestigationSession` and the store. It reads `ToolResult.summary` strings and observation
   statements only, never `ToolResult.data` or the raw traffic log, so no byte reaches the model. It
   takes the last 5 summaries (A-05), the current hypothesis from `HypothesisTracker`, and the tool
-  list from `ToolRegistry.toolListFor(stage, capabilities)` (FR-071, see
+  list from `ToolRegistry.listFor(stage, capabilities)` (FR-071, see
   [register a tool](../../tool-registry/register-a-tool/README.md)). A refusal's reason is a summary
   like any other, so the model sees it in the next state (FR-043).
 - **`SystemPrompt`** (`agent/system-prompt.ts`) — fixed text in 2 parts: the role and output rules,

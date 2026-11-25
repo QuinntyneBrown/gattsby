@@ -43,7 +43,7 @@ builder -> store : Last 5 step summaries (FR-041)
 store --> builder : 5 one-line summaries, no bytes
 builder -> hypo : current()
 hypo --> builder : FTMS treadmill, 0.35
-builder -> registry : toolListFor(identify, capabilities) (FR-071)
+builder -> registry : listFor(identify, capabilities) (FR-071)
 registry --> builder : allowed tools
 builder --> decider : DecisionState: facts, hypothesis, summaries, stage, tools
 decider -> budget : fit(system + tools + state, inputBudget)

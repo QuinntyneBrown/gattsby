@@ -94,7 +94,7 @@ The verdict set and its conditions come from FR-054 (wording provisional; OQ-06)
    (OQ-06); until it is answered `decide` returns *Partially decoded* with the stop reason in the
    summary.
 4. Emergency stop ends the loop (FR-039) but is not "the person stopped before a verdict". The verdict
-   is decided from the evidence and the stop reason `emergencyStop` is recorded. This reading is to be
+   is decided from the evidence and the stop reason `emergencyStopped` is recorded. This reading is to be
    confirmed with the Behavior Description (OQ-06).
 5. *Connected — protocol* takes the knowledge base's display name: "Connected — FTMS", "Connected —
    Heart Rate" (FR-054 AC2; wording for sensors is open, OQ-11).

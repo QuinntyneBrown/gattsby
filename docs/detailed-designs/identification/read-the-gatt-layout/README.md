@@ -71,7 +71,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - **`WebBluetoothBleLayer`** (`ble/web-bluetooth-ble-layer.ts`) — `enumerate()` calls
   `getPrimaryServices()` and `getCharacteristics()` and copies each `BluetoothCharacteristicProperties`
   flag; `read(service, characteristic)` calls `readValue()`. Both map Web Bluetooth `DOMException`s to
-  the shared error codes in one place (`ble/gatt-error-mapper.ts`): a disconnected device to
+  the shared error codes in one place (`BleErrorMapper`, `ble/ble-error-mapper.ts`): a disconnected device to
   `NOT_CONNECTED`, a blocklisted UUID to `BLOCKLISTED`, a service outside `optionalServices` to
   `SERVICE_NOT_PERMITTED`, an insufficient-authentication or insufficient-encryption ATT error to
   `AUTH_REQUIRED`, and any other ATT error to `GATT_ERROR` with the ATT code in the message.

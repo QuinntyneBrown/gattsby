@@ -118,7 +118,7 @@ open (OQ-09).
 | Code | Raised by | Meaning to the person |
 |---|---|---|
 | `STORAGE_FULL` | `InvestigationStore` | Shown on the verdict screen's error state (see issue the verdict). |
-| `UNEXPECTED_ERROR` | `DeviceProfileBuilder` | Not expected in use. The verdict screen omits "Open the device profile"; the record keeps the error. |
+| `INTERNAL_ERROR` | `DeviceProfileBuilder` | Not expected in use. The verdict screen omits "Open the device profile"; the record keeps the error. |
 
 ### Tests that prove it
 

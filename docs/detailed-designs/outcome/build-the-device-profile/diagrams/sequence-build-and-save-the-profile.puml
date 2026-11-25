@@ -40,13 +40,13 @@ builder -> builder : Leave out the raw log (FR-055)
 builder -> index : resolveAll(evidence of every metric and feature) (FR-056)
 alt A metric or feature has no resolving reference
   index --> builder : nothing resolves for one entry
-  builder -> builder : Leave the entry out; record UNEXPECTED_ERROR (NFR-025)
+  builder -> builder : Leave the entry out; record INTERNAL_ERROR (NFR-025)
 end
 builder -> validator : validate(profile) against format 1.0
 alt Schema violation
   validator --> builder : errors
   builder --> finish : invalid profile
-  finish -> store : Commit the verdict without a profile; record UNEXPECTED_ERROR (NFR-025)
+  finish -> store : Commit the verdict without a profile; record INTERNAL_ERROR (NFR-025)
 else Valid
   validator --> builder : valid
   builder --> finish : DeviceProfile

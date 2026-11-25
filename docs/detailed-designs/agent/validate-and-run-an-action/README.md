@@ -96,8 +96,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 10. **No exception escapes.** `ToolExecutor` catches anything a tool throws. An `AbortError` becomes
     `ABORTED`. Any other escaped exception, and any `data` that fails the tool's output schema, is a
     tool defect: the step is committed with `ok` false and recorded with its tool and stage
-    (NFR-025). The shared error codes have no code for a tool defect; the code to use is
-    `<TO SUPPLY>`.
+    (NFR-025). The shared error codes have no code for a tool defect; this design uses
+    `INTERNAL_ERROR`, which the
+    [result-envelope design](../../tool-registry/return-a-result-envelope/README.md) proposes adding
+    to section 3.
 11. **Untrusted text stays text.** Model output, device names, characteristic values, answers,
     imported values and text read from photos are held as plain strings and rendered only through
     Angular interpolation or property binding to text. The app uses no `innerHTML`,

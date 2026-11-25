@@ -17,7 +17,7 @@ Container_Boundary(spa, "Gattsby web app") {
 
 Rel(executor, recorder, "record(failed result)")
 Rel(orch, recorder, "record(refusal or timeout)")
-Rel(handler, recorder, "record(UNEXPECTED_ERROR)")
+Rel(handler, recorder, "record(INTERNAL_ERROR)")
 Rel(recorder, store, "Adds the entry to the step's transaction")
 Rel(recorder, messages, "messageFor(entry)")
 Rel(recorder, notice, "PlainMessage for blocking errors")

@@ -20,12 +20,12 @@ enum InvestigationStatus {
 }
 
 enum StopReason {
-  finish
-  confidenceReached
+  finished
+  confident
   stepBudget
   noProgress
-  stoppedByPerson
-  emergencyStop
+  personStopped
+  emergencyStopped
 }
 
 class Investigation {

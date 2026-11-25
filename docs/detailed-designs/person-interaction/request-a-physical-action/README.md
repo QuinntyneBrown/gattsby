@@ -61,7 +61,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   the prompt offers in each state: "Ready" and "Skip" in `waitingReady`; a recording countdown in
   `active`; "Done" and "Skip" in `waitingDone`.
 - **`PromptChannel`** (`agent/prompt-channel.ts`) — holds the one open prompt and runs the inactivity
-  timer on the injected `Clock` (`agent/clock.ts`). The timer restarts on every tap and is paused
+  timer on the injected `Clock` (`shared/clock.ts`). The timer restarts on every tap and is paused
   while a tied recording runs, because the recording itself is the activity.
 - **`PromptCard`** (`ui/prompt-card/prompt-card.component.ts`) — renders an `action` prompt: the
   instruction as the dock's heading, the detail line, and the buttons the reducer allows. "Done" may

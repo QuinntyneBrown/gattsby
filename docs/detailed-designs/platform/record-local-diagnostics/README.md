@@ -54,7 +54,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   OQ-06) and comes from the mocks where they draw it.
 - **`GattsbyErrorHandler`** (`diagnostics/gattsby-error-handler.ts`) — replaces Angular's
   `ErrorHandler` and listens for `unhandledrejection`. It records an uncaught error with the code
-  `UNEXPECTED_ERROR` and shows a danger toast. In a development build it also writes to the console;
+  `INTERNAL_ERROR` and shows a danger toast. In a development build it also writes to the console;
   the production build writes nowhere else.
 - **`ToolExecutor`** and **`AgentOrchestrator`** (`agent/`) — call `record` for every failed result
   envelope (FR-072), every validation refusal (FR-043), every model timeout or abort (FR-047), and
@@ -70,8 +70,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 1. Every error is recorded with its error code, tool, stage and timestamp in the investigation record
    (NFR-025). The tool is empty for an error outside a tool call; the stage is empty outside an
    investigation.
-2. Codes are the shared error codes of L2 section 3. `UNEXPECTED_ERROR` is added for an uncaught
-   error; it is not a tool error code and no tool returns it.
+2. Codes are the shared error codes of L2 section 3. An uncaught error is recorded as
+   `INTERNAL_ERROR`, the code for a defect inside Gattsby that the
+   [result-envelope design](../../tool-registry/return-a-result-envelope/README.md) proposes adding to
+   section 3.
 3. An entry inside an investigation is committed in the same transaction as its step (FR-060), so a
    crash loses at most the step in progress and its entry.
 4. A `STORAGE_FULL` entry cannot be stored when it happens. It stays pending in memory, is shown at
@@ -167,7 +169,7 @@ commits it with the step, and the investigation screen shows what failed and wha
 ### Behaviour — record an error outside a step
 
 A `STORAGE_FULL` refusal is held in memory, shown at once with the export offered first, and stored
-with the retried commit; an uncaught error is recorded as `UNEXPECTED_ERROR` and shown as a danger
+with the retried commit; an uncaught error is recorded as `INTERNAL_ERROR` and shown as a danger
 toast.
 
 ![Sequence diagram for recording an error outside a step](diagrams/sequence-record-outside-a-step.png)

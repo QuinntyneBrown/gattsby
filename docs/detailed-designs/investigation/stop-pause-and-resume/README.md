@@ -44,7 +44,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 - **`AgentOrchestrator`** (`agent/agent-orchestrator.ts`) — owns the `AbortController` of the step in
   progress and the loop's lifecycle:
-  - `stop('stoppedByPerson')` aborts the step in progress, cancels any open prompt, revokes every
+  - `stop('personStopped')` aborts the step in progress, cancels any open prompt, revokes every
     approval token, disconnects, and asks `VerdictService` for the verdict. It returns once the
     verdict is committed.
   - `pause()` aborts the step in progress, pauses notification subscriptions through the BLE layer,
@@ -85,7 +85,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    so no `write` or `control` call can run afterwards (FR-009).
 4. Stop disconnects within 2 seconds: notifications are stopped, and `gatt.disconnect()` runs at the
    latest when 2 seconds have passed, even if a `stopNotifications()` call has not answered.
-5. Stop ends the loop with `StopReason` `stoppedByPerson` (FR-045). `VerdictService` records the
+5. Stop ends the loop with `StopReason` `personStopped` (FR-045). `VerdictService` records the
    verdict *Stopped by the person*, and `DeviceProfileBuilder` builds the partial profile; both are
    committed with the status `finished`.
 6. A stopped investigation opens from the history on its verdict page, with its observations,
@@ -192,7 +192,7 @@ store and reconnects before the loop continues.
 ### Class structure
 
 `AgentOrchestrator` and `ResumeService` act on one `Investigation` through the store's status
-methods and on the device through the `BleLayer` contract; `VerdictService` turns `stoppedByPerson`
+methods and on the device through the `BleLayer` contract; `VerdictService` turns `personStopped`
 into a verdict and a partial profile.
 
 ![Class diagram for stopping, pausing and resuming an investigation](diagrams/class-structure.png)

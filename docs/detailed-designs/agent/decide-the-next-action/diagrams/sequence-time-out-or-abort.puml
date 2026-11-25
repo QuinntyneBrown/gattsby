@@ -48,7 +48,7 @@ alt The model does not answer within 10 seconds
 else The person taps Stop or Emergency stop
   decider -> model : prompt(text, responseConstraint, signal)
   person -> page : Tap Emergency stop
-  page -> orch : abortCurrentStep(emergencyStop) (FR-039)
+  page -> orch : abortCurrentStep(emergencyStopped) (FR-039)
   orch -> orch : controller.abort()
   model --> decider : AbortError at once
   decider -> decider : Clear timer
