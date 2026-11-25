@@ -18,10 +18,11 @@
     "check:headers": "node scripts/check-headers.ts",
     "e2e:critical": "playwright test --grep @critical",
     "kb": "node scripts/validate-knowledge-base.ts",
-    "prestart": "npm run kb",
-    "prebuild": "npm run kb",
-    "pretest": "npm run kb",
-    "prelint": "npm run kb"
+    "schemas": "node scripts/compile-schemas.ts",
+    "prestart": "npm run kb && npm run schemas",
+    "prebuild": "npm run kb && npm run schemas",
+    "pretest": "npm run kb && npm run schemas",
+    "prelint": "npm run kb && npm run schemas"
   },
   "private": true,
   "packageManager": "npm@10.9.9",

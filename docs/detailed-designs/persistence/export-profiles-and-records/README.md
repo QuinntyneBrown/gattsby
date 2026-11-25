@@ -126,7 +126,8 @@ and `omitted` is absent.
    entries, each page is validated and serialised to a string, and the strings become the parts of
    one `Blob`. Peak memory stays near one page, not the whole log (NFR-005).
 4. The dialog shows each file's size from `estimateSizes`. A record above 20 MB cannot be imported
-   again (NFR-015); the dialog's wording for that case is `<TO SUPPLY>` (no mock).
+   again (NFR-015). The dialog explains that the file is too large to import into Gattsby and
+   still offers the download.
 5. "Full investigation record" is unavailable for a profile imported without its record.
 6. On the Verdict page's error state (the verdict could not be saved), `exportRecord` adds the
    pending step and verdict held in memory, so nothing is lost (NFR-008).

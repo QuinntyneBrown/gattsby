@@ -1,0 +1,593 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gattsby device profile 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "kbVersion",
+    "id",
+    "investigationId",
+    "createdAt",
+    "identity",
+    "services",
+    "protocol",
+    "metrics",
+    "features",
+    "handshake",
+    "quirks",
+    "undetermined",
+    "verdict",
+    "missingToolRequests",
+    "counts"
+  ],
+  "properties": {
+    "kind": {
+      "const": "gattsby.device-profile"
+    },
+    "formatVersion": {
+      "const": "1.0"
+    },
+    "kbVersion": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "investigationId": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$"
+    },
+    "location": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "displayName",
+        "advertisedName",
+        "deviceType",
+        "maker",
+        "model",
+        "firmware",
+        "evidence"
+      ],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "advertisedName": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deviceType": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "maker": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "firmware": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:s|r|o|h|rec|ph)-[a-zA-Z0-9-]+$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["advertised", "discovered", "unreachable"],
+      "properties": {
+        "advertised": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+          }
+        },
+        "discovered": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+          }
+        },
+        "unreachable": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["uuid", "reason"],
+            "properties": {
+              "uuid": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 120
+              }
+            }
+          }
+        }
+      }
+    },
+    "protocol": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "variant", "service", "confidence", "hypothesisVersion"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "variant": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "hypothesisVersion": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "metric",
+          "label",
+          "unit",
+          "characteristic",
+          "rule",
+          "type",
+          "endianness",
+          "scale",
+          "status",
+          "evidence"
+        ],
+        "properties": {
+          "metric": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "characteristic": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+          },
+          "rule": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "offset", "length"],
+                "properties": {
+                  "kind": {
+                    "const": "offset"
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "length": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "flagBit"],
+                "properties": {
+                  "kind": {
+                    "const": "flag"
+                  },
+                  "flagBit": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "endianness": {
+            "enum": ["little", "big"]
+          },
+          "scale": {
+            "type": "number"
+          },
+          "rateHz": {
+            "type": "number",
+            "minimum": 0
+          },
+          "status": {
+            "enum": ["confirmed", "likely", "claimedOnly", "claimedNotSeen"]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?:s|r|o|h|rec|ph)-[a-zA-Z0-9-]+$"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["feature", "command", "range", "test", "status", "evidence"],
+        "properties": {
+          "feature": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "command": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["characteristic", "opCode", "parameter"],
+            "properties": {
+              "characteristic": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+              },
+              "opCode": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "parameter": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["type", "scale", "unit"],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "scale": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string",
+                        "maxLength": 120
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "range": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["min", "max", "increment", "source"],
+                "properties": {
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "increment": {
+                    "type": "number"
+                  },
+                  "source": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "test": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["from", "to", "result"],
+                "properties": {
+                  "from": {
+                    "type": "number"
+                  },
+                  "to": {
+                    "type": "number"
+                  },
+                  "result": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": ["confirmed", "claimedOnly", "refused"]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?:s|r|o|h|rec|ph)-[a-zA-Z0-9-]+$"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "handshake": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vendor", "characteristic", "bytes", "source"],
+          "properties": {
+            "vendor": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "characteristic": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+            },
+            "bytes": {
+              "type": "string",
+              "maxLength": 280
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 280
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quirks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "evidence"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 280
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?:s|r|o|h|rec|ph)-[a-zA-Z0-9-]+$"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "undetermined": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["subject", "reason"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 280
+          }
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "label", "protocol", "summary"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "connected",
+            "partiallyDecoded",
+            "needsMissingTool",
+            "notConnectable",
+            "stoppedByPerson"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 280
+        }
+      }
+    },
+    "missingToolRequests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 120
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps", "packets", "approvedCommands"],
+      "properties": {
+        "steps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "packets": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "approvedCommands": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "exportedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$"
+    },
+    "appVersion": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 4000
+      }
+    }
+  }
+}

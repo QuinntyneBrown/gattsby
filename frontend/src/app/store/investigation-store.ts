@@ -20,6 +20,8 @@ export abstract class InvestigationStore {
   abstract get(id: string): Promise<InvestigationRecord>;
   abstract list(): Promise<Investigation[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
+  abstract rawEvidence(id: string, ids: readonly string[]): Promise<RawLogEntry[]>;
+  abstract getProfile(id: string): Promise<import('./model/device-profile').DeviceProfile>;
   /** Returns the packets linked to one recording, or null if the recording does not exist. */
   abstract recordedPackets(
     investigationId: string,

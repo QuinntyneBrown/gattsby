@@ -89,8 +89,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 7. UUIDs are stored in canonical 128-bit lowercase form. The UI shortens Bluetooth SIG base UUIDs to
    the `0x2ACD` form.
 8. A built profile that fails its schema is a defect. The commit is refused, and the failure is
-   recorded with the tool and stage (NFR-025). How the verdict is then stored is `<TO SUPPLY>`: the
-   requirements name no fallback.
+   recorded with the tool and stage (NFR-025). The investigation remains recoverable at the last
+   committed step. The verdict and profile are committed together.
+
+For OQ-09, format 1.0 follows the FR-055 field list. The published schema is the interchange
+contract for consumers of the profile.
 
 ### Profile format 1.0
 

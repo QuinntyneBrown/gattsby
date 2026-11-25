@@ -6,6 +6,7 @@ import { CapabilityDetector } from '../environment/capability-detector';
 import { KnowledgeBase } from '../knowledge-base/knowledge-base';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
 import { HypothesisTracker } from '../outcome/hypothesis-tracker';
+import { buildProfile } from '../outcome/profile-builder';
 import { verdictLabel, type VerdictFacts } from '../outcome/verdict-builder';
 import { Clock } from '../shared/clock';
 import { InvestigationStore } from '../store/investigation-store';
@@ -421,6 +422,22 @@ export class PlaybookOrchestrator {
         evidence: result.evidence,
       };
       this.statusSignal.set('concluding');
+      const referenced = [
+        ...new Set(newState.readableMetrics.flatMap((metric) => metric.evidence)),
+      ];
+      const storedEvidence = await this.store.rawEvidence(id, referenced);
+      const profile = buildProfile(
+        this.investigationSignal()!,
+        verdict,
+        newState,
+        kb,
+        hypothesis ?? facts.hypothesis,
+        allObservations,
+        [...this.steps(), step],
+        facts.missingToolRequests,
+        [...storedEvidence, ...rawLog],
+        this.log.count(),
+      );
       await this.store.commitVerdict({
         investigationId: id,
         step,
@@ -429,6 +446,7 @@ export class PlaybookOrchestrator {
         hypothesis,
         missingToolRequests: requests,
         verdict,
+        profile,
         investigationPatch: {
           status: verdict.kind === 'stoppedByPerson' ? 'stopped' : 'concluded',
           endedAt: Date.now(),

@@ -1,4 +1,5 @@
 import type { Hypothesis } from './hypothesis';
+import type { DeviceProfile } from './device-profile';
 import type { InvestigationPatch } from './investigation';
 import type { MissingToolRequest } from './missing-tool-request';
 import type { Observation } from './observation';
@@ -6,8 +7,7 @@ import type { RawLogEntry } from './raw-log-entry';
 import type { Step } from './step';
 import type { Verdict } from './verdict';
 
-// The verdict, the final step and what it produced, written together (issue-the-verdict design). The device profile
-// joins it with journey 4.
+// The verdict, profile and final step, written together (FR-055).
 export interface VerdictCommit {
   readonly investigationId: string;
   readonly step: Step;
@@ -16,5 +16,6 @@ export interface VerdictCommit {
   readonly hypothesis: Hypothesis | null;
   readonly missingToolRequests: readonly MissingToolRequest[];
   readonly verdict: Verdict;
+  readonly profile: DeviceProfile;
   readonly investigationPatch: InvestigationPatch;
 }

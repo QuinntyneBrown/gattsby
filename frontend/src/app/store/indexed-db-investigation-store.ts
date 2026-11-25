@@ -8,6 +8,7 @@ import {
   upgrade,
 } from './database-schema';
 import type { Investigation, NewInvestigation } from './model/investigation';
+import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { Recording } from './model/recording';
@@ -86,6 +87,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       'observations',
       'hypotheses',
       'missingToolRequests',
+      'profiles',
     ];
     await this.write(stores, 'strict', (tx) => {
       const store = tx.objectStore('investigations');
@@ -109,10 +111,12 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
         commit.observations.forEach((o) => tx.objectStore('observations').put(o));
         if (commit.hypothesis) tx.objectStore('hypotheses').put(commit.hypothesis);
         commit.missingToolRequests.forEach((r) => tx.objectStore('missingToolRequests').put(r));
+        tx.objectStore('profiles').add(commit.profile);
         store.put({
           ...current,
           ...commit.investigationPatch,
           verdict: commit.verdict,
+          profileId: commit.profile.id,
           lastCommittedStep: commit.step.n,
         });
       };
@@ -181,6 +185,31 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return (await request(
       tx.objectStore('rawLog').getAll(investigationRange(id)),
     )) as RawLogEntry[];
+  }
+
+  async rawEvidence(id: string, ids: readonly string[]): Promise<RawLogEntry[]> {
+    const db = await this.open();
+    const store = db.transaction('rawLog').objectStore('rawLog');
+    const rows = await Promise.all(
+      ids
+        .filter((evidence) => /^r-\d+$/.test(evidence))
+        .map(
+          (evidence) =>
+            request(store.get([id, Number(evidence.slice(2))])) as Promise<RawLogEntry | undefined>,
+        ),
+    );
+    return rows.filter((row) => row !== undefined);
+  }
+
+  async getProfile(id: string): Promise<DeviceProfile> {
+    const db = await this.open();
+    const row = await request(db.transaction('profiles').objectStore('profiles').get(id));
+    if (!row) throw new StoreError('NOT_FOUND', 'No device profile with that id.');
+    const { default: validate } = await import('../../schemas/generated/device-profile-1.js');
+    if (!validate(row)) {
+      throw new StoreError('UNREADABLE_PROFILE', 'This profile couldn’t be opened.');
+    }
+    return row as DeviceProfile;
   }
 
   async recordedPackets(
@@ -256,7 +285,6 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       const tx = db.transaction(stores, 'readwrite', { durability });
       tx.oncomplete = () => resolve();
       tx.onabort = () => reject(toStoreError(tx));
-      tx.onerror = (event) => event.preventDefault();
       work(tx);
     });
   }
