@@ -82,12 +82,13 @@ Web Bluetooth reports notifications and indications through the same event. The 
 2. The target is 50 notifications per second per characteristic on up to 4 characteristics, with no
    entry dropped and the UI delayed by at most one frame (NFR-003).
 3. Flushes run in batches, off the value handler's path. The batch size and interval are
-   `<TO SUPPLY>`, set from the NFR-003 and NFR-005 measurements.
+   proposed as 200 entries or 500 ms, whichever comes first (journey 2), to be tuned from the
+   NFR-003 and NFR-005 measurements.
 
 ### Staying bounded (NFR-005)
 
 - The window holds the last 2,000 entries; older entries leave memory once flushed.
-- The flush queue is bounded; its limit is `<TO SUPPLY>`. A queue that cannot drain because a write
+- The flush queue is bounded; its limit is 10,000 entries (proposed, journey 2). A queue that cannot drain because a write
   failed for quota stops recording (below).
 - Recordings longer than 120 seconds are refused with `INVALID_INPUT` (TOOL-013), and the model's
   history is capped (see the build-the-decision-state design).

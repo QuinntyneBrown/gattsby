@@ -1,0 +1,31 @@
+{
+  "kind": "standard-service",
+  "id": "running-speed-cadence",
+  "name": "Running Speed and Cadence",
+  "shortName": "Running Speed and Cadence",
+  "hypothesisLabel": "Standard running sensor (Running Speed and Cadence)",
+  "uuid": "0x1814",
+  "scanFilter": true,
+  "source": {
+    "type": "specification",
+    "title": "Bluetooth SIG Running Speed and Cadence Service 1.0"
+  },
+  "characteristics": [
+    {
+      "uuid": "0x2a53",
+      "name": "RSC Measurement",
+      "properties": ["notify"],
+      "deviceType": "treadmill"
+    },
+    { "uuid": "0x2a54", "name": "RSC Feature", "properties": ["read"] }
+  ],
+  "profiles": [
+    {
+      "id": "rsc-sensor",
+      "label": "Running speed and cadence sensor",
+      "deviceType": "treadmill",
+      "requires": ["0x2a53"],
+      "expects": ["0x2a54"]
+    }
+  ]
+}

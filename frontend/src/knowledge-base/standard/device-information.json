@@ -1,0 +1,68 @@
+{
+  "kind": "standard-service",
+  "id": "device-information",
+  "name": "Device Information",
+  "shortName": "Device Information",
+  "uuid": "0x180a",
+  "scanFilter": false,
+  "source": { "type": "specification", "title": "Bluetooth SIG Device Information Service 1.1" },
+  "characteristics": [
+    {
+      "uuid": "0x2a29",
+      "name": "Manufacturer Name String",
+      "properties": ["read"],
+      "decoder": "utf8-string",
+      "field": "manufacturer"
+    },
+    {
+      "uuid": "0x2a24",
+      "name": "Model Number String",
+      "properties": ["read"],
+      "decoder": "utf8-string",
+      "field": "model"
+    },
+    {
+      "uuid": "0x2a25",
+      "name": "Serial Number String",
+      "properties": ["read"],
+      "decoder": "utf8-string",
+      "field": "serial"
+    },
+    {
+      "uuid": "0x2a27",
+      "name": "Hardware Revision String",
+      "properties": ["read"],
+      "decoder": "utf8-string",
+      "field": "hardware"
+    },
+    {
+      "uuid": "0x2a26",
+      "name": "Firmware Revision String",
+      "properties": ["read"],
+      "decoder": "utf8-string",
+      "field": "firmware"
+    },
+    {
+      "uuid": "0x2a28",
+      "name": "Software Revision String",
+      "properties": ["read"],
+      "decoder": "utf8-string",
+      "field": "software"
+    },
+    {
+      "uuid": "0x2a23",
+      "name": "System ID",
+      "properties": ["read"],
+      "decoder": "hex",
+      "field": "systemId"
+    },
+    {
+      "uuid": "0x2a50",
+      "name": "PnP ID",
+      "properties": ["read"],
+      "decoder": "hex",
+      "field": "pnpId"
+    }
+  ],
+  "profiles": []
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "brand-suggestions",
+  "note": "Display names that answer the Prepare stage's brand question and order the scan filters. They claim nothing about a protocol (start-an-investigation design).",
+  "byMachineType": {
+    "treadmill": ["Technogym", "Life Fitness", "Matrix", "Horizon", "NordicTrack"],
+    "bike": ["Peloton", "Wahoo", "Schwinn", "Echelon", "Keiser"],
+    "rower": ["Concept2", "WaterRower", "Hydrow", "Technogym", "Domyos"],
+    "cross-trainer": ["Life Fitness", "Precor", "Matrix", "Technogym", "Domyos"],
+    "heart-rate-sensor": ["Polar", "Garmin", "Wahoo", "Coospo", "Suunto"],
+    "other": ["Technogym", "Life Fitness", "Concept2", "Wahoo", "Polar"],
+    "unknown": ["Technogym", "Life Fitness", "Concept2", "Wahoo", "Polar"]
+  }
+}

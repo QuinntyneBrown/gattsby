@@ -62,7 +62,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   is not consulted at Prepare.
 - **`KnowledgeBase.brandSuggestions(type)`** (`knowledge-base/knowledge-base.ts`) — vendor names from
   the knowledge base's vendor signatures for the given machine type, at most 6 (TOOL-025's answer
-  limit). Which vendors appear for each type, and in what order, is `<TO SUPPLY>`.
+  limit). The vendors with a signature for the type come first; the rest of the six places are
+  filled from `suggestions/brands.json`, a knowledge-base file that lists well-known brand names per
+  machine type in display order (journey 2). These names only answer the question and order the scan
+  filters; they claim nothing about a protocol, so they carry no `source`. While no vendor file ships
+  (the Echelon entry is still being researched), every suggestion comes from that list.
 - **`askUserTool`** and **`requestActionTool`** (`tools/person/ask-user.tool.ts`,
   `tools/person/request-action.tool.ts`) — post the prompts through `PromptChannel`; their rules are
   in the ask-the-person design.
@@ -93,7 +97,7 @@ to `unknown` or the brand to `null`; neither counts as an error, and the stage e
 ### Location label
 
 - The label is optional and may be added, changed or cleared at any stage until the verdict. Its
-  maximum length is `<TO SUPPLY>`; the import schema limits it like every string (NFR-015).
+  maximum length is 120 characters (proposed; the location label arrives with journey 4); the import schema limits it like every string (NFR-015).
 - The label is rendered as text (see the render-untrusted-text design).
 - No code calls `navigator.geolocation`, and the `Permissions-Policy` header does not allow it (see
   the serve-offline-and-private design). The fake browser in the acceptance specs replaces

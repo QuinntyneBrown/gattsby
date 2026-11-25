@@ -64,7 +64,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 ### Connect rules
 
 1. The screen shows the device's name and "Connected" within 10 seconds, or a failure with its reason
-   (FR-015). The failure wording is `<TO SUPPLY>` (OQ-06); no mock shows it yet.
+   (FR-015). A refused connection goes to the held-by-other prompt below; a connection that does
+   not answer in time shows `docs/mocks/pages/investigation/error.html` ("Couldn't connect"), built
+   with the recover-a-dropped-connection journey (10). Journey 2 scripts a device that refuses its
+   first connection (`held-by-other`) for FR-017.
 2. The connection time `at` is the high-resolution timestamp of the `connect` raw-log entry, and the
    step commits it (FR-015).
 3. A device name containing markup, such as `<b>`, is shown literally (FR-015, NFR-013); no template

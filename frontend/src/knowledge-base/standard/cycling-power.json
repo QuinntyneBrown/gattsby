@@ -1,0 +1,29 @@
+{
+  "kind": "standard-service",
+  "id": "cycling-power",
+  "name": "Cycling Power",
+  "shortName": "Cycling Power",
+  "hypothesisLabel": "Standard power meter (Cycling Power)",
+  "uuid": "0x1818",
+  "scanFilter": true,
+  "source": { "type": "specification", "title": "Bluetooth SIG Cycling Power Service 1.1" },
+  "characteristics": [
+    {
+      "uuid": "0x2a63",
+      "name": "Cycling Power Measurement",
+      "properties": ["notify"],
+      "deviceType": "bike"
+    },
+    { "uuid": "0x2a65", "name": "Cycling Power Feature", "properties": ["read"] },
+    { "uuid": "0x2a5d", "name": "Sensor Location", "properties": ["read"] }
+  ],
+  "profiles": [
+    {
+      "id": "cycling-power-meter",
+      "label": "Cycling power meter",
+      "deviceType": "bike",
+      "requires": ["0x2a63"],
+      "expects": ["0x2a65"]
+    }
+  ]
+}

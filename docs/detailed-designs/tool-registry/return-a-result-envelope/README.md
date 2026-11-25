@@ -68,7 +68,9 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    `TimeoutError` becomes `TIMEOUT` (FR-072 AC1).
 2. Any other throw is a defect. The shared codes hold no code for a defect, so the design proposes
    adding `INTERNAL_ERROR` ("An unexpected error in Gattsby's own code") to L2 section 3; until that
-   is decided, the code a defect maps to is `<TO SUPPLY>`. The step records the exception's name
+   is decided, a defect maps to `GATT_ERROR` when it came from the BLE layer and otherwise ends the
+   loop with the stop reason `failure` (see the end-the-loop design), recorded with its tool and
+   stage (journey 2). The step records the exception's name
    and message, never its stack in the model's state.
 3. `summary` is plain text on one line. Line breaks become spaces, and a summary longer than 200
    characters is cut to 199 characters plus "…".

@@ -63,7 +63,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 1. Facts scored: the service and characteristic UUIDs in the layout, the advertised name, the Device
    Information manufacturer and model, and any manufacturer IDs from advertisement samples (FR-021).
-2. Each profile's weights are knowledge-base data; their values are `<TO SUPPLY>` (FR-066). A layout
+2. Each profile's weights are knowledge-base data (FR-066). Journey 2 proposes: a required
+   characteristic present 60 (shared across `requires`), each expected characteristic 10 (at most
+   20), the protocol's service present 15, a name pattern or Device Information maker agreeing with a
+   vendor signature 5; the sum is capped at 100. A layout
    with `0x1826` and Treadmill Data (`0x2ACD`) scores at least 90 for "FTMS treadmill" (TOOL-012).
 3. The same input always gives the same output (TOOL-012): candidates sort by score, highest first,
    and then by `profileId`; no clock, random value or map order enters the result.
@@ -83,7 +86,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - The 10-point margin compares the best candidate of each protocol. Profiles that share a protocol and
   device type, such as a generic FTMS treadmill and a Horizon FTMS treadmill, lead to the same next
   step and do not make the match ambiguous.
-- The heuristic threshold is `<TO SUPPLY>`; it shall be below 90, so that an FTMS treadmill is
+- The heuristic threshold is 70 (`LoopConfig.profileThreshold`, journey 2); it shall be below 90, so that an FTMS treadmill is
   decided by the rules alone (FR-021, TOOL-012).
 - A device exposing only unknown services is always ambiguous: the model, or in checklist mode the
   checklist, chooses the next step (FR-021).

@@ -81,7 +81,10 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 3. The filtered request has one `{ services: [uuid] }` filter per known service that the knowledge
    base marks as a scan filter, and one `{ namePrefix }` filter per vendor name prefix. Generic
    services such as Device Information (`0x180A`) and Battery (`0x180F`) would list unrelated
-   devices; whether they serve as filters is `<TO SUPPLY>`.
+   devices, so they are not scan filters: the knowledge base marks each standard service with
+   `scanFilter` (true for Fitness Machine, Cycling Power, Cycling Speed and Cadence, Heart Rate and
+   Running Speed and Cadence; false for Device Information and Battery). They stay in
+   `optionalServices`.
 4. `machineType` and `brand` (from the Prepare stage's answers) only order the filters, placing the
    brand's prefixes and the machine type's standard service first. They never remove a filter
    (TOOL-002).
@@ -104,6 +107,12 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 |---|---|---|
 | The person picks a device | `ok: true` | Observation "Chosen device"; the connect-to-the-device design runs next |
 | The person closes the chooser | `USER_CANCELLED` | State `find-cancelled`: "Show all nearby devices" or "Scan again" (FR-011, FR-012) |
+
+The `find-cancelled` prompt is the tap prompt of the next scan, because both of its buttons open the
+chooser and Chrome accepts `requestDevice` only inside the tap that asked for it. The rules decide
+`scan_all_devices`; its tap prompt offers "Show all nearby devices" and, as a second button, "Scan
+again", which runs the filtered request instead and records the step's mode as `filtered`. It is
+therefore not an `ask_user` question and carries no "Don't know" answer, as the mock shows.
 | No tap within 2 minutes | `TIMEOUT` | "Still there?" (ask-the-person design) |
 | `availability()` is false, or Chrome refuses by policy | `BLE_UNAVAILABLE` | Plain message to switch Bluetooth on; no chooser opens |
 | No `navigator.bluetooth` | `UNSUPPORTED` | The check-capabilities design explains the browser |

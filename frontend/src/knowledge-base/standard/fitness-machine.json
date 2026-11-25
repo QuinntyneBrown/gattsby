@@ -1,0 +1,84 @@
+{
+  "kind": "standard-service",
+  "id": "fitness-machine",
+  "name": "Fitness Machine",
+  "shortName": "FTMS",
+  "hypothesisLabel": "Standard fitness machine (FTMS)",
+  "uuid": "0x1826",
+  "scanFilter": true,
+  "source": { "type": "specification", "title": "Bluetooth SIG Fitness Machine Service 1.0" },
+  "characteristics": [
+    {
+      "uuid": "0x2acd",
+      "name": "Treadmill Data",
+      "properties": ["notify"],
+      "deviceType": "treadmill"
+    },
+    {
+      "uuid": "0x2ace",
+      "name": "Cross Trainer Data",
+      "properties": ["notify"],
+      "deviceType": "cross-trainer"
+    },
+    { "uuid": "0x2ad1", "name": "Rower Data", "properties": ["notify"], "deviceType": "rower" },
+    {
+      "uuid": "0x2ad2",
+      "name": "Indoor Bike Data",
+      "properties": ["notify"],
+      "deviceType": "bike"
+    },
+    {
+      "uuid": "0x2acc",
+      "name": "Fitness Machine Feature",
+      "properties": ["read"],
+      "decoder": "fitness-machine-feature"
+    },
+    { "uuid": "0x2ad3", "name": "Training Status", "properties": ["read", "notify"] },
+    {
+      "uuid": "0x2ad4",
+      "name": "Supported Speed Range",
+      "properties": ["read"],
+      "decoder": "supported-speed-range"
+    },
+    { "uuid": "0x2ad5", "name": "Supported Inclination Range", "properties": ["read"] },
+    { "uuid": "0x2ad6", "name": "Supported Resistance Level Range", "properties": ["read"] },
+    { "uuid": "0x2ad7", "name": "Supported Heart Rate Range", "properties": ["read"] },
+    { "uuid": "0x2ad8", "name": "Supported Power Range", "properties": ["read"] },
+    {
+      "uuid": "0x2ad9",
+      "name": "Fitness Machine Control Point",
+      "properties": ["write", "indicate"]
+    },
+    { "uuid": "0x2ada", "name": "Fitness Machine Status", "properties": ["notify"] }
+  ],
+  "profiles": [
+    {
+      "id": "ftms-treadmill",
+      "label": "FTMS treadmill",
+      "deviceType": "treadmill",
+      "requires": ["0x2acd"],
+      "expects": ["0x2acc", "0x2ad9"]
+    },
+    {
+      "id": "ftms-indoor-bike",
+      "label": "FTMS indoor bike",
+      "deviceType": "bike",
+      "requires": ["0x2ad2"],
+      "expects": ["0x2acc", "0x2ad9"]
+    },
+    {
+      "id": "ftms-rower",
+      "label": "FTMS rower",
+      "deviceType": "rower",
+      "requires": ["0x2ad1"],
+      "expects": ["0x2acc", "0x2ad9"]
+    },
+    {
+      "id": "ftms-cross-trainer",
+      "label": "FTMS cross-trainer",
+      "deviceType": "cross-trainer",
+      "requires": ["0x2ace"],
+      "expects": ["0x2acc", "0x2ad9"]
+    }
+  ]
+}

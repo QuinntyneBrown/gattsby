@@ -1,16 +1,21 @@
 import type { Locator, Page } from '@playwright/test';
 
-// The Home page at `/` (docs/mocks/pages/home/default.html). Journey 1 draws only the app shell
-// around it: the skip link and the app bar with the brand.
+// The Home page at `/` (docs/mocks/pages/home/empty.html and default.html).
 export class HomePage {
   readonly brand: Locator;
   readonly skipLink: Locator;
   readonly main: Locator;
+  readonly heading: Locator;
+  readonly identifyADevice: Locator;
+  readonly modeChip: Locator;
 
   constructor(private readonly page: Page) {
     this.brand = page.getByRole('link', { name: 'Gattsby, home' });
     this.skipLink = page.getByRole('link', { name: 'Skip to content' });
     this.main = page.getByRole('main');
+    this.heading = page.getByRole('heading', { level: 1 });
+    this.identifyADevice = page.getByRole('button', { name: 'Identify a device' });
+    this.modeChip = page.locator('.mode-chip');
   }
 
   async goto(): Promise<void> {
@@ -19,5 +24,9 @@ export class HomePage {
 
   title(): Promise<string> {
     return this.page.title();
+  }
+
+  async identify(): Promise<void> {
+    await this.identifyADevice.click();
   }
 }
