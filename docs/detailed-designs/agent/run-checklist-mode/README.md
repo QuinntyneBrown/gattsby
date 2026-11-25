@@ -20,7 +20,7 @@ recommendation first and the stage's other available steps after it
 The Readiness page on a phone ends in "Ready, in checklist mode." with "Start in checklist mode"
 (`docs/mocks/pages/readiness/checklist.html`). The Investigation page in checklist mode
 (`docs/mocks/pages/investigation/checklist.html`) reads "Checklist · Identify" in the app bar, shows
-the mode banner "Running as a checklist." ("You chose checklist mode, so no model is used. You pick
+the mode banner "Running as a checklist." ("The on-device model is off for this investigation. You pick
 each step; Gattsby runs it and explains the result.", `docs/mocks/notifications/mode-banner/info.html`),
 prefixes feed entries with "Checklist:" and "Purpose:" instead of "Agent:" and "Why:", and offers
 "Pick the next step" with "Recommended: read device information. It's read-only and takes a

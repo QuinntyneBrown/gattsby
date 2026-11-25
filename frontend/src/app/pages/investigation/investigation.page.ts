@@ -22,6 +22,7 @@ import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
 import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
 import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
+import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { InvestigationNote } from '../../store/model/investigation-note';
@@ -52,6 +53,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     StillThereDialog,
     AddNoteDialog,
     InvestigationMenuDialog,
+    ModeBannerComponent,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -129,6 +131,9 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           aria-label="Activity"
           [attr.aria-busy]="loading() ? 'true' : null"
         >
+          @if (orchestrator.mode() === 'checklist') {
+            <g-mode-banner />
+          }
           <div class="feed-scroll" #feedScroll>
             <div class="feed-wrap">
               <g-activity-feed [entries]="orchestrator.feed()" />
