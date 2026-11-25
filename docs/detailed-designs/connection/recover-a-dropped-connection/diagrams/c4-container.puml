@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Recover a dropped connection
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Connection supervisor, reconnect policy, BLE layer, connection banner")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Committed steps, the drop and reconnect entries, interrupted recordings")
+}
+System_Ext(device, "Device", "Machine under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Reads the banner; taps Try again or Stop", "Touch or keyboard")
+Rel(device, spa, "Drops the connection", "gattserverdisconnected")
+Rel(spa, device, "Reconnects; restarts notifications", "Web Bluetooth")
+Rel(spa, idb, "Logs the drop; commits the reconnect step")
+@enduml

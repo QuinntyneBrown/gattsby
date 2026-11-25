@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Derive the verdict on any other stop
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "StopConditions" as stop
+  participant "PlaybookOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "finishTool" as tool
+  participant "VerdictBuilder" as builder
+  participant "ProfileBuilder" as profile
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+stop -> stop : Step budget, no progress, person stop or emergency stop
+stop -> orch : Stop with reason (latched once)
+orch -> builder : derive(facts with stop reason)
+builder -> builder : First rule that holds: stopped, connected, partial, missing tool, not connectable
+builder --> orch : Verdict "Partially decoded"
+orch -> tool : run({ verdict, template summary })
+tool -> profile : build(facts, verdict)
+profile --> tool : DeviceProfile
+tool -> store : commitVerdict(verdict, profile, final step)
+alt Committed
+  store --> tool : complete
+  tool --> orch : ok { verdict, profileId }
+  orch -> page : Show the verdict
+  page --> person : "Partially decoded" with evidence
+else Quota exceeded
+  store --> tool : STORAGE_FULL; nothing of the three stored
+  tool --> orch : ok false, STORAGE_FULL
+  orch -> page : Show error state with the verdict held in memory
+  page --> person : "This verdict couldn't be saved." Try saving again
+  person -> page : Tap "Export full record" or "Try saving again"
+end
+@enduml

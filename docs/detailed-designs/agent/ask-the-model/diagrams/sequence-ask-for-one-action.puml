@@ -1,0 +1,49 @@
+@startuml
+title UML sequence behaviour — Ask for one action
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ModelDecider" as decider
+  participant "PromptComposer" as composer
+  participant "ActionValidator" as validator
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ActionSchema" as schema
+  participant "ModelSession" as session
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome Prompt API" as api
+end box
+
+orch -> decider : decide(state, investigationSignal)
+decider -> composer : compose(state, budget)
+composer --> decider : ComposedPrompt
+decider -> schema : forTools(allowed names at the stage)
+schema --> decider : oneOf five shapes (FR-042 AC1)
+decider -> decider : Per-call AbortController; setTimeout 10 s (FR-047)
+decider -> session : promptAction(prompt, schema, callSignal)
+session -> api : base.clone({ signal })
+api --> session : clone
+session -> api : clone.prompt(prompt, { responseConstraint, signal })
+api --> session : '{"type":"call_tool","tool":"vendor_signature_lookup",...}'
+session -> api : clone.destroy()
+session --> decider : parsed JSON
+decider -> decider : Clear timer; exactly one object? (FR-042 AC2)
+decider --> orch : candidate AgentAction
+orch -> validator : validate(candidate, state)
+validator --> orch : ValidAction (see validate-every-action)
+orch -> orch : Record ModelCall and DecisionTiming (NFR-002)
+@enduml

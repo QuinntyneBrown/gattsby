@@ -1,0 +1,106 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Scan for the device
+
+enum SafetyClass {
+  read
+  listen
+  write
+  control
+  n/a
+}
+
+interface "ToolDefinition<I, O>" as ToolDefinition {
+  +name: string
+  +safetyClass: SafetyClass
+  +preconditions: Precondition[]
+  +stages: Stage[]
+  +requiredCapabilities: string[]
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class scanDevicesTool {
+  +name = "scan_devices"
+  +run(input: ScanDevicesInput, ctx: ToolContext): Promise<ToolResult<ChosenDevice>>
+}
+
+class scanAllDevicesTool {
+  +name = "scan_all_devices"
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<ChosenDevice>>
+}
+
+class ScanDevicesInput {
+  +machineType?: string
+  +brand?: string
+}
+
+class ScanOptionsBuilder {
+  +filtered(machineType?: string, brand?: string): ScanRequest
+  +acceptAll(): ScanRequest
+}
+
+class ScanRequest {
+  +options: RequestDeviceOptions
+  +excludedAsBlocklisted: string[]
+  +mode: "filtered" | "acceptAll"
+}
+
+class RequestDeviceOptions {
+  +filters?: BluetoothLEScanFilter[]
+  +acceptAllDevices?: boolean
+  +optionalServices: string[]
+}
+
+class ChosenDevice {
+  +deviceId: string
+  +name: string | null
+  +advertisedServices: string[]
+}
+
+class KnowledgeBase {
+  +version: string
+  +blocklist: string[]
+  +knownServiceUuids(): string[]
+  +vendors: VendorSignature[]
+}
+
+abstract class BleLayer <<contract>> {
+  +availability(): Promise<boolean>
+  +requestDevice(options: RequestDeviceOptions): Promise<ToolResult<ChosenDevice>>
+}
+
+class WebBluetoothBleLayer {
+  -devices: Map<string, BluetoothDevice>
+  +requestDevice(options: RequestDeviceOptions): Promise<ToolResult<ChosenDevice>>
+}
+
+class PromptChannel {
+  +post(prompt: PersonPrompt): Promise<PromptResponse>
+}
+
+ToolDefinition <|.. scanDevicesTool
+ToolDefinition <|.. scanAllDevicesTool
+scanDevicesTool ..> ScanDevicesInput
+scanDevicesTool ..> ScanOptionsBuilder : filtered()
+scanAllDevicesTool ..> ScanOptionsBuilder : acceptAll()
+scanDevicesTool ..> PromptChannel : awaits tap
+scanAllDevicesTool ..> PromptChannel : awaits tap
+ScanOptionsBuilder ..> KnowledgeBase : reads
+ScanOptionsBuilder ..> ScanRequest : builds
+ScanRequest *-- RequestDeviceOptions
+scanDevicesTool ..> BleLayer : requestDevice
+scanAllDevicesTool ..> BleLayer : requestDevice
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer ..> ChosenDevice : returns
+@enduml

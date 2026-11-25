@@ -1,0 +1,90 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Recover a dropped connection
+
+class ReconnectInput {
+  +deviceId: string
+  +attempts?: number
+}
+
+class ReconnectOutput {
+  +connected: boolean
+  +attempts: number
+  +restoredSubscriptions: string[]
+}
+
+class reconnectTool {
+  +name = "reconnect"
+  +run(input: ReconnectInput, ctx: ToolContext): Promise<ToolResult<ReconnectOutput>>
+}
+
+class ReconnectPolicy {
+  +delaysMs = [1000, 2000, 4000]
+  +maxAttempts = 3
+  +delayFor(attempt: number): number
+}
+
+class Subscription {
+  +service: string
+  +characteristic: string
+  +kind: "notification" | "indication"
+  +onValue: (bytes: Uint8Array, t: number) => void
+}
+
+class GattSession {
+  +deviceId: string
+  +connectedAt: number
+  +subscriptions: Map<string, Subscription>
+  +rebind(server: BluetoothRemoteGATTServer): Promise<string[]>
+}
+
+class ConnectionSupervisor {
+  +onDisconnected(event: DisconnectEvent): Promise<void>
+  +tryAgain(): Promise<void>
+}
+
+class DisconnectEvent {
+  +deviceId: string
+  +t: number
+  +intentional: boolean
+}
+
+abstract class AgentOrchestrator <<contract>> {
+  +status: Signal<string>
+  +pause(reason: string): void
+  +resume(id: string): Promise<void>
+  +stop(reason: string): Promise<void>
+}
+
+abstract class BleLayer <<contract>> {
+  +connect(deviceId: string, timeoutMs: number): Promise<ToolResult<ConnectOutput>>
+  +disconnected: Observable<DisconnectEvent>
+}
+
+abstract class Clock <<contract>> {
+  +now(): number
+  +delay(ms: number, signal: AbortSignal): Promise<void>
+}
+
+reconnectTool ..> ReconnectInput
+reconnectTool ..> ReconnectOutput : returns
+reconnectTool ..> ReconnectPolicy
+reconnectTool ..> BleLayer : connect
+reconnectTool ..> GattSession : rebind
+ReconnectPolicy ..> Clock : waits on
+GattSession "1" *-- "*" Subscription
+ConnectionSupervisor ..> DisconnectEvent : subscribes
+ConnectionSupervisor ..> AgentOrchestrator : pause / resume / stop
+ConnectionSupervisor ..> reconnectTool : runs
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Run checklist mode
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard", "Angular component", "Pick the next step; 48 px options")
+  Component(banner, "ModeBanner", "Angular component", "Running as a checklist")
+  Component(channel, "PromptChannel", "Service", "Posts the step; 2-minute timer")
+  Component(orch, "PlaybookOrchestrator", "Service", "Same loop in both modes")
+  Component(mode, "ModeSelector", "Service", "Checklist at start or on fall-back")
+  Component(decider, "ChecklistDecider", "Decider", "Rules outcome to checklist step")
+  Component(rules, "PlaybookRules", "Pure service", "next(state), alternatives(state)")
+  Component(validator, "ActionValidator", "Service", "Same checks as model actions")
+  Component(executor, "ToolExecutor", "Service", "Runs the chosen tool")
+}
+
+Rel(person, card, "Taps an option")
+Rel(mode, orch, "Sets the decider")
+Rel(mode, banner, "Shows the mode")
+Rel(orch, decider, "decide(state)")
+Rel(decider, rules, "next, alternatives")
+Rel(decider, channel, "post(checklist step)")
+Rel(channel, card, "Renders")
+Rel(orch, validator, "validate(choice)")
+Rel(orch, executor, "run(ValidAction)")
+@enduml

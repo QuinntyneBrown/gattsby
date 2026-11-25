@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Record missing-tool requests
+
+Person(person, "Person", "Developer")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(tool, "requestMissingToolTool", "Tool registry entry", "Agent's request, source agent")
+  Component(executor, "ToolExecutor", "Service", "UNSUPPORTED or AUTH_REQUIRED results")
+  Component(rules, "PlaybookRules", "Service", "Needed capability unavailable")
+  Component(limits, "SafetyLimits", "Service", "No safe limit for a command")
+  Component(recorder, "MissingToolRecorder", "Service", "Creates or merges by capability key; groups")
+  Component(page, "MissingToolsPage", "Angular page", "Groups with count, links and status")
+  Component(export, "ExportService", "Service", "Saves the list as JSON")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "missingToolRequests, investigations")
+
+Rel(tool, recorder, "record(draft)")
+Rel(executor, recorder, "record(unsupported or encrypted)")
+Rel(rules, recorder, "record(capabilityUnavailable)")
+Rel(limits, recorder, "record(noSafeLimit)")
+Rel(executor, idb, "commitStep with requests")
+Rel(page, recorder, "groupedAcrossInvestigations()")
+Rel(recorder, idb, "Reads all requests")
+Rel(person, page, "Opens; taps Export JSON")
+Rel(page, export, "exportMissingTools()")
+@enduml

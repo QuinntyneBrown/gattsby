@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Stop at protected data
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ActionValidator" as validator
+  participant "AuthRefusalGuard" as guard
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "readCharacteristicTool" as tool
+  participant "MissingToolRecorder" as missing
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run(read 0xFE00 / 0xFE01)
+tool -> ble : read(0xFE00, 0xFE01)
+ble -> device : readValue
+device --> ble : ATT error 0x0F insufficient encryption
+ble --> tool : AUTH_REQUIRED
+tool --> executor : ok false, AUTH_REQUIRED
+executor -> guard : observe(result, step)
+guard -> guard : Add 0xFE01 to the protected set
+guard -> missing : record("Decrypt 0xFE01", reason, evidence [step, raw entry], stage)
+missing -> store : Store or merge request (FR-058)
+guard -> store : Observation "protected: no further attempt" (FR-033)
+== Later in the investigation ==
+executor -> validator : subscribe_and_record([0xFE01])
+validator -> guard : isProtected(0xFE01)
+guard --> validator : true
+validator --> executor : PRECONDITION_FAILED "protected; no further attempt"; counts as a step
+note over executor, device : No retry, no pairing call, no key guessing, no replay (FR-033)
+@enduml

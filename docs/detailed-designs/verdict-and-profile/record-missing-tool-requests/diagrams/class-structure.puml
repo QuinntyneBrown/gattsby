@@ -1,0 +1,92 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Record missing-tool requests
+
+enum MissingToolSource {
+  agent
+  unsupported
+  capabilityUnavailable
+  encrypted
+  noSafeLimit
+}
+
+enum RequestStatus {
+  open
+  built
+}
+
+class MissingToolDraft {
+  +capability: string
+  +reason: string
+  +evidence: string[]
+  +stage: Stage
+  +source: MissingToolSource
+}
+
+class MissingToolRequest {
+  +id: string
+  +investigationId: string
+  +capability: string
+  +capabilityKey: string
+  +reasons: string[]
+  +evidence: string[]
+  +stage: Stage
+  +source: MissingToolSource
+  +occurrences: number
+  +firstRaisedAt: string
+  +lastRaisedAt: string
+}
+
+class MissingToolGroup {
+  +capability: string
+  +capabilityKey: string
+  +status: RequestStatus
+  +count: number
+  +latestReason: string
+  +firstRaisedAt: string
+  +investigations: GroupLink[]
+}
+
+class MissingToolRecorder {
+  -current: Map<string, MissingToolRequest>
+  +load(investigationId: string): Promise<void>
+  +record(draft: MissingToolDraft): RecordOutcome
+  +forInvestigation(id: string): MissingToolRequest[]
+  +groupedAcrossInvestigations(): Promise<MissingToolGroup[]>
+  +keyOf(capability: string): string
+}
+
+class RecordOutcome {
+  +request: MissingToolRequest
+  +merged: boolean
+}
+
+class ExportService {
+  +exportMissingTools(): Promise<ExportResult>
+}
+
+class MissingToolsPage <<component>> {
+  +groups: Signal<MissingToolGroup[]>
+  +state: Signal<"loading" | "ready" | "empty" | "error">
+}
+
+MissingToolRecorder ..> MissingToolDraft : records
+MissingToolRecorder "1" o-- "*" MissingToolRequest
+MissingToolRecorder ..> MissingToolGroup : groups
+MissingToolRecorder ..> RecordOutcome : returns
+MissingToolRequest --> MissingToolSource
+MissingToolGroup --> RequestStatus
+MissingToolsPage ..> MissingToolRecorder
+MissingToolsPage ..> ExportService
+@enduml

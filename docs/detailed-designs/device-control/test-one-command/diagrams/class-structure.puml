@@ -1,0 +1,104 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Test one command
+
+enum FeatureStatus {
+  confirmed
+  claimedOnly
+  refused
+}
+
+enum EffectVerdict {
+  asExpected
+  notSeen
+  opposite
+}
+
+class SendCommandInput {
+  +command: CommandName
+  +value?: number
+}
+
+class SendCommandOutput {
+  +sent: string
+  +result: string
+  +raw?: string
+}
+
+class sendCommandTool <<const>> {
+  +name = "send_command"
+  +safetyClass = "control"
+  +stages = ["control"]
+  +run(input: SendCommandInput, ctx: ToolContext): Promise<ToolResult<SendCommandOutput>>
+}
+
+class CommandEffect {
+  +command: CommandName
+  +from: number
+  +target: number
+  +observed?: number
+  +verdict: EffectVerdict
+  +sampleIds: string[]
+}
+
+class CommandEffectChecker {
+  +windowMs: number = 15000
+  +check(command: CommandName, from: number, target: number, samples: DecodedSample[]): CommandEffect
+}
+
+class CommandEncoding {
+  +opCode?: number
+  +type?: "uint8" | "uint16" | "sint16"
+  +resolution?: number
+  +unit?: string
+  +bytes?: string
+}
+
+class ControllableFeature {
+  +feature: "start" | "stop" | "targetSpeed" | "targetIncline" | "resistance" | "powerTarget"
+  +command: CommandEncoding
+  +range?: SupportedRange
+  +status: FeatureStatus
+  +note?: string
+  +evidence: string[]
+}
+
+class ControllableFeatureResolver {
+  +resolve(investigation: Investigation, kb: KnowledgeBase): ControllableFeature[]
+}
+
+class ProfileBuilder {
+  +build(investigation: Investigation): DeviceProfile
+}
+
+class PlaybookRules {
+  +next(state: DecisionState): RuleOutcome
+}
+
+class SafetyLimits {
+  +offer(command: CommandName, facts: LimitFacts): SafeCommand | ToolError
+}
+
+sendCommandTool ..> SendCommandInput
+sendCommandTool ..> SendCommandOutput : returns
+PlaybookRules ..> SafetyLimits : offer test value
+PlaybookRules ..> CommandEffectChecker : after the write
+CommandEffectChecker ..> CommandEffect : produces
+CommandEffect --> EffectVerdict
+ControllableFeatureResolver ..> CommandEffect : reads
+ControllableFeatureResolver ..> ControllableFeature : builds
+ControllableFeature --> FeatureStatus
+ControllableFeature --> CommandEncoding
+ProfileBuilder ..> ControllableFeatureResolver : uses
+@enduml

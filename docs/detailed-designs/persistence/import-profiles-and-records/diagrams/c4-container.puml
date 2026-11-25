@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Import profiles and records
+
+Person(person, "Person", "Developer or helper")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+}
+
+Rel(person, spa, "Opens Import; chooses a file", "Touch or keyboard")
+Rel(spa, idb, "Writes a checked profile or record in one transaction")
+@enduml

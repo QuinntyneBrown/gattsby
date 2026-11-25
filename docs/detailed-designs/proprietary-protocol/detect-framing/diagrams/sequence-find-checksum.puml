@@ -1,0 +1,41 @@
+@startuml
+title UML sequence behaviour — Search for the checksum
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "FramingDetector" as detector
+  participant "Checksums" as sums
+end box
+
+alt Checked range identical in every packet
+  detector -> detector : Report no checksum (any fit would be trivial)
+else Packets differ
+  loop each position: last byte (8-bit); last two bytes, LE and BE (16-bit)
+    loop each range start: 0, after header, after length byte
+      loop each algorithm: sum8, xor8, crc8, crc16-ccitt, crc16-modbus
+        detector -> sums : compute(algorithm, packet[start .. before checksum])
+        sums --> detector : value
+        detector -> detector : share = packets where value equals stored checksum
+      end
+    end
+  end
+  alt Best share >= 0.9
+    detector -> detector : Keep best; ties: simpler algorithm, then start 0
+    detector -> detector : checksum {offset -1, sum8, range [0, -2], share 1.0} (TOOL-019)
+  else No candidate reaches 0.9
+    detector -> detector : Report no checksum
+  end
+end
+@enduml

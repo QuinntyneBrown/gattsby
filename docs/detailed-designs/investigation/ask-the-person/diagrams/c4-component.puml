@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Ask the person
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(card, "PromptCard / AnswerButtons", "Angular components", "One question or instruction; 48 px answers; Skip")
+  Component(still, "StillThereDialog", "Angular dialog", "Still there? Continue or Stop")
+  Component(page, "InvestigationPage", "Angular page", "Hosts the dock; relays the response")
+  Component(validator, "ActionValidator / SchemaValidator", "Services", "Lengths and counts in the input schema")
+  Component(executor, "ToolExecutor", "Service", "Runs ask_user and request_action")
+  Component(tools, "askUserTool / requestActionTool", "Tools, n/a", "Build the PersonPrompt; return the output")
+  Component(channel, "PromptChannel", "Service", "Posts one prompt; 2-minute inactivity timer")
+  Component(store, "IndexedDbInvestigationStore", "Store", "commitStep(answer or skip)")
+}
+
+Rel(executor, validator, "Validates the input")
+Rel(executor, tools, "run(input, ctx)")
+Rel(tools, channel, "post(prompt)")
+Rel(channel, page, "prompt signal")
+Rel(page, card, "Renders")
+Rel(person, card, "Answers, skips, Ready, Done")
+Rel(channel, still, "After 2 minutes of no response")
+Rel(person, still, "Continue or Stop")
+Rel(executor, store, "Commits the step")
+@enduml

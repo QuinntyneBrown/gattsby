@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Run checklist mode
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Orchestrator with the checklist decider; model adapter not loaded")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Profiles, decoders' data, safe limits")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps with mode, observations, verdict, profile")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, spa, "Pick the next step", "Touch or keyboard")
+Rel(spa, kb, "Rules and tools read it")
+Rel(spa, idb, "Commits each step with its mode")
+Rel(spa, device, "Runs the chosen tools", "Web Bluetooth")
+@enduml

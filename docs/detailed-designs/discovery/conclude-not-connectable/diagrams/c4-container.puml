@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Conclude not connectable
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Elimination questions, reachability assessment, verdict")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Scan steps, answers, observations, verdict, profile")
+}
+System_Ext(chrome, "Chrome", "Device chooser")
+
+Rel(person, spa, "Answers the three checks", "Touch or keyboard")
+Rel(spa, chrome, "Third scan", "Web Bluetooth")
+Rel(spa, idb, "Reads observations; commits the assessment and the verdict")
+@enduml

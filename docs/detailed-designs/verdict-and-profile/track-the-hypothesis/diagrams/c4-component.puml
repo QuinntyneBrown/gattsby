@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Track the hypothesis
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(decider, "ModelDecider", "Service", "Returns the model's update_hypothesis action")
+  Component(validator, "ActionValidator", "Service", "Checks schema and that every evidence ID resolves")
+  Component(resolver, "EvidenceResolver", "Service", "Resolves evidence IDs by prefix")
+  Component(executor, "ToolExecutor", "Service", "Runs the tool; commits the step with the new version")
+  Component(tool, "updateHypothesisTool", "Tool registry entry", "Meta tool, safety class n/a")
+  Component(tracker, "HypothesisTracker", "Service", "One current hypothesis; append-only versions")
+  Component(scorer, "ConfidenceScorer", "Pure helper", "Deterministic confidence from observations")
+  Component(feed, "ActivityFeed", "Angular component", "Hypothesis row: old and new confidence")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "hypotheses, observations, steps")
+
+Rel(decider, validator, "AgentAction")
+Rel(validator, resolver, "exists(investigationId, ids)")
+Rel(validator, executor, "Validated action")
+Rel(executor, tool, "run(input, ctx)")
+Rel(tool, tracker, "apply(proposal, stepN)")
+Rel(tracker, scorer, "score(protocol, observations)")
+Rel(executor, idb, "commitStep with hypothesis version")
+Rel(tracker, feed, "current and previous version")
+@enduml

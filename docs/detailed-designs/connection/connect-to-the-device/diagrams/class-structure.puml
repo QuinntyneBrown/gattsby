@@ -1,0 +1,97 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Connect to the device
+
+enum ConnectionState {
+  disconnected
+  connecting
+  connected
+  releasing
+}
+
+class ConnectInput {
+  +deviceId: string
+  +timeoutMs?: number
+}
+
+class ConnectOutput {
+  +connected: true
+  +at: number
+}
+
+class connectTool {
+  +name = "connect"
+  +run(input: ConnectInput, ctx: ToolContext): Promise<ToolResult<ConnectOutput>>
+}
+
+class getPermittedDevicesTool {
+  +name = "get_permitted_devices"
+  +requiredCapabilities = ["getDevices"]
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<PermittedDevices>>
+}
+
+class PermittedDevices {
+  +devices: { deviceId: string, name: string | null }[]
+}
+
+abstract class BleLayer <<contract>> {
+  +connect(deviceId: string, timeoutMs: number): Promise<ToolResult<ConnectOutput>>
+  +permittedDevices(): Promise<ToolResult<PermittedDevices>>
+  +disconnected: Observable<DisconnectEvent>
+}
+
+class WebBluetoothBleLayer {
+  -devices: Map<string, BluetoothDevice>
+  +connect(deviceId: string, timeoutMs: number): Promise<ToolResult<ConnectOutput>>
+  +permittedDevices(): Promise<ToolResult<PermittedDevices>>
+}
+
+class GattSession {
+  +deviceId: string
+  +name: string | null
+  +state: Signal<ConnectionState>
+  +connectedAt: number
+}
+
+class DisconnectEvent {
+  +deviceId: string
+  +t: number
+  +intentional: boolean
+}
+
+class ConnectionSupervisor {
+  -quickDrops: number
+  +quickDropMs = 5000
+  +onDisconnected(event: DisconnectEvent): void
+  +onConnectRefused(deviceId: string): void
+  +suspectHeldByOther(reason: string): Promise<void>
+}
+
+class ConnectionBanner <<component>> {
+  +state: input<ConnectionState>
+  +deviceName: input<string | null>
+}
+
+connectTool ..> ConnectInput
+connectTool ..> BleLayer : connect
+getPermittedDevicesTool ..> BleLayer : permittedDevices
+getPermittedDevicesTool ..> PermittedDevices
+BleLayer <|-- WebBluetoothBleLayer
+WebBluetoothBleLayer "1" *-- "0..1" GattSession
+WebBluetoothBleLayer ..> DisconnectEvent : emits
+GattSession --> ConnectionState
+ConnectionSupervisor ..> DisconnectEvent : subscribes
+ConnectionSupervisor ..> GattSession : reads connectedAt
+ConnectionBanner ..> ConnectionState
+@enduml

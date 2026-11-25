@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Maintain the knowledge base
+
+Person(author, "Knowledge-base author", "Developer who adds or edits knowledge-base data files")
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System_Ext(build, "Build pipeline", "npm build and GitHub Actions CI")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(host, "Static host", "HTTPS host that serves Gattsby's static files and headers")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(author, build, "Commits data files")
+Rel(build, host, "Publishes validated static files")
+Rel(host, gattsby, "Serves the app and the knowledge-base chunk", "HTTPS")
+Rel(person, gattsby, "Identifies a device")
+Rel(gattsby, chrome, "Passes known UUIDs as optionalServices", "Web Bluetooth")
+Rel(chrome, device, "GATT over Bluetooth LE, via Web Bluetooth")
+@enduml

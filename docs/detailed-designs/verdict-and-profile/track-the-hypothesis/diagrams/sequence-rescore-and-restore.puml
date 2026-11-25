@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Rescore after a step, and restore on resume
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "HypothesisTracker" as tracker
+  participant "ConfidenceScorer" as scorer
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+group After a step that adds observations
+  executor -> executor : decode_standard returns speed confirmed (o-9)
+  executor -> tracker : rescore(step 8, new observations)
+  tracker -> scorer : score(FTMS, observations)
+  scorer --> tracker : 0.85
+  alt Score changed
+    tracker --> executor : version 4, source rules, 0.65 → 0.85
+    executor -> store : commitStep(step 8 + observations + hypothesis v4)
+    store -> idb : One readwrite transaction
+    idb --> store : complete
+    executor -> feed : "Confidence 65% → 85%"
+  else Score unchanged
+    tracker --> executor : null; no new version
+  end
+end
+group On resume after a reload
+  orch -> tracker : restore(id)
+  tracker -> store : hypotheses(id)
+  store -> idb : getAll on key range [id]
+  idb --> store : versions 1..4
+  store --> tracker : versions in order
+  tracker -> tracker : current = version 4
+end
+@enduml

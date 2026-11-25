@@ -1,0 +1,111 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Save as the investigation runs
+
+enum StoreErrorCode {
+  STORAGE_FULL
+  STORAGE_UNAVAILABLE
+  NOT_FOUND
+  ALREADY_EXISTS
+  ALREADY_CONCLUDED
+  DATABASE_BLOCKED
+}
+
+enum InvestigationStatus {
+  running
+  paused
+  concluded
+  stopped
+}
+
+abstract class InvestigationStore <<contract>> {
+  +create(init: InvestigationInit): Promise<Investigation>
+  +flushRawLog(id: string, entries: RawLogEntry[]): Promise<void>
+  +commitStep(commit: StepCommit): Promise<void>
+  +commitVerdict(commit: VerdictCommit): Promise<void>
+  +recover(id: string): Promise<Investigation>
+  +recoverInterrupted(): Promise<string[]>
+  +get(id: string): Promise<InvestigationRecord>
+  +list(): Promise<InvestigationSummary[]>
+  +delete(id: string): Promise<void>
+  +deleteAll(): Promise<void>
+  +usage(): Promise<StorageUsage>
+  +requestPersistence(): Promise<boolean>
+}
+
+class IndexedDbInvestigationStore {
+  -db: IDBDatabase | null
+  -open(): Promise<IDBDatabase>
+  -tx(stores: string[], mode: IDBTransactionMode, durability: string): IDBTransaction
+}
+
+class DatabaseSchema {
+  +name: "gattsby"
+  +version: 1
+  +upgrade(db: IDBDatabase, oldVersion: number): void
+}
+
+class StepCommit {
+  +investigationId: string
+  +step: Step
+  +rawLog: RawLogEntry[]
+  +observations: Observation[]
+  +hypothesis?: Hypothesis
+  +recordings: Recording[]
+  +missingToolRequests: MissingToolRequest[]
+  +investigationPatch: Partial<Investigation>
+}
+
+class Investigation {
+  +id: string
+  +status: InvestigationStatus
+  +stage: Stage
+  +lastCommittedStep: number
+  +kbVersion: string
+  +recordFormat: string
+  +startedAt: string
+  +interruptedAt?: string
+}
+
+class StorageUsage {
+  +usedBytes: number
+  +quotaBytes: number
+  +ratio: number
+  +persisted: boolean
+  +investigations: number
+  +profiles: number
+  +photos: number
+}
+
+class StoreError {
+  +code: StoreErrorCode
+  +message: string
+}
+
+class RawTrafficLog {
+  -window: RawLogEntry[]
+  +append(entry: RawLogEntry): void
+  +takeUnflushed(): RawLogEntry[]
+}
+
+InvestigationStore <|-- IndexedDbInvestigationStore
+IndexedDbInvestigationStore ..> DatabaseSchema : applies
+IndexedDbInvestigationStore ..> StepCommit : commits
+IndexedDbInvestigationStore ..> StoreError : rejects with
+IndexedDbInvestigationStore ..> StorageUsage : reports
+StepCommit --> Investigation : patches
+Investigation --> InvestigationStatus
+StoreError --> StoreErrorCode
+RawTrafficLog ..> InvestigationStore : flushRawLog
+@enduml

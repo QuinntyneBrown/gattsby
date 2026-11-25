@@ -1,0 +1,61 @@
+@startuml
+title UML sequence behaviour — Stop from any screen
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "EmergencyStopButton" as button
+  participant "EmergencyStopDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "EmergencyStopController" as estop
+  participant "PlaybookOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ControlPointExchange" as exchange
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ApprovalLedger" as ledger
+  participant "ModelSession" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+person -> button : Tap Emergency stop (t = 0)
+button -> estop : pressed
+estop -> estop : Latch stopped = true (FR-039 AC2)
+estop -> ledger : revokeAll()
+estop -> ledger : issueForEmergencyStop(0x2AD9, 08 01) and (0x2AD9, 01)
+estop -> exchange : send(08 01) with no await before it
+exchange -> device : write 0x2AD9 08 01 (within 500 ms, FR-039 AC1)
+estop -> dialog : Sending Stop...
+par Halt the agent at once
+  estop -> orch : abort()
+  orch -> model : AbortSignal fires; prompt rejected (FR-039 AC3)
+  orch -> orch : Withdraw pending prompt; close approval dialog
+end
+device --> exchange : indicate 80 08 01
+exchange -> device : write 0x2AD9 01 (Reset)
+device --> exchange : indicate 80 01 01
+exchange --> estop : acknowledged
+estop -> ledger : lock()
+estop -> orch : stop(emergencyStop)
+orch -> orch : Build verdict and profile from what is known (FR-045)
+estop -> estop : Commit EmergencyStopEvent and emergencyStoppedAt
+estop -> dialog : All commands stopped. Sent Stop at 14:32:07
+person -> dialog : The belt has stopped
+dialog --> estop : stopped; open the verdict
+@enduml

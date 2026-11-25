@@ -1,0 +1,136 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Decode standard data
+
+enum FieldType {
+  uint8
+  sint8
+  uint16
+  sint16
+  uint24
+  uint32
+  sint32
+}
+
+interface Decoder <<contract>> {
+  +uuid: string
+  +decode(bytes: Uint8Array, previous?: DecodedValue): DecodedValue | DecodeError
+}
+
+class FlagLayout {
+  +flagsWidth: 1 | 2 | 3
+  +bits: FlagEntry[]
+}
+
+class FlagEntry {
+  +bit: number
+  +presentWhen: 0 | 1
+  +fields: FieldSpec[]
+}
+
+class FieldSpec {
+  +name: string
+  +type: FieldType
+  +scale: number
+  +unit: string
+}
+
+class FlagLayoutDecoder {
+  -layout: FlagLayout
+  +decode(bytes: Uint8Array): DecodedValue | DecodeError
+  +announcedLength(flags: number): number
+}
+
+class ByteReader {
+  -cursor: number
+  +read(type: FieldType): number | null
+  +missing(): number
+}
+
+class DecodedValue {
+  +fields: DecodedField[]
+  +flags?: number
+  +trailingBytes?: number
+  +reservedBits?: number[]
+}
+
+class DecodedField {
+  +name: string
+  +value: number
+  +unit: string
+  +offset: number
+  +type: FieldType
+  +scale: number
+  +flagBit?: number
+}
+
+class DecodeError {
+  +reason: string
+  +announcedLength?: number
+  +actualLength: number
+}
+
+class Recording {
+  +id: string
+  +investigationId: string
+  +label: string
+  +level?: number
+  +characteristics: string[]
+  +startedAt: number
+  +seconds: number
+  +interrupted: boolean
+  +valueCount: number
+}
+
+class RecordedValue {
+  +recordingId: string
+  +uuid: string
+  +t: number
+  +hex: string
+  +rawLogId: string
+  +decoded?: DecodedValue
+  +decodeError?: DecodeError
+}
+
+class NotificationRecorder {
+  -open: Recording | null
+  +attach(uuid: string): void
+  +open(label: string, seconds: number, signal: AbortSignal): Promise<Recording>
+  +onValue(value: NotificationValue): void
+}
+
+class KnowledgeBase {
+  +version: string
+  +decoderFor(uuid: string): Decoder | null
+}
+
+class FieldStatistics {
+  +{static} summarise(values: RecordedValue[]): FieldSummary[]
+}
+
+Decoder <|.. FlagLayoutDecoder
+FlagLayoutDecoder --> FlagLayout
+FlagLayout "1" *-- "*" FlagEntry
+FlagEntry "1" *-- "*" FieldSpec
+FlagLayoutDecoder ..> ByteReader : reads with
+Decoder ..> DecodedValue : returns
+Decoder ..> DecodeError : or returns
+DecodedValue "1" *-- "*" DecodedField
+Recording "1" *-- "*" RecordedValue
+RecordedValue --> DecodedValue
+NotificationRecorder ..> KnowledgeBase : decoderFor
+NotificationRecorder --> Recording : appends to
+FieldStatistics ..> RecordedValue : summarises
+KnowledgeBase ..> Decoder : provides
+@enduml

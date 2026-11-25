@@ -1,0 +1,69 @@
+@startuml
+title UML sequence behaviour — Read the plate and confirm it
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "PhotoReadDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "capturePhotoTool" as tool
+  participant "HypothesisTracker" as tracker
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "MediaDevicesCameraAdapter" as camera
+  participant "PhotoSanitizer" as sanitizer
+  participant "PromptApiModelAdapter" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "Camera" as cam
+  participant "Gemini Nano" as nano
+  database "IndexedDB" as idb
+end box
+
+executor -> tool : run({ subject: "modelPlate" })
+tool -> camera : capture(signal) (dynamically imported)
+camera -> cam : getUserMedia: first camera request (NFR-016)
+person -> cam : Take the photo
+cam --> camera : frame
+camera -> camera : Stop every track
+camera --> tool : Blob
+tool -> sanitizer : sanitize(blob)
+sanitizer --> tool : re-encoded image, no EXIF or location (NFR-017)
+tool -> idb : put photos { investigationId, blob }
+tool -> dialog : busy: "Reading the plate on this device…"
+tool -> model : readImage(blob, signal)
+model -> nano : prompt(image, schema maker, model, serial, confidence)
+nano --> model : JSON
+model --> tool : PlateRead, untrusted text
+tool -> dialog : default: "Check what I read", fields filled, confidence shown
+alt The person confirms or corrects
+  person -> dialog : Edit the model; tap "Use this"
+  dialog --> tool : use { maker, model, serial }
+  tool --> executor : { photoId, read, confirmedByPerson: true } (FR-022, TOOL-027)
+  executor -> tracker : Maker and model as evidence with a confidence, never fact
+  executor -> idb : commitStep with the observation
+else Model left empty
+  person -> dialog : Tap "Use this"
+  dialog -> dialog : invalid: "Enter the model, or tap Skip."
+else The person taps "Retake"
+  dialog --> tool : retake
+  tool -> camera : capture(signal) again
+end
+note over tool, nano : The photo goes only to the on-device model (NFR-012, NFR-017)
+@enduml

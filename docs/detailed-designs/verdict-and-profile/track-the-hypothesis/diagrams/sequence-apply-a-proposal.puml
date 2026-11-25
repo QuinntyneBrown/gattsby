@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Apply a hypothesis proposal
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ActivityFeed" as feed
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ModelDecider" as decider
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "updateHypothesisTool" as tool
+  participant "HypothesisTracker" as tracker
+  participant "ConfidenceScorer" as scorer
+  participant "EvidenceResolver" as resolver
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+decider -> validator : update_hypothesis FTMS treadmill, 0.95, [o-4, o-6]
+validator -> validator : Check ActionSchema and tool input schema
+validator -> resolver : exists(id, [o-4, o-6])
+alt Every evidence ID resolves
+  resolver --> validator : true
+  validator -> executor : Validated action
+  executor -> tool : run(proposal, ctx)
+  tool -> tracker : apply(proposal, step 6, model)
+  tracker -> scorer : score(FTMS, observations)
+  scorer --> tracker : 0.65 with contributions
+  tracker -> tracker : Store score, keep 0.95 as proposedConfidence (FR-053)
+  tracker --> tool : version 3, confidence 0.65
+  tool --> executor : ok, { version 3, confidence 0.65 }
+  executor -> store : commitStep(step 6 + hypothesis v3) (FR-060)
+  store --> executor : committed
+  executor -> feed : Hypothesis row 35% → 65% likely
+  feed --> person : Shows the change as text
+else An evidence ID does not resolve
+  resolver --> validator : false (o-99 unknown)
+  validator --> decider : Refuse with INVALID_INPUT (TOOL-028)
+  validator -> executor : Count the refusal as a step (FR-043)
+end
+@enduml

@@ -1,0 +1,62 @@
+@startuml
+title UML sequence behaviour — Resume an interrupted investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ModeSelector" as sel
+  participant "ConnectionSupervisor" as sup
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+person -> home : Reopen Gattsby after the tab closed at Identify
+home -> store : list()
+store --> home : i-42 status running or paused, stage identify
+home -> person : "Resume: Horizon T202, Paused at Identify"
+person -> home : Tap Resume
+home -> page : Navigate /investigations/i-42
+page -> orch : resume(i-42)
+orch -> store : get(i-42)
+store --> orch : Steps 1 to 7; step 8 absent or incomplete (FR-060)
+orch -> orch : Restore stage, hypothesis and observations
+orch -> sel : select(preference)
+sel --> orch : agent or checklist
+page -> person : "Resuming. Reconnecting to HZN-T202-4F1A"
+orch -> sup : reconnect first (FR-009)
+sup -> ble : permittedDevices()
+alt The device is still permitted
+  ble --> sup : HZN-T202-4F1A
+  sup -> ble : connect(deviceId, 10000)
+  ble -> device : gatt.connect()
+  device --> ble : connected
+else Not permitted, or getDevices() unavailable
+  sup -> person : "Find the device" (needs a tap)
+  person -> sup : Tap; picks HZN-T202-4F1A in Chrome's list
+  sup -> ble : connect(deviceId, 10000)
+end
+sup --> orch : connected
+orch -> orch : Re-decide step 8 and continue
+@enduml

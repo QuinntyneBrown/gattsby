@@ -1,0 +1,23 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Browse and delete history
+
+Person(person, "Person", "Developer or helper")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(history, "HistoryPage", "Angular page", "Summaries newest first; opens or deletes one")
+  Component(delOne, "DeleteInvestigationDialog", "Angular component", "Cancel first; Delete investigation")
+  Component(settings, "SettingsPage", "Angular page", "Storage line; Delete all")
+  Component(delAll, "DeleteAllDataDialog", "Angular component", "Typed confirmation DELETE")
+  Component(store, "IndexedDbInvestigationStore", "Store", "list, delete, deleteAll, usage")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Database gattsby")
+
+Rel(person, history, "Opens a row or taps Delete")
+Rel(history, delOne, "Confirm")
+Rel(history, store, "list(), delete(id)")
+Rel(person, settings, "Taps Delete all")
+Rel(settings, delAll, "Confirm with DELETE")
+Rel(settings, store, "usage(), deleteAll()")
+Rel(store, idb, "Transactions; deleteDatabase")
+@enduml

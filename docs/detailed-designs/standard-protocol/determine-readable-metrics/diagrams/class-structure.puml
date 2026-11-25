@@ -1,0 +1,93 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Determine readable metrics
+
+enum MetricStatus {
+  confirmed
+  claimedOnly
+  claimedNotSeen
+  likely
+}
+
+class Range {
+  +min: number
+  +max: number
+  +increment: number
+}
+
+class SupportedRangesResult {
+  +machineFeatures: string[]
+  +targetSettingFeatures: string[]
+  +ranges: Partial<Record<RangeName, Range>>
+}
+
+class MetricClaim {
+  +metric: string
+  +source: "featureBit" | "dataFlags"
+  +bit: number
+}
+
+class DecodingRule {
+  +kind: "offset" | "flag"
+  +from?: number
+  +to?: number
+  +bit?: number
+}
+
+class ReadableMetric {
+  +metric: string
+  +unit: string
+  +characteristic: string
+  +rule: DecodingRule
+  +type: FieldType
+  +scale: number
+  +byteOrder?: "LE" | "BE"
+  +rateHz?: number
+  +status: MetricStatus
+  +quirks: string[]
+  +evidence: string[]
+}
+
+class readSupportedRangesTool <<tool>> {
+  +name: "read_supported_ranges"
+  +safetyClass: "read"
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<SupportedRangesResult>>
+}
+
+class FitnessMachineFeatureDecoder {
+  +decode(bytes: Uint8Array): FeatureBits | DecodeError
+}
+
+class SupportedRangeDecoder {
+  +decode(bytes: Uint8Array): Range | DecodeError
+}
+
+class ReadableMetricResolver {
+  +{static} resolve(claims: MetricClaim[], seen: SeenField[], confirmations: ConfirmationResult[], kb: KnowledgeBase): ReadableMetric[]
+}
+
+class ProfileBuilder {
+  +build(investigationId: string): Promise<DeviceProfile>
+}
+
+readSupportedRangesTool ..> FitnessMachineFeatureDecoder : uses
+readSupportedRangesTool ..> SupportedRangeDecoder : uses
+readSupportedRangesTool ..> SupportedRangesResult : returns
+SupportedRangesResult "1" *-- "*" Range
+ReadableMetricResolver ..> MetricClaim : reads
+ReadableMetricResolver ..> ReadableMetric : builds
+ReadableMetric *-- DecodingRule
+ReadableMetric --> MetricStatus
+ProfileBuilder ..> ReadableMetricResolver : calls
+@enduml

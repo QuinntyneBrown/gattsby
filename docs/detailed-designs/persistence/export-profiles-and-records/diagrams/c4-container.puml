@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Export profiles and records
+
+Person(person, "Person", "Developer or helper")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+}
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+
+Rel(person, spa, "Opens Export; picks profile, record or summary", "Touch or keyboard")
+Rel(spa, idb, "Reads the profile and record section by section")
+Rel(spa, chrome, "Download through a revoked object URL; no network")
+@enduml

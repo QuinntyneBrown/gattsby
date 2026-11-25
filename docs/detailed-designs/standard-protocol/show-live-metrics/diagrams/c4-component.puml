@@ -1,0 +1,24 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Show live metrics
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Delivers each notification")
+  Component(recorder, "NotificationRecorder", "Service", "Decodes and pushes each value")
+  Component(live, "LiveMetrics", "Service", "Latest value per field; raw streams; frame-coalesced signals")
+  Component(orch, "AgentOrchestrator", "Contract", "prompt signal names the metric being confirmed")
+  Component(page, "InvestigationPage", "Angular page", "Live strip and Live readings panel")
+  Component(fmt, "MetricFormatter", "Pure helper", "Precision, m:ss, spaced hex")
+  Component(tile, "LiveMetricTile", "Angular component", "Label, value, unit, status word and shape")
+}
+
+Rel(ble, recorder, "onValue")
+Rel(recorder, live, "update(uuid, decoded, t, rawLogId)")
+Rel(page, live, "Reads metrics, raw, emphasised")
+Rel(page, orch, "Reads prompt")
+Rel(page, fmt, "Formats values")
+Rel(page, tile, "Renders one per metric")
+Rel(tile, person, "Shows value and status")
+@enduml

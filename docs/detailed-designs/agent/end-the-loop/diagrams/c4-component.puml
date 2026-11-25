@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — End the loop
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Updates progress; concludes on a stop")
+  Component(conditions, "StopConditions", "Pure service", "finish, confidence, budget, no progress")
+  Component(config, "LoopConfig", "Configuration", "0.9, 40 steps, 5 steps (A-05)")
+  Component(rules, "PlaybookRules", "Pure service", "checksDone(state)")
+  Component(tracker, "HypothesisTracker", "Service", "Current confidence")
+  Component(finish, "finishTool", "ToolDefinition", "finish; also called by the orchestrator")
+  Component(verdict, "VerdictBuilder", "Service", "Verdict the evidence supports")
+  Component(profile, "ProfileBuilder", "Service", "Profile from what is known")
+  Component(releaser, "ConnectionReleaser", "Service", "Disconnects after the verdict")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Verdict, profile, stop reason")
+
+Rel(orch, conditions, "check(progress, state, lastStep)")
+Rel(conditions, config, "Thresholds")
+Rel(conditions, rules, "checksDone")
+Rel(conditions, tracker, "confidence")
+Rel(orch, finish, "run(verdict)")
+Rel(finish, verdict, "supported(investigation)")
+Rel(finish, profile, "build()")
+Rel(orch, releaser, "release()")
+Rel(finish, idb, "Stores verdict and profile")
+@enduml

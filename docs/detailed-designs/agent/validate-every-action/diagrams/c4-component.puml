@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Validate every action
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Records refusals as steps; counts them")
+  Component(validator, "ActionValidator", "Service", "Ten checks in order; no I/O")
+  Component(schema, "SchemaValidator", "Service", "Precompiled action and input schemas")
+  Component(registry, "ToolRegistry", "Service", "Definitions, stages, capabilities, preconditions")
+  Component(limits, "SafetyLimits", "Service", "UNSAFE_VALUE")
+  Component(estop, "EmergencyStopController", "Service", "Stop latch")
+  Component(gate, "ApprovalGate", "Service", "Denials in the last 3 steps")
+  Component(evidence, "EvidenceResolver", "Service", "Evidence IDs resolve?")
+  Component(executor, "ToolExecutor", "Service", "Accepts only a ValidAction")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps")
+
+Rel(orch, validator, "validate(candidate, state)")
+Rel(validator, schema, "Action and input schemas")
+Rel(validator, registry, "get(name)")
+Rel(validator, estop, "stopped?")
+Rel(validator, limits, "check(command, value)")
+Rel(validator, gate, "isDeniedRecently(call)")
+Rel(validator, evidence, "resolves(ids)")
+Rel(orch, executor, "run(ValidAction)")
+Rel(orch, idb, "commitStep(refusal)")
+@enduml

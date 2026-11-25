@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Export profiles and records
+
+Person(person, "Person", "Developer")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "DeviceProfilePage / VerdictPage", "Angular pages", "Open the dialog; call the service")
+  Component(dialog, "ExportDialog", "Angular component", "Profile, record, summary; notes and photos box")
+  Component(export, "ExportService", "Service", "Builds, validates and saves files")
+  Component(namer, "FileNamer", "Pure helper", "device-date-kind.gattsby.json")
+  Component(validator, "SchemaValidator", "Service", "Precompiled profile and record schemas")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Reads profile; pages the raw log")
+  Component(toast, "ToastService", "Service", "Summary copied")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "profiles, steps, rawLog, photos")
+System_Ext(chrome, "Chrome", "Downloads and clipboard")
+
+Rel(person, dialog, "Chooses an export")
+Rel(page, dialog, "Opens; passes state")
+Rel(dialog, page, "exportProfile, exportRecord, copySummary")
+Rel(page, export, "Calls")
+Rel(export, store, "Reads")
+Rel(store, idb, "readonly transactions")
+Rel(export, namer, "fileName()")
+Rel(export, validator, "validate()")
+Rel(export, chrome, "Object URL download; clipboard")
+Rel(page, toast, "Summary copied")
+@enduml

@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Ask the person
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Prompt card, prompt channel, ask_user and request_action tools")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Questions, answers, skips, ready and done times")
+}
+
+Rel(spa, person, "Shows the prompt in the dock; announces it politely")
+Rel(person, spa, "Answers", "Touch or keyboard")
+Rel(spa, idb, "Commits each answer or skip as a step")
+@enduml

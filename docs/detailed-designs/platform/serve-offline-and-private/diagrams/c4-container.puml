@@ -1,0 +1,20 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Serve offline and private
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Ext(host, "Static host", "HTTPS, response headers")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Initial bundle at most 250 KB compressed; lazy routes and dynamic imports")
+  Container(sw, "Service worker", "Angular service worker", "Caches every static file for offline use")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Served from the app's own origin")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "All investigation data; never sent anywhere")
+}
+
+Rel(person, spa, "Uses it online or offline", "Touch or keyboard")
+Rel(host, sw, "First load: every static file", "HTTPS, own origin only")
+Rel(sw, spa, "Serves the app shell and lazy chunks from cache")
+Rel(sw, kb, "Serves from cache")
+Rel(spa, idb, "Reads and writes locally")
+@enduml

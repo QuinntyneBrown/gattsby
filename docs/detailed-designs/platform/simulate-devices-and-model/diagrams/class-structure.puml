@@ -1,0 +1,89 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Simulate devices and the model
+
+class ScriptedDevice {
+  +id: string
+  +name: string | null
+  +advertisedServices: string[]
+  +services: ScriptedService[]
+  +drop: { afterMs: number, comesBack: boolean } | null
+  +requiresEncryption: boolean
+  +heldByOtherCentral: boolean
+}
+
+class ScriptedService {
+  +uuid: string
+  +characteristics: ScriptedCharacteristic[]
+}
+
+class ScriptedCharacteristic {
+  +uuid: string
+  +properties: string[]
+  +value: (effort: EffortLevel) => Uint8Array
+  +notifyEveryMs: number | null
+  +onWrite: (bytes: Uint8Array) => Uint8Array | null
+}
+
+class FakeBluetoothApi {
+  +devices: ScriptedDevice[]
+  +calls: RecordedCall[]
+  +writes: RecordedWrite[]
+  +unexpected: RecordedCall[]
+  +chooser: ChooserScript
+  +setEffort(level: EffortLevel): void
+  +getAvailability(): Promise<boolean>
+  +requestDevice(options: RequestDeviceOptions): Promise<FakeBluetoothDevice>
+  +getDevices(): Promise<FakeBluetoothDevice[]>
+}
+
+class FakeLanguageModel {
+  +availabilityScript: ModelAvailability
+  +downloadProgress: number[]
+  +responses: ScriptedResponse[]
+  +prompts: string[]
+  +availability(options: object): Promise<ModelAvailability>
+  +create(options: object): Promise<FakeModelSession>
+}
+
+class ScriptedResponse {
+  +text: string | null
+  +delayMs: number
+  +error: "QuotaExceededError" | "AbortError" | null
+}
+
+class GattsbyTest <<Playwright fixture>> {
+  +fakeBluetooth: FakeBluetoothFixture
+  +fakeModel: FakeLanguageModelFixture
+  +guards(): void
+}
+
+class BLUETOOTH <<InjectionToken>> {
+  +factory: () => navigator.bluetooth
+}
+
+class provideSimulation <<EnvironmentProviders>> {
+  +BLUETOOTH: FakeBluetoothApi
+  +chooser: SimulatedChooserDialog
+}
+
+ScriptedDevice *-- ScriptedService
+ScriptedService *-- ScriptedCharacteristic
+FakeBluetoothApi o-- ScriptedDevice
+FakeLanguageModel o-- ScriptedResponse
+GattsbyTest ..> FakeBluetoothApi : installs, inspects
+GattsbyTest ..> FakeLanguageModel : installs, inspects
+provideSimulation ..> BLUETOOTH : overrides
+provideSimulation ..> FakeBluetoothApi
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Follow the investigation
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service (AgentOrchestrator)", "Signals stage, step, feed, prompt, mode, status")
+  Component(registry, "ToolRegistry", "Service", "Each tool's running and done labels")
+  Component(page, "InvestigationPage", "Angular page, /investigations/:id", "Responsive layout; polite and assertive regions")
+  Component(stepper, "StageStepper", "Angular component", "Seven stages: done, now, to do, skipped")
+  Component(feed, "ActivityFeed", "Angular component", "Messages, tool cards, summaries, hypothesis changes")
+  Component(card, "PromptCard", "Angular component", "The prompt dock")
+  Component(badge, "ConfidenceBadge", "Angular component", "Word plus shape")
+  Component(estop, "EmergencyStopButton", "Angular component", "Pinned while connected")
+  Component(shell, "AppShell", "Angular component", "Assertive live region for errors and emergency stop")
+}
+
+Rel(orch, registry, "Reads the step label")
+Rel(page, orch, "Reads signals")
+Rel(page, stepper, "stage")
+Rel(page, feed, "feed")
+Rel(page, card, "prompt")
+Rel(feed, badge, "Confidence of each observation")
+Rel(page, estop, "connected")
+Rel(page, shell, "Raises errors")
+Rel(person, page, "Reads, answers, scrolls")
+@enduml

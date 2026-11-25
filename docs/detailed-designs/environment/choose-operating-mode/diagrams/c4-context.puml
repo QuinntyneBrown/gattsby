@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Choose the operating mode
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+
+Rel(person, gattsby, "Downloads the model, chooses checklist mode, sees Agent or Checklist")
+Rel(gattsby, chrome, "Checks availability, creates a session, follows download progress", "Prompt API")
+Rel(chrome, nano, "Downloads and runs the model on the device")
+@enduml

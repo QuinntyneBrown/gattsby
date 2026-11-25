@@ -1,0 +1,58 @@
+@startuml
+title UML sequence behaviour — Commit a step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ToastStack" as toast
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "RawTrafficLog" as log
+  participant "IndexedDbInvestigationStore" as store
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+executor -> executor : Step 8 runs subscribe_and_record
+loop While the window passes 2,000 entries (NFR-005)
+  log -> store : flushRawLog(id, entries tagged stepN 8)
+  store -> idb : readwrite rawLog, durability relaxed
+  idb --> store : complete; entries are provisional
+end
+executor -> executor : Tool returns its envelope
+executor -> log : takeUnflushed()
+log --> executor : Remaining entries
+executor -> store : commitStep(step 8, raw, observations, hypothesis, requests)
+store -> idb : readwrite 7 stores, durability strict
+store -> idb : put rows, then investigation lastCommittedStep = 8
+alt Transaction completes (FR-060)
+  idb --> store : complete
+  store --> executor : committed
+else QuotaExceededError
+  idb --> store : abort; nothing of step 8 stored
+  store --> executor : STORAGE_FULL
+  executor -> orch : Pending commit kept in memory
+  orch -> ble : Unsubscribe every notification (recording stops)
+  orch -> orch : Pause the loop (NFR-008)
+  orch -> toast : Danger toast: export, then delete old investigations
+  toast --> person : role=alert; stays until dismissed
+end
+@enduml

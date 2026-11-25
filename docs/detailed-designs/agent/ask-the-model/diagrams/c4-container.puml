@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Ask the model
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Agent orchestrator, model decider; model adapter loaded on demand")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps with model calls and timings")
+}
+System_Ext(nano, "Gemini Nano", "Via Chrome's Prompt API")
+
+Rel(person, spa, "Watches the feed; taps Stop or Emergency stop")
+Rel(spa, nano, "One JSON action per call; abort on timeout or stop", "Prompt API")
+Rel(spa, idb, "Commits each decision's outcome and timing")
+@enduml

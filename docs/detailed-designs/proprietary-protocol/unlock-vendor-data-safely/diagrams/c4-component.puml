@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Unlock vendor data safely
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(rules, "PlaybookRules", "Pure code", "Proposes the handshake when all is silent")
+  Component(validator, "ActionValidator", "Service", "Known handshakeId; vendor match; not protected")
+  Component(gate, "ApprovalGate", "Service", "One approval; one token per step")
+  Component(dialog, "ApprovalDialog", "Angular component", "Purpose and bytes of each step")
+  Component(tool, "replayKnownHandshakeTool", "Tool, write", "Writes kb steps in order; listens 10 s")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "Consumes token, writes, maps ATT auth errors")
+  Component(log, "RawTrafficLog", "BLE layer", "Write entries with approvalId and source")
+  Component(guard, "AuthRefusalGuard", "Service", "Protected set; raises missing-tool request")
+  Component(missing, "MissingToolRecorder", "Service", "Records and merges requests")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "rawLog, observations, missingToolRequests")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(rules, validator, "replay_known_handshake")
+Rel(validator, guard, "Is the target protected?")
+Rel(validator, gate, "Valid call")
+Rel(gate, dialog, "Shows request")
+Rel(person, dialog, "Taps Send")
+Rel(gate, tool, "Tokens")
+Rel(tool, ble, "write(step, bytes, tokenId)")
+Rel(ble, device, "writeValue", "Web Bluetooth")
+Rel(ble, log, "Write with provenance")
+Rel(ble, guard, "AUTH_REQUIRED results")
+Rel(guard, missing, "record(request)")
+Rel(missing, idb, "Stores request")
+Rel(log, idb, "Flushes")
+@enduml

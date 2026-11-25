@@ -1,0 +1,93 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Record and find varying fields
+
+class Recording {
+  +id: string
+  +label: string
+  +level: number
+  +characteristics: string[]
+  +seconds: number
+  +valueCount: number
+  +interrupted: boolean
+}
+
+class RecordedValue {
+  +uuid: string
+  +t: number
+  +hex: string
+  +rawLogId: string
+}
+
+class OffsetClasses {
+  +uuid: string
+  +length: number
+  +betweenLabels: number[]
+  +withinLabel: number[]
+  +constant: number[]
+  +counters: number[]
+  +packets: number
+}
+
+class SkippedGroup {
+  +uuid: string
+  +length?: number
+  +reason: string
+}
+
+class VaryingBytesReport {
+  +perCharacteristic: OffsetClasses[]
+  +skipped: SkippedGroup[]
+}
+
+class VaryingBytesFinder {
+  +{static} find(recordings: Recording[], values: RecordedValue[]): VaryingBytesReport | ToolError
+  -{static} isCounter(series: number[][]): boolean
+  -{static} hasDisjointPair(sets: Set<number>[]): boolean
+}
+
+class findVaryingBytesTool <<tool>> {
+  +name: "find_varying_bytes"
+  +safetyClass: "read"
+  +run(input: { recordingIds: string[] }, ctx: ToolContext): Promise<ToolResult<VaryingBytesReport>>
+}
+
+class BaselineVsActivityResult {
+  +baselineId: string
+  +activityId: string
+  +changed: { uuid: string, offsets: number[] }[]
+  +unchanged: string[]
+}
+
+class baselineVsActivityTool <<tool>> {
+  +name: "baseline_vs_activity"
+  +safetyClass: "listen"
+  +run(input: BvaInput, ctx: ToolContext): Promise<ToolResult<BaselineVsActivityResult>>
+}
+
+class subscribeAndRecordTool <<tool>> {
+  +name: "subscribe_and_record"
+  +safetyClass: "listen"
+}
+
+Recording "1" *-- "*" RecordedValue
+VaryingBytesReport "1" *-- "*" OffsetClasses
+VaryingBytesReport "1" *-- "*" SkippedGroup
+VaryingBytesFinder ..> Recording : reads
+VaryingBytesFinder ..> VaryingBytesReport : returns
+findVaryingBytesTool ..> VaryingBytesFinder : calls
+baselineVsActivityTool ..> subscribeAndRecordTool : records twice with
+baselineVsActivityTool ..> VaryingBytesFinder : diffs with
+baselineVsActivityTool ..> BaselineVsActivityResult : returns
+@enduml

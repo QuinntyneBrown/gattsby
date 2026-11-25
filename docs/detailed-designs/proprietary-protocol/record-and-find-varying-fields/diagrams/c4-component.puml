@@ -1,0 +1,32 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Record and find varying fields
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Level prompt, raw live readings, Recordings panel")
+  Component(rules, "PlaybookRules", "Pure code", "Plans idle, slow, fast; then find_varying_bytes")
+  Component(executor, "ToolExecutor", "Service", "Runs each tool and commits the step")
+  Component(action, "requestActionTool", "Tool, n/a", "Instruction; waits for Ready")
+  Component(record, "subscribeAndRecordTool", "Tool, listen", "One labelled recording per level")
+  Component(bva, "baselineVsActivityTool", "Tool, listen", "Baseline, one action, diff")
+  Component(find, "findVaryingBytesTool", "Tool, read", "Loads 2-6 recordings")
+  Component(finder, "VaryingBytesFinder", "Pure helper", "betweenLabels, withinLabel, constant per offset")
+  Component(recorder, "NotificationRecorder", "Service", "Appends values to the open recording")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "recordings, observations")
+
+Rel(rules, executor, "Decided actions")
+Rel(executor, action, "run")
+Rel(action, page, "Shows instruction via PromptChannel")
+Rel(person, page, "Taps Ready")
+Rel(executor, record, "run")
+Rel(record, recorder, "open(label, 10 s)")
+Rel(recorder, idb, "Writes values in batches")
+Rel(executor, find, "run")
+Rel(find, idb, "Reads recordings")
+Rel(find, finder, "find(recordings)")
+Rel(executor, bva, "run")
+Rel(bva, finder, "find([baseline, activity])")
+@enduml

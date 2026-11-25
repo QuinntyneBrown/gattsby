@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Register and list tools
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+}
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+
+Rel(person, spa, "Follows the investigation", "Touch or keyboard")
+Rel(spa, chrome, "Detects capabilities")
+Rel(spa, nano, "Prompt with the generated tool list", "Prompt API")
+@enduml

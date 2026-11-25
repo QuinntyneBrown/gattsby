@@ -1,0 +1,107 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Choose the operating mode
+
+enum OperatingMode {
+  agent
+  checklist
+}
+
+enum ModeReason {
+  modelAvailable
+  personChoseChecklist
+  modelUnavailable
+  sessionFailed
+  twoTimeouts
+  contextExhausted
+  threeInvalidActions
+}
+
+enum ModelAvailability {
+  unavailable
+  downloadable
+  downloading
+  available
+}
+
+class ModeChange {
+  +from: OperatingMode | null
+  +to: OperatingMode
+  +reason: ModeReason
+  +stage: Stage
+  +step: number
+  +rejectedActionIds: string[]
+  +at: number
+}
+
+class ModeSelector {
+  -consecutiveTimeouts: number
+  -consecutiveInvalid: number
+  +select(preference: ModePreference): Promise<ModeDecision>
+  +report(failure: ModelFailure): ModeReason | null
+  +reset(): void
+}
+
+class ModelDownloadController {
+  +availability: Signal<ModelAvailability>
+  +progress: Signal<number>
+  +error: Signal<string | null>
+  +start(): Promise<void>
+  +retry(): Promise<void>
+}
+
+abstract class ModelAdapter <<contract>> {
+  +availability(): Promise<ModelAvailability>
+  +download(onProgress: (percent: number) => void): Promise<void>
+  +createSession(): Promise<ModelSession>
+}
+
+class PromptApiModelAdapter {
+  -sessionOptions: LanguageModelCreateOptions
+}
+
+abstract class Decider <<contract>> {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+}
+class ModelDecider
+class ChecklistDecider
+
+abstract class AgentOrchestrator <<contract>> {
+  +mode: Signal<OperatingMode>
+  +start(id: string): Promise<void>
+}
+
+class PlaybookOrchestrator {
+  -decider: Decider
+  -fallBack(reason: ModeReason): Promise<void>
+}
+
+class ModeBanner <<component>> {
+  +mode: input<OperatingMode>
+  +reason: input<ModeReason>
+}
+
+ModelAdapter <|-- PromptApiModelAdapter
+Decider <|-- ModelDecider
+Decider <|-- ChecklistDecider
+AgentOrchestrator <|-- PlaybookOrchestrator
+PlaybookOrchestrator --> ModeSelector : asks
+PlaybookOrchestrator --> Decider : uses one at a time
+PlaybookOrchestrator ..> ModeChange : records
+ModeSelector ..> ModelAdapter : availability, createSession
+ModelDownloadController ..> ModelAdapter : download
+ModeChange --> OperatingMode
+ModeChange --> ModeReason
+PlaybookOrchestrator ..> ModeBanner : shown by the page
+@enduml

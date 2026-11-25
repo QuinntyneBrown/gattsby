@@ -1,0 +1,98 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Detect framing
+
+enum ChecksumAlgorithm {
+  sum8
+  xor8
+  crc8
+  crc16-ccitt
+  crc16-modbus
+}
+
+enum LengthRelation {
+  total
+  afterHeader
+  afterLength
+}
+
+class HeaderReport {
+  +offset: 0
+  +bytes: string
+  +share: number
+}
+
+class LengthReport {
+  +offset: number
+  +includesHeader: boolean
+  +relation: LengthRelation
+  +share: number
+}
+
+class CounterReport {
+  +offset: number
+  +step: number
+  +share: number
+}
+
+class ChecksumReport {
+  +offset: number
+  +algorithm: ChecksumAlgorithm
+  +range: [number, number]
+  +byteOrder?: "LE" | "BE"
+  +share: number
+}
+
+class FramingReport {
+  +header?: HeaderReport
+  +length?: LengthReport
+  +counter?: CounterReport
+  +checksum?: ChecksumReport
+  +fit: number
+  +packets: number
+}
+
+class FramingDetector {
+  +{static} reportThreshold: 0.9
+  +{static} detect(packets: Uint8Array[]): FramingReport | ToolError
+  -{static} findHeader(packets: Uint8Array[]): HeaderReport | null
+  -{static} findLength(packets: Uint8Array[], headerLength: number): LengthReport | null
+  -{static} findChecksum(packets: Uint8Array[], starts: number[]): ChecksumReport | null
+  -{static} findCounter(packets: Uint8Array[], exclude: number[]): CounterReport | null
+}
+
+class Checksums {
+  +{static} sum8(bytes: Uint8Array): number
+  +{static} xor8(bytes: Uint8Array): number
+  +{static} crc8(bytes: Uint8Array): number
+  +{static} crc16Ccitt(bytes: Uint8Array): number
+  +{static} crc16Modbus(bytes: Uint8Array): number
+}
+
+class detectFramingTool <<tool>> {
+  +name: "detect_framing"
+  +safetyClass: "read"
+  +run(input: { recordingId: string, uuid: string }, ctx: ToolContext): Promise<ToolResult<FramingReport>>
+}
+
+detectFramingTool ..> FramingDetector : calls
+FramingDetector ..> Checksums : computes with
+FramingDetector ..> FramingReport : returns
+FramingReport *-- HeaderReport
+FramingReport *-- LengthReport
+FramingReport *-- CounterReport
+FramingReport *-- ChecksumReport
+LengthReport --> LengthRelation
+ChecksumReport --> ChecksumAlgorithm
+@enduml

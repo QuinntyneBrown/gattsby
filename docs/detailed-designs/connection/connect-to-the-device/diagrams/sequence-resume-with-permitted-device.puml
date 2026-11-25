@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Reconnect on resume without the chooser
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "getPermittedDevicesTool" as tool
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+
+person -> page : Resume the investigation
+page -> orch : resume(id)
+orch -> executor : call_tool get_permitted_devices
+executor -> tool : run({}, ctx)
+tool -> ble : permittedDevices()
+alt getDevices() is available (PD-GETDEVICES)
+  ble -> chrome : navigator.bluetooth.getDevices()
+  chrome --> ble : BluetoothDevice[]
+  ble --> tool : { devices: [{ deviceId, name }] }
+  tool --> executor : ok
+  alt The investigation's device is listed
+    orch -> executor : call_tool connect { deviceId } (no chooser)
+  else Not listed
+    orch -> page : Ask the person to tap "Find the device"
+  end
+else Not available
+  ble --> tool : UNSUPPORTED
+  tool --> executor : UNSUPPORTED (TOOL-032)
+  orch -> page : Ask the person to tap "Find the device" again
+end
+@enduml

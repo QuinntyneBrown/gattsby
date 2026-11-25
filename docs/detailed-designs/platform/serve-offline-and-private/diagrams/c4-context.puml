@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Serve offline and private
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(host, "Static host", "HTTPS host that serves Gattsby's static files and headers")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+
+Rel(person, gattsby, "Opens and installs it; uses it offline")
+Rel(host, gattsby, "Serves static files with HSTS, CSP and Permissions-Policy", "HTTPS, once")
+Rel(gattsby, chrome, "Caches files; enforces the headers; keeps data local")
+Rel(chrome, nano, "Keeps the downloaded model cached")
+@enduml

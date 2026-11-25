@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Serve offline and private
+
+Person(person, "Person", "Beside the machine")
+System_Ext(host, "Static host", "Serves files and the headers file")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(shell, "AppShell", "Angular component", "Initial bundle; lazy routes; update prompt")
+  Component(routes, "appRoutes", "Angular router config", "loadComponent for every page")
+  Component(update, "SwUpdate", "Angular service worker client", "versionUpdates; activates between investigations")
+  Component(toast, "ToastService", "Service", "A new version is ready")
+  Component(model, "ModelAdapter, analysis, camera", "Dynamic imports", "Loaded on demand, from cache when offline")
+  Component(kbsvc, "KnowledgeBase", "Service", "Fetches its JSON from 'self'")
+}
+Container(sw, "Service worker", "Angular service worker, ngsw-config.json", "Prefetches all assets and lazy chunks")
+
+Rel(person, shell, "Opens Gattsby")
+Rel(shell, routes, "Navigates")
+Rel(routes, sw, "Fetches lazy chunks")
+Rel(model, sw, "import() chunks")
+Rel(kbsvc, sw, "fetch() JSON", "connect-src 'self'")
+Rel(update, sw, "Checks for a new version")
+Rel(update, toast, "Offers reload when no investigation runs")
+Rel(sw, host, "Fetches files on install and update", "HTTPS")
+@enduml

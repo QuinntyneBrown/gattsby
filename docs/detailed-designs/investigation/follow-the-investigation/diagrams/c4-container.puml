@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Follow the investigation
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Investigation page, stage stepper, activity feed, prompt dock")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and their one-line summaries")
+  Container(sw, "Service worker", "Angular service worker", "Serves the bundled fonts and icons")
+}
+
+Rel(spa, person, "Renders the investigation at every viewport", "Touch, keyboard, screen reader")
+Rel(spa, idb, "Reloads the feed of a resumed investigation")
+Rel(sw, spa, "Serves self-hosted fonts and icons")
+@enduml

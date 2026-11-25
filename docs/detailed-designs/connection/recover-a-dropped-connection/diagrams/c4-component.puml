@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Recover a dropped connection
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(banner, "ConnectionBanner", "Notification", "Warning, success and danger states")
+  Component(orch, "PlaybookOrchestrator", "Service", "Pauses the loop; repeats the interrupted step")
+  Component(supervisor, "ConnectionSupervisor", "Service", "Reacts to an unexpected drop")
+  Component(tool, "reconnectTool", "Tool (read)", "TOOL-007: up to 3 attempts, restores subscriptions")
+  Component(policy, "ReconnectPolicy", "BLE layer", "Delays 1, 2, 4 s; 3 attempts")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "disconnected stream; connect; startNotifications")
+  Component(session, "GattSession", "BLE layer", "Active subscriptions to restore")
+  Component(log, "RawTrafficLog", "BLE layer", "Logs the drop and each attempt")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Steps and raw log")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(device, ble, "gattserverdisconnected")
+Rel(ble, log, "Appends disconnect entry")
+Rel(ble, supervisor, "DisconnectEvent")
+Rel(supervisor, orch, "pause(); resume()")
+Rel(supervisor, tool, "Runs reconnect through ToolExecutor")
+Rel(tool, policy, "Next delay")
+Rel(tool, ble, "connect(); restore subscriptions")
+Rel(ble, session, "Reads and re-binds subscriptions")
+Rel(supervisor, banner, "Attempt n of 3; result")
+Rel(person, banner, "Taps Try again or Stop")
+Rel(log, idb, "Flushes")
+@enduml

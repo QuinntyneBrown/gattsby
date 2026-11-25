@@ -1,0 +1,86 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Release the connection
+
+enum ReleaseReason {
+  verdict
+  stop
+  leave
+  hidden
+  pagehide
+}
+
+class ConnectionReleaser {
+  +hiddenReleaseMs = 60000
+  -hiddenTimer: number | null
+  +release(reason: ReleaseReason): Promise<void>
+  -onVisibilityChange(state: DocumentVisibilityState): void
+  -onRecordingChange(running: boolean): void
+}
+
+class disconnectTool {
+  +name = "disconnect"
+  +run(input: DisconnectInput, ctx: ToolContext): Promise<ToolResult<DisconnectOutput>>
+}
+
+class DisconnectInput {
+  +deviceId: string
+}
+
+class DisconnectOutput {
+  +disconnected: true
+}
+
+abstract class BleLayer <<contract>> {
+  +unsubscribe(characteristic: string): Promise<void>
+  +disconnect(deviceId: string): Promise<void>
+}
+
+class GattSession {
+  +state: Signal<ConnectionState>
+  +subscriptions: Map<string, Subscription>
+  +markReleasing(): void
+}
+
+class ConnectionSupervisor {
+  +onDisconnected(event: DisconnectEvent): Promise<void>
+}
+
+class "leaveInvestigationGuard" as Guard <<function>> {
+  +canDeactivate(page: InvestigationPage): Promise<boolean>
+}
+
+class LeaveInvestigationDialog <<component>> {
+  +deviceName: input<string>
+  +busy: input<boolean>
+  +decided: output<"stay" | "leave">
+}
+
+class StopInvestigationDialog <<component>> {
+  +deviceName: input<string>
+  +busy: input<boolean>
+  +decided: output<"keepGoing" | "stop">
+}
+
+ConnectionReleaser ..> ReleaseReason
+ConnectionReleaser ..> disconnectTool : runs
+disconnectTool ..> DisconnectInput
+disconnectTool ..> DisconnectOutput
+disconnectTool ..> BleLayer : unsubscribe all, disconnect
+BleLayer ..> GattSession : markReleasing
+ConnectionSupervisor ..> GattSession : ignores releasing
+Guard ..> LeaveInvestigationDialog : opens
+Guard ..> ConnectionReleaser : release(leave)
+StopInvestigationDialog ..> ConnectionReleaser : via orchestrator stop
+@enduml

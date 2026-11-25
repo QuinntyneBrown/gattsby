@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Load and use the knowledge base at run time
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "KnowledgeBase" as kb
+  participant "VendorSignatureMatcher" as matcher
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ScanOptionsBuilder" as scan
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Web Bluetooth" as bt
+end box
+
+person -> orch : "Identify a device"
+orch -> kb : load()
+kb -> kb : import("generated/knowledge-base.json"); lazy chunk (NFR-004)
+kb --> orch : version 2026.11, schemaVersion 1.0
+orch -> store : create({ kbVersion: "2026.11" }) (FR-069)
+orch -> scan : build options
+scan -> kb : knownServiceUuids()
+kb --> scan : Standard and vendor UUIDs minus blocklist
+scan --> orch : filters, optionalServices (FR-067)
+orch -> bt : requestDevice(options) on the person's tap
+bt --> orch : Device whose name fits an Echelon pattern
+orch -> matcher : match(name, services, manufacturer data)
+matcher -> kb : vendors
+matcher --> orch : Echelon, pattern as evidence (FR-068 AC1)
+@enduml

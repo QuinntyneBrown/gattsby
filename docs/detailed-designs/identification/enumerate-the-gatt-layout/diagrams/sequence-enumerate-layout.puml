@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Enumerate and record the GATT layout
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "enumerateGattTool" as tool
+  participant "KnowledgeBase" as kb
+  participant "MissingToolRecorder" as missing
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+  database "IndexedDB" as idb
+end box
+
+executor -> tool : run({}, ctx)
+tool -> ble : primaryServices()
+ble -> device : gatt.getPrimaryServices()
+device --> ble : permitted services present: 0x1826, 0x180A, 0x180D, 0xFFF0
+loop each service
+  ble -> device : service.getCharacteristics()
+  device --> ble : characteristics with properties
+end
+ble --> tool : services with characteristics and properties
+tool -> kb : nameOf(uuid) for each service and characteristic
+kb --> tool : Fitness Machine, Treadmill Data, Control Point, …
+tool -> tool : requestedButUnreachable = blocklisted from the scan + advertised but not listed
+tool -> tool : Add the invisibility note (FR-023)
+opt Evidence of hidden services (FR-023)
+  tool -> missing : record "Known-UUID entry" naming the UUID or brand, with the evidence
+end
+tool --> executor : ok, "Connected. 4 services, 3 of them standard."
+executor -> idb : commitStep: layout, one observation per service (FR-019)
+@enduml

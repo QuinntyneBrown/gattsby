@@ -1,0 +1,45 @@
+@startuml
+title UML sequence behaviour — The rules decide a step
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "PlaybookRules" as rules
+  participant "ActionValidator" as validator
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "HypothesisTracker" as tracker
+end box
+
+orch -> rules : next(state: Identify, layout known, 0x180A present)
+rules -> rules : Rule identify.read-device-info applies
+rules --> orch : decided: call_tool read_device_info (FR-046)
+note right of orch : No model call
+orch -> validator : validate(action)
+validator --> orch : ValidAction
+orch -> page : Now: Reading the maker and model (read-only, no prompt)
+page -> person : Shows the running step
+orch -> executor : run(read_device_info)
+executor --> orch : ok, "Johnson Health Tech, model T202, firmware 2.14.0"
+orch -> tracker : apply observations (deterministic score)
+tracker --> orch : FTMS treadmill, Horizon T-series
+orch -> rules : next(state)
+rules --> orch : decided: match_known_profiles
+@enduml

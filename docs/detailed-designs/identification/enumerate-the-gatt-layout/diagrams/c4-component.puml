@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Enumerate the GATT layout
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(executor, "ToolExecutor", "Service", "Runs the tool and commits the step")
+  Component(enumerate, "enumerateGattTool", "Tool (read)", "TOOL-009: services, characteristics, properties")
+  Component(read, "readCharacteristicTool", "Tool (read)", "TOOL-011: one value with candidate decodings")
+  Component(candidates, "CandidateDecodings", "Pure helper", "UTF-8 and integer candidates")
+  Component(kb, "KnowledgeBase", "Service", "nameOf(uuid), decoderFor(uuid), blocklist, vendors")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "primaryServices(), read()")
+  Component(session, "GattSession", "BLE layer", "Service and characteristic handles")
+  Component(missing, "MissingToolRecorder", "Service", "Hidden-service and encrypted-read requests")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Layout, observations, missing-tool requests")
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(executor, enumerate, "run({}, ctx)")
+Rel(executor, read, "run({ service, characteristic }, ctx)")
+Rel(enumerate, ble, "primaryServices()")
+Rel(read, ble, "read(service, characteristic)")
+Rel(ble, session, "Caches handles")
+Rel(ble, device, "Web Bluetooth GATT calls")
+Rel(enumerate, kb, "nameOf(uuid)")
+Rel(read, kb, "decoderFor(uuid)")
+Rel(read, candidates, "candidates(bytes)")
+Rel(enumerate, missing, "Hidden services suspected (FR-023)")
+Rel(read, missing, "AUTH_REQUIRED (FR-033)")
+Rel(executor, idb, "commitStep")
+@enduml

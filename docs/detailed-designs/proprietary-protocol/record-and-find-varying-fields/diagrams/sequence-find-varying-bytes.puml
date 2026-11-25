@@ -1,0 +1,50 @@
+@startuml
+title UML sequence behaviour — Find the varying bytes
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "findVaryingBytesTool" as tool
+  participant "VaryingBytesFinder" as finder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "InvestigationStore" as store
+end box
+
+executor -> tool : run({recordingIds: [idle, slow, fast]})
+tool -> store : Load recordings and values
+store --> tool : 3 recordings of 0xFE01
+tool -> finder : find(recordings, values)
+finder -> finder : Group by characteristic, then by packet length
+alt A group has fewer than 5 values in a recording
+  finder -> finder : Skip the group; name it in skipped
+end
+alt Nothing left to compare
+  finder --> tool : INSUFFICIENT_DATA (TOOL-016)
+  tool --> executor : ok false, INSUFFICIENT_DATA
+else Groups remain
+  loop each offset of each group
+    finder -> finder : constant if one value overall
+    finder -> finder : counter if same step in >= 90 % of pairs: withinLabel
+    finder -> finder : betweenLabels if two levels share no value
+    finder -> finder : otherwise withinLabel
+  end
+  finder --> tool : 0xFE01 len 16: betweenLabels [5, 6], withinLabel [15], constant [0, 1, ...]
+  tool --> executor : ok; summary "byte 5 varies with effort; byte 15 counts up"
+  executor -> store : Commit step and varying-field observation with evidence (FR-029)
+end
+@enduml

@@ -1,0 +1,74 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Render untrusted text
+
+class TrustedTypesPolicy {
+  +name: "gattsby"
+  -allowedScriptUrls: string[]
+  +install(): void
+  +scriptUrl(url: string): TrustedScriptURL
+}
+
+class DisplayText <<pure helper>> {
+  +toDisplayText(value: string, maxLength: number): string
+  +toFileNamePart(value: string): string
+}
+
+class SchemaValidator {
+  -validators: Map<string, PrecompiledValidator>
+  +validate(schemaId: string, value: unknown): ValidationResult
+}
+
+class ActionValidator {
+  +validate(raw: unknown, state: DecisionState): AgentAction | ToolError
+}
+
+class ImportService {
+  +import(file: File): Promise<ImportResult>
+  -refusePrototypeKeys(text: string): void
+}
+
+class ExportService {
+  +fileName(profile: DeviceProfile, kind: "profile" | "record"): string
+}
+
+class ActivityFeed <<component>> {
+  +entries: input<FeedEntry[]>
+}
+
+class ByteTable <<component>> {
+  +bytes: input<Uint8Array>
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+}
+
+enum UntrustedSource {
+  modelOutput
+  deviceName
+  characteristicValue
+  personAnswer
+  importedFile
+  photoText
+}
+
+ActionValidator --> SchemaValidator
+ImportService --> SchemaValidator
+ExportService ..> DisplayText : toFileNamePart
+ActivityFeed ..> DisplayText : toDisplayText
+PromptCard ..> DisplayText : toDisplayText
+ByteTable ..> DisplayText : hex only
+TrustedTypesPolicy ..> UntrustedSource : never accepts
+@enduml

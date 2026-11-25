@@ -1,0 +1,48 @@
+@startuml
+title UML sequence behaviour — Validate the knowledge base at build
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Knowledge-base author" as author
+box "Build pipeline" #F2F4F7
+  participant "npm run build" as build
+  participant "validate-knowledge-base.ts" as script
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "decoder-registry" as registry
+  participant "knowledge-base.schema.json" as schema
+end box
+
+author -> build : Add vendors/keiser.json; no code change (FR-069)
+build -> script : prebuild
+script -> script : Glob frontend/src/knowledge-base/**/*.json minus generated/ and schema
+loop Each file
+  script -> schema : Validate against $defs by kind
+  alt Valid
+    schema --> script : ok
+  else A fact has no source
+    schema --> script : /namePatterns/0: must have required property 'source'
+    script --> build : Exit 1 with file and JSON pointer (FR-068 AC2)
+    build --> author : Build fails
+  end
+end
+script -> script : Sources exist; UUIDs normalised; no duplicate service
+script -> registry : Decoder IDs exist
+registry --> script : ok
+script -> script : Name patterns compile and start with ^; IDs 0..65535; manifest version
+script -> script : Write generated/knowledge-base.json with knownServiceUuids
+script --> build : Exit 0
+build -> build : ng build: knowledge base in its own lazy chunk
+build --> author : Vendor UUIDs in the scan list; patterns matched
+@enduml

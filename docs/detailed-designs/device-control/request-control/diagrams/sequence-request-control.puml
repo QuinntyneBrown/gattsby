@@ -1,0 +1,71 @@
+@startuml
+title UML sequence behaviour — Request control and report the result
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ApprovalDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+  participant "ApprovalGate" as gate
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "requestControlTool" as tool
+  participant "ControlPointExchange" as exchange
+  participant "ControlPointResponseDecoder" as decoder
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "GattSession" as session
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> gate : request(request_control)
+gate -> dialog : Show approval; no stand-clear box (OQ-12)
+person -> dialog : Tap Send
+dialog --> gate : send
+gate --> executor : token a-16
+executor -> tool : run({}, approvalId a-16)
+tool -> exchange : send(00, a-16)
+exchange -> ble : subscribe(0x2AD9) before the write (FR-037)
+ble -> device : startNotifications (indications)
+exchange -> ble : write(0x2AD9, 00, a-16)
+ble -> device : writeValueWithResponse(00)
+dialog -> dialog : Busy: waiting up to 5 s
+alt Device indicates 80 00 01
+  device --> ble : indicate 80 00 01
+  ble --> exchange : value (logged with timestamp)
+  exchange -> decoder : decode(80 00 01)
+  decoder --> exchange : op 0x00, success
+  exchange --> tool : outcome success
+  tool -> session : controlGranted = true
+  tool --> executor : ok, result success (FR-037 AC1)
+else Device indicates 80 00 05
+  device --> ble : indicate 80 00 05
+  ble --> exchange : value
+  exchange -> decoder : decode(80 00 05)
+  decoder --> exchange : op 0x00, controlNotPermitted
+  exchange --> tool : outcome controlNotPermitted
+  tool --> executor : ok, result controlNotPermitted;\nquirk "Control not permitted" (FR-037 AC2)
+  executor -> dialog : Failed state; Finish read-only
+else No matching indication within 5 s
+  exchange --> tool : TIMEOUT
+  tool --> executor : ok false, TIMEOUT (TOOL-021)
+end
+executor -> executor : Commit step: approval, write, indication,\nobservation, quirk (one transaction)
+@enduml

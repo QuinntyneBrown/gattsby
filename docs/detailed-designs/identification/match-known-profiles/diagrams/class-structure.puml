@@ -1,0 +1,104 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Match known profiles
+
+class DeviceFacts {
+  +services: string[]
+  +characteristics: string[]
+  +name: string | null
+  +manufacturer?: string
+  +model?: string
+  +manufacturerIds: number[]
+}
+
+class ProfileCandidate {
+  +profileId: string
+  +protocol: string
+  +deviceType: string
+  +score: number
+  +matched: string[]
+  +missing: string[]
+}
+
+class ProfileMatcher {
+  +score(facts: DeviceFacts, profiles: Profile[]): ProfileCandidate[]
+}
+
+class VendorMatch {
+  +vendor: string
+  +matchedOn: ("name" | "uuid" | "manufacturerId")[]
+  +score: number
+  +hasDecoder: boolean
+  +hasHandshake: boolean
+  +source: string
+}
+
+class VendorLookupInput {
+  +name?: string
+  +uuids?: string[]
+  +manufacturerId?: number
+}
+
+class VendorSignatureMatcher {
+  +match(input: VendorLookupInput, vendors: VendorSignature[]): VendorMatch[]
+}
+
+class matchKnownProfilesTool {
+  +name = "match_known_profiles"
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<{ candidates: ProfileCandidate[] }>>
+}
+
+class vendorSignatureLookupTool {
+  +name = "vendor_signature_lookup"
+  +run(input: VendorLookupInput, ctx: ToolContext): Promise<ToolResult<{ matches: VendorMatch[] }>>
+}
+
+class KnowledgeBase {
+  +version: string
+  +profiles: Profile[]
+  +vendors: VendorSignature[]
+}
+
+class PlaybookRules {
+  +heuristicThreshold: number
+  +ambiguityMargin = 10
+  +next(state: DecisionState): RuleOutcome
+}
+
+class RuleOutcome {
+  +kind: "decided" | "ambiguous"
+  +action?: AgentAction
+  +options?: AgentAction[]
+}
+
+abstract class Decider <<contract>> {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+}
+
+class ModelDecider
+class ChecklistDecider
+
+matchKnownProfilesTool ..> ProfileMatcher
+matchKnownProfilesTool ..> DeviceFacts : builds from the record
+ProfileMatcher ..> ProfileCandidate : returns, best first
+ProfileMatcher ..> KnowledgeBase : profiles
+vendorSignatureLookupTool ..> VendorSignatureMatcher
+VendorSignatureMatcher ..> VendorMatch : returns
+VendorSignatureMatcher ..> KnowledgeBase : vendors
+PlaybookRules ..> ProfileCandidate : threshold and margin
+PlaybookRules ..> RuleOutcome : returns
+Decider <|-- ModelDecider
+Decider <|-- ChecklistDecider
+RuleOutcome ..> Decider : ambiguous goes to
+@enduml

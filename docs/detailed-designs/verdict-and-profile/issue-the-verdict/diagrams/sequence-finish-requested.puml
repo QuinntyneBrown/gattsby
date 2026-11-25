@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Finish requested by the agent
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "VerdictPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ModelDecider" as decider
+  participant "ToolExecutor" as executor
+  participant "ConnectionReleaser" as releaser
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "finishTool" as tool
+  participant "VerdictBuilder" as builder
+  participant "ProfileBuilder" as profile
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+  participant "WebBluetoothBleLayer" as ble
+end box
+
+decider -> executor : finish "Connected — FTMS", summary
+executor -> tool : run(input, ctx)
+tool -> builder : check(connected, facts)
+alt A metric is confirmed by live data (FR-054)
+  builder --> tool : supported
+  tool -> profile : build(facts, verdict)
+  profile --> tool : DeviceProfile p-1
+  tool -> store : commitVerdict(verdict, profile, final step)
+  store --> tool : committed (exactly one verdict)
+  tool --> executor : ok { verdict, profileId p-1 }
+  executor -> releaser : Release on verdict (FR-018)
+  releaser -> ble : disconnect(deviceId)
+  executor -> page : Navigate to /investigations/:id/verdict
+  page -> store : get(id), profile, requests
+  store --> page : Records
+  page --> person : "Connected — FTMS", Can read, Can control, Export profile (FR-057)
+else No metric confirmed
+  builder --> tool : missing: a metric confirmed by live data
+  tool --> executor : ok false, PRECONDITION_FAILED (TOOL-030)
+  executor --> decider : Refusal and what is missing in the next state
+end
+@enduml

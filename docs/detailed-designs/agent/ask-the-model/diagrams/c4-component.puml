@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Ask the model
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Owns the AbortController; asks when rules are ambiguous")
+  Component(decider, "ModelDecider", "Decider", "Compose, constrain, call, parse; 10 s timeout")
+  Component(composer, "PromptComposer", "Service", "Fitted prompt (see build-the-decision-state)")
+  Component(schema, "ActionSchema", "Model adapter", "Five action shapes; forTools(names)")
+  Component(adapter, "PromptApiModelAdapter", "Model adapter", "Only code touching LanguageModel")
+  Component(session, "ModelSession", "Model adapter", "Clone, prompt with responseConstraint, destroy")
+  Component(validator, "ActionValidator", "Service", "Checks the candidate action")
+  Component(mode, "ModeSelector", "Service", "Two timeouts in a row: checklist mode")
+}
+System_Ext(nano, "Gemini Nano", "Chrome Prompt API")
+
+Rel(orch, decider, "decide(state, signal)")
+Rel(decider, composer, "compose(state)")
+Rel(decider, schema, "forTools(allowed names)")
+Rel(decider, adapter, "createSession() once")
+Rel(decider, session, "promptAction(prompt, schema, signal)")
+Rel(session, nano, "clone(); prompt()", "Prompt API")
+Rel(orch, validator, "validate(candidate)")
+Rel(orch, mode, "Reports timeouts and failures")
+@enduml

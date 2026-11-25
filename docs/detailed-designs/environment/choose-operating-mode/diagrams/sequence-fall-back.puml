@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Fall back to checklist mode during an investigation
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "ModeBanner" as banner
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ModelDecider" as md
+  participant "ModeSelector" as sel
+  participant "ChecklistDecider" as cd
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+orch -> md : decide(state, signal) at Identify
+md --> orch : TIMEOUT after 10 s (FR-047)
+orch -> sel : report(timeout)
+sel --> orch : null (1 of 2)
+orch -> md : decide(state, signal)
+md --> orch : TIMEOUT after 10 s
+orch -> sel : report(timeout)
+alt Second consecutive timeout
+  sel --> orch : twoTimeouts
+else Third consecutive invalid action
+  sel --> orch : threeInvalidActions
+else Context exhausted or session lost
+  sel --> orch : contextExhausted or sessionFailed
+end
+orch -> md : Destroy the model session
+orch -> orch : decider = ChecklistDecider, stage stays Identify
+orch -> store : commitStep(ModeChange agent to checklist, rejected actions) (FR-006)
+note right of store : Observations and hypothesis are untouched
+orch -> banner : warning "Continuing as a checklist."
+banner -> person : The on-device model stopped answering twice in a row
+orch -> cd : decide(state, signal)
+cd --> orch : Next step from PlaybookRules and the person's choice
+@enduml

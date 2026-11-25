@@ -1,0 +1,72 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Read device information
+
+class DeviceInformation {
+  +manufacturer?: string
+  +model?: string
+  +serial?: string
+  +hardware?: string
+  +firmware?: string
+  +software?: string
+  +systemId?: string
+  +pnpId?: string
+}
+
+class DeviceInfoField {
+  +field: keyof DeviceInformation
+  +uuid: string
+  +encoding: "text" | "hex"
+}
+
+class readDeviceInfoTool {
+  +name = "read_device_info"
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<DeviceInformation>>
+  -decodeText(bytes: Uint8Array): string
+}
+
+class KnowledgeBase {
+  +blocklist: string[]
+  +deviceInformationFields(): DeviceInfoField[]
+}
+
+abstract class BleLayer <<contract>> {
+  +read(service: string, characteristic: string): Promise<ToolResult<Uint8Array>>
+}
+
+class HypothesisTracker {
+  +apply(change: HypothesisChange, stepId: string): Hypothesis
+}
+
+class Observation {
+  +id: string
+  +stepId: string
+  +fact: string
+  +value: string
+  +tag: "confirmed" | "likely" | "guess"
+  +evidence: string[]
+}
+
+class HexCodec {
+  +toHex(bytes: Uint8Array): string
+}
+
+readDeviceInfoTool ..> KnowledgeBase : field map, blocklist
+readDeviceInfoTool ..> BleLayer : read
+readDeviceInfoTool ..> HexCodec : systemId, pnpId
+readDeviceInfoTool ..> DeviceInformation : returns
+KnowledgeBase "1" *-- "8" DeviceInfoField
+DeviceInformation ..> Observation : one per field
+HypothesisTracker ..> Observation : evidence for maker and model
+@enduml

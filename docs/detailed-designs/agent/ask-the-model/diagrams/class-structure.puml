@@ -1,0 +1,89 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Ask the model
+
+abstract class Decider <<contract>> {
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+}
+
+class ModelDecider {
+  -session: ModelSession | null
+  +decide(state: DecisionState, signal: AbortSignal): Promise<AgentAction>
+  +release(): void
+  -parseOneAction(text: string): unknown | ToolError
+}
+
+abstract class ModelAdapter <<contract>> {
+  +contextWindow: number
+  +availability(): Promise<ModelAvailability>
+  +createSession(systemPrompt: string, signal: AbortSignal): Promise<ModelSession>
+  +measureTokens(text: string): Promise<number>
+}
+
+class PromptApiModelAdapter {
+  +createSession(systemPrompt: string, signal: AbortSignal): Promise<ModelSession>
+  +measureTokens(text: string): Promise<number>
+}
+
+class ModelSession {
+  +promptAction(prompt: string, schema: JsonSchema, signal: AbortSignal): Promise<unknown>
+  +destroy(): void
+}
+
+class ActionSchema {
+  +base: JsonSchema
+  +forTools(names: string[]): JsonSchema
+}
+
+class LoopConfig {
+  +modelTimeoutMs: number = 10000
+  +finishConfidence: number = 0.9
+  +stepBudget: number = 40
+  +noProgressSteps: number = 5
+  +summaryWindow: number = 5
+}
+
+class ModelCall {
+  +step: number
+  +promptTokens: number
+  +schemaTools: string[]
+  +startedAt: number
+  +outcome: "answered" | "timedOut" | "aborted" | "rejected" | "failed"
+  +rawText?: string
+}
+
+class DecisionTiming {
+  +buildMs: number
+  +composeMs: number
+  +modelMs: number
+  +validateMs: number
+  +totalMs: number
+}
+
+class ModeSelector {
+  +recordTimeout(): void
+  +recordAnswer(): void
+  +fallBack(reason: FallbackReason): void
+}
+
+Decider <|-- ModelDecider
+ModelAdapter <|-- PromptApiModelAdapter
+ModelDecider ..> ModelAdapter : creates session
+ModelDecider --> ModelSession : base session
+ModelDecider ..> ActionSchema : responseConstraint
+ModelDecider ..> LoopConfig : timeout
+ModelDecider ..> ModelCall : records
+ModelDecider ..> ModeSelector : reports timeouts
+ModelCall --> DecisionTiming
+@enduml

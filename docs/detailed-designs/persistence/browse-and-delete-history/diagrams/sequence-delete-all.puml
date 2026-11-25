@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Delete all data
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "SettingsPage" as page
+  participant "DeleteAllDataDialog" as dialog
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+person -> page : Tap "Delete all"
+page -> store : usage()
+store --> page : 8 investigations, 6 profiles, 3 photos
+page -> dialog : Open with counts
+person -> dialog : Type "delete" and submit
+dialog --> person : "Type DELETE in capitals to confirm." (button stays disabled)
+person -> dialog : Type "DELETE"
+dialog -> dialog : Enable "Delete all data" (FR-065)
+person -> dialog : Tap "Delete all data"
+dialog --> page : confirmed (busy state)
+page -> store : deleteAll()
+store -> store : Close the connection
+store -> idb : indexedDB.deleteDatabase("gattsby")
+alt Deleted
+  idb --> store : success
+  store --> page : done
+  page -> page : Navigate to Home, empty state
+else Another tab keeps it open for 5 s
+  idb --> store : blocked
+  store --> page : DATABASE_BLOCKED
+  page --> person : "Close Gattsby's other tabs, then try again."
+end
+@enduml

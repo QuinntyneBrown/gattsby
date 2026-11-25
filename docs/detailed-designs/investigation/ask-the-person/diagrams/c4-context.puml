@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Ask the person
+
+Person(person, "Person", "Developer or helper holding the phone or laptop beside the machine")
+System(gattsby, "Gattsby", "Static client-only web app in Chrome that identifies a Bluetooth device")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+System_Ext(chrome, "Chrome", "Web Bluetooth stack, device chooser, Prompt API, camera, IndexedDB")
+
+Rel(gattsby, person, "Asks one question or one physical action at a time")
+Rel(person, gattsby, "Taps an answer, Don't know, Skip, Ready or Done")
+Rel(person, device, "Walks faster, pedals harder, presses Start")
+Rel(gattsby, chrome, "Stores each answer with its question", "IndexedDB")
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Scan for the device
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Find prompt, scan tools, scan options builder, BLE layer")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Known service UUIDs, name prefixes, Chrome's GATT blocklist")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Scan steps, chosen device, raw log")
+}
+System_Ext(chrome, "Chrome", "Web Bluetooth device chooser")
+
+Rel(person, spa, "Taps to scan", "Touch or keyboard")
+Rel(spa, kb, "Reads known UUIDs, name prefixes and blocklist")
+Rel(spa, chrome, "requestDevice(filters or acceptAllDevices, optionalServices)", "Web Bluetooth")
+Rel(spa, idb, "Commits the scan step, its raw-log entry and the chosen device")
+@enduml

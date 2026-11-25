@@ -1,0 +1,49 @@
+@startuml
+title UML sequence behaviour — Release when the person leaves the screen
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "AppShell router" as router
+  participant "leaveInvestigationGuard" as guard
+  participant "LeaveInvestigationDialog" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ConnectionReleaser" as releaser
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+
+person -> router : Navigate to Past investigations
+router -> guard : canDeactivate(InvestigationPage)
+guard -> guard : Connected to a device
+guard -> dialog : Open "Leave the investigation?"
+dialog -> person : "It's saved. Leaving disconnects from HZN-T202-4F1A…"
+alt The person taps "Leave and disconnect"
+  person -> dialog : Leave and disconnect
+  dialog -> dialog : Busy: "Disconnecting from HZN-T202-4F1A…"
+  dialog -> orch : pause("left the screen")
+  dialog -> releaser : release("leave")
+  releaser -> ble : disconnect(deviceId) via disconnectTool
+  ble --> releaser : disconnected
+  releaser --> guard : released (FR-018)
+  guard --> router : true: navigation continues
+else The person taps "Stay"
+  person -> dialog : Stay
+  guard --> router : false: stays on the investigation
+end
+@enduml

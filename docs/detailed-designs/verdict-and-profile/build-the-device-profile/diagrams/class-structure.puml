@@ -1,0 +1,111 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Build the device profile
+
+enum MetricStatus {
+  confirmed
+  likely
+  claimedOnly
+  claimedNotSeen
+}
+
+enum FeatureStatus {
+  confirmed
+  claimedOnly
+  refused
+}
+
+class DeviceProfile {
+  +kind: "gattsby.device-profile"
+  +formatVersion: string
+  +kbVersion: string
+  +id: string
+  +investigationId: string
+  +createdAt: string
+  +location?: string
+  +identity: DeviceIdentity
+  +services: ServiceSummary
+  +protocol: ProtocolClaim
+  +metrics: ReadableMetric[]
+  +features: ControllableFeature[]
+  +handshake: Handshake | null
+  +quirks: Quirk[]
+  +undetermined: Undetermined[]
+  +verdict: Verdict
+  +missingToolRequests: string[]
+  +counts: ProfileCounts
+}
+
+class DeviceIdentity {
+  +displayName: string
+  +advertisedName?: string
+  +deviceType?: string
+  +maker?: string
+  +model?: string
+  +firmware?: string
+  +evidence: string[]
+}
+
+class ReadableMetric {
+  +metric: string
+  +unit: string
+  +characteristic: string
+  +rule: DecodingRule
+  +type: string
+  +endianness: "little" | "big"
+  +scale: number
+  +rateHz?: number
+  +status: MetricStatus
+  +evidence: string[]
+}
+
+class DecodingRule {
+  +kind: "offset" | "flag"
+  +offset?: number
+  +length?: number
+  +flagBit?: number
+}
+
+class ControllableFeature {
+  +feature: string
+  +command: CommandSpec
+  +range?: Range
+  +test?: CommandTest
+  +status: FeatureStatus
+  +evidence: string[]
+}
+
+class ProfileBuilder {
+  +build(facts: VerdictFacts, verdict: Verdict): Promise<DeviceProfile>
+}
+
+class EvidenceResolver {
+  +exists(investigationId: string, ids: string[]): Promise<boolean>
+  +resolve(investigationId: string, id: string): Promise<EvidenceItem | null>
+}
+
+class SchemaValidator {
+  +validate(schemaId: string, value: unknown): ValidationResult
+}
+
+DeviceProfile *-- DeviceIdentity
+DeviceProfile "1" *-- "*" ReadableMetric
+DeviceProfile "1" *-- "*" ControllableFeature
+ReadableMetric *-- DecodingRule
+ReadableMetric --> MetricStatus
+ControllableFeature --> FeatureStatus
+ProfileBuilder ..> DeviceProfile : builds
+ProfileBuilder ..> EvidenceResolver : proves evidence
+ProfileBuilder ..> SchemaValidator : validates
+@enduml

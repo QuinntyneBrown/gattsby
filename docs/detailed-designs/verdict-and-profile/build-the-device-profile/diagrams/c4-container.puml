@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Build the device profile
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "UUIDs, decoders' data, vendor signatures, safe limits, commands")
+  Container(sw, "Service worker", "Angular service worker", "Caches every static file for offline use")
+}
+
+Rel(person, spa, "Opens the Device profile and Evidence pages", "Touch or keyboard")
+Rel(spa, idb, "Reads observations; stores the profile")
+Rel(spa, kb, "Reads characteristic names, command entries and its version")
+Rel(sw, spa, "Serves the app and schemas/device-profile-1.schema.json offline")
+@enduml

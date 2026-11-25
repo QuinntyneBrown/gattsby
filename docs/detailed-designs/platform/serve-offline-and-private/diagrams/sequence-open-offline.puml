@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Open and run offline
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "AppShell" as shell
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "PromptApiModelAdapter" as model
+end box
+box "Browser and device" #F2F4F7
+  participant "Service worker" as sw
+  participant "Chrome" as chrome
+  database "IndexedDB" as idb
+end box
+
+person -> chrome : Open Gattsby with no network
+chrome -> sw : GET /
+sw --> chrome : index.html from cache
+chrome -> shell : Bootstrap from cached chunks
+shell -> sw : import() InvestigationPage chunk
+sw --> shell : From cache
+shell -> sw : fetch knowledge-base JSON
+sw --> shell : From cache
+shell -> model : import() model adapter
+model -> chrome : LanguageModel.availability()
+chrome --> model : available (model cached by Chrome)
+shell -> idb : Steps, raw log, profile stay local
+note over shell, idb : The simulated FTMS treadmill reaches a verdict offline (NFR-006)
+alt A new version was deployed
+  sw -> shell : VERSION_READY on the next online visit
+  alt No investigation running
+    shell -> person : Toast "A new version is ready" with Reload
+  else Investigation running
+    shell -> shell : Defer until the verdict
+  end
+end
+@enduml

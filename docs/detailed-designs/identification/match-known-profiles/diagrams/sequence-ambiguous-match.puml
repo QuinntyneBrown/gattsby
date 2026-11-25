@@ -1,0 +1,56 @@
+@startuml
+title UML sequence behaviour — Ambiguous match goes to the decider
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "PlaybookRules" as rules
+  participant "ModelDecider" as model
+  participant "ChecklistDecider" as checklist
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "vendorSignatureLookupTool" as vendor
+  participant "VendorSignatureMatcher" as vsm
+end box
+
+orch -> rules : next(state): candidates scored
+rules -> rules : Only unknown services: no candidate above threshold,\nor top two within 10 points (FR-021)
+opt A name or vendor UUID is known
+  rules --> orch : decided: vendor_signature_lookup { name, uuids }
+  orch -> executor : run
+  executor -> vendor : run(input, ctx)
+  vendor -> vsm : match(input, vendors)
+  vsm --> vendor : matches with matchedOn, score, source (TOOL-020)
+  vendor --> executor : ok (empty matches is ok)
+  orch -> rules : next(state)
+end
+rules --> orch : ambiguous: options
+alt Full agent mode
+  orch -> model : decide(state, signal)
+  model --> orch : one AgentAction, validated before it runs (FR-043)
+else Checklist mode
+  orch -> checklist : decide(state, signal)
+  checklist -> page : "Pick the next step" with the recommended option first
+  person -> page : Tap an option
+  page --> checklist : choice
+  checklist --> orch : AgentAction
+end
+orch -> executor : run the chosen action
+@enduml

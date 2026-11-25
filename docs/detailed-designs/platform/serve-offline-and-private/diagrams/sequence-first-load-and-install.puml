@@ -1,0 +1,43 @@
+@startuml
+title UML sequence behaviour — First load and install
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "AppShell" as shell
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+  participant "Service worker" as sw
+  participant "Static host" as host
+end box
+
+person -> chrome : Open https://gattsby.app
+chrome -> host : GET /
+host --> chrome : index.html with HSTS, CSP, Permissions-Policy (NFR-014)
+chrome -> host : GET initial bundle (at most 250 KB compressed, NFR-004)
+host --> chrome : main, polyfills, styles
+chrome -> shell : Bootstrap; home interactive within 2 s
+shell -> chrome : Register /ngsw-worker.js
+chrome -> sw : install
+sw -> host : Prefetch every asset group: lazy chunks, knowledge base, fonts, icons (NFR-006)
+host --> sw : 200 for each, own origin only
+sw --> chrome : activated
+note over chrome, host : No request to any other origin, ever (NFR-012, FR-075)
+opt Person installs the app
+  person -> chrome : Install Gattsby
+  chrome -> chrome : Read manifest.webmanifest
+end
+@enduml

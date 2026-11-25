@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Read device information
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Device panel: Maker, Model, Firmware")
+  Component(rules, "PlaybookRules", "Pure rules", "Identify: read 0x180A when present, else record absence")
+  Component(executor, "ToolExecutor", "Service", "Runs the tool and commits the step")
+  Component(tool, "readDeviceInfoTool", "Tool (read)", "TOOL-010")
+  Component(kb, "KnowledgeBase", "Service", "Device Information characteristic map; blocklist")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "read(); logs each read")
+  Component(tracker, "HypothesisTracker", "Service", "Sets maker and model with the reads as evidence")
+  Component(store, "IndexedDbInvestigationStore", "Store", "commitStep in one transaction")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(rules, executor, "Decides read_device_info")
+Rel(executor, tool, "run({}, ctx)")
+Rel(tool, kb, "Characteristic map; blocklist")
+Rel(tool, ble, "read(0x180A, uuid) per field")
+Rel(ble, device, "readValue()", "Web Bluetooth")
+Rel(executor, tracker, "Maker and model with evidence")
+Rel(executor, store, "commitStep")
+Rel(page, store, "Reads observations through the orchestrator's signals")
+@enduml

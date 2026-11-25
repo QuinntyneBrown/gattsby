@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Render untrusted text
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Renders untrusted strings by interpolation only; Trusted Types enforced")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Stores untrusted strings as data")
+}
+System_Ext(chrome, "Chrome", "Enforces CSP and Trusted Types")
+
+Rel(person, spa, "Answers, notes, imported files")
+Rel(chrome, spa, "Device names, values, model output")
+Rel(spa, idb, "Stores strings unchanged, as data")
+Rel(chrome, spa, "Blocks any string reaching an HTML or script sink", "Trusted Types")
+@enduml

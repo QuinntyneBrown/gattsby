@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Heuristic match decides without the model
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "PlaybookRules" as rules
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "matchKnownProfilesTool" as tool
+  participant "ProfileMatcher" as pm
+  participant "KnowledgeBase" as kb
+  participant "HypothesisTracker" as tracker
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+orch -> rules : next(state): enumerate_gatt has run
+rules --> orch : decided: call_tool match_known_profiles
+orch -> executor : run
+executor -> tool : run({}, ctx)
+tool -> idb : Read layout, name, Device Information, manufacturer IDs
+tool -> pm : score(facts, kb.profiles)
+pm -> kb : profiles (version 2026.11)
+pm --> tool : FTMS treadmill first, score at least 90; sorted, ties by profileId (TOOL-012)
+tool --> executor : candidates with matched and missing facts
+executor -> idb : commitStep
+orch -> rules : next(state)
+rules -> rules : Best protocol above threshold, next protocol more than 10 points behind;\nFTMS present → decode FTMS first (FR-021)
+rules --> orch : decided: update_hypothesis "FTMS treadmill", then Standard path
+orch -> tracker : apply hypothesis; ConfidenceScorer sets confidence
+note over orch : No model call for this decision (FR-021, FR-046)
+orch -> page : "Matches the Horizon / Johnson FTMS treadmill family (3 profiles on file)."
+@enduml

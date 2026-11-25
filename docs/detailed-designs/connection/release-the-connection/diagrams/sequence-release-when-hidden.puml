@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Release after 60 seconds hidden
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ConnectionReleaser" as releaser
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Document" as doc
+end box
+
+doc -> releaser : visibilitychange: hidden
+alt No recording is running
+  releaser -> releaser : Start the 60 s timer (FR-018)
+else A recording is running
+  releaser -> releaser : Wait; start the timer when the recording ends
+end
+alt Visible again before 60 s
+  doc -> releaser : visibilitychange: visible
+  releaser -> releaser : Cancel the timer; keep the connection
+else 60 s pass while hidden
+  releaser -> orch : pause("hidden")
+  releaser -> ble : disconnect(deviceId) via disconnectTool
+  ble --> releaser : disconnected
+  note over orch : On return the investigation is paused;\nresuming starts with a reconnect (FR-009)
+end
+opt The page is being unloaded
+  doc -> releaser : pagehide
+  releaser -> ble : disconnect(deviceId), not awaited
+end
+@enduml

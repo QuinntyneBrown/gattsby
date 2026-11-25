@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Match known profiles
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Profile and vendor matchers, playbook rules, deciders")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Profiles, vendor signatures, name patterns, manufacturer IDs")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Layout, Device Information, match results, hypothesis versions")
+}
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(person, spa, "Follows the Identify stage", "Touch or keyboard")
+Rel(spa, kb, "Reads profiles and vendor signatures")
+Rel(spa, idb, "Reads facts; commits candidates and the hypothesis")
+Rel(spa, nano, "Ambiguous cases only", "Prompt API")
+@enduml

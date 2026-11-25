@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Refuse a file with a reason
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ImportDialog" as dialog
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ImportService" as service
+  participant "RecordMigrator" as migrator
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+dialog -> service : import(file, signal)
+alt Over 20 MB
+  service --> dialog : FILE_TOO_LARGE before reading (NFR-015 AC1)
+else Not JSON
+  service -> service : JSON.parse throws
+  service --> dialog : NOT_JSON
+else A __proto__, constructor or prototype key
+  service -> service : Reviver throws; Object.prototype unchanged
+  service --> dialog : FORBIDDEN_KEY (NFR-015 AC2)
+else No kind or formatVersion
+  service --> dialog : NOT_GATTSBY: "This isn't a Gattsby file."
+else Newer version (format 3)
+  service -> migrator : plan(record, 3.0)
+  migrator --> service : unsupported
+  service --> dialog : UNSUPPORTED_VERSION: "Made by a newer Gattsby."
+else Fails the schema of its declared version
+  service -> service : SchemaValidator errors at /identity/displayName
+  service --> dialog : SCHEMA_INVALID with the field
+else Cancel tapped during the checks
+  dialog -> service : signal aborted
+  service --> dialog : ABORTED
+end
+note over service, store : No branch reaches the store: nothing is stored (FR-064 AC2)
+dialog --> person : Invalid or failed state with the reason and "Choose another file"
+@enduml

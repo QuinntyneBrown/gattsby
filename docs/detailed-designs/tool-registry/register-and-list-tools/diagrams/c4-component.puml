@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Register and list tools
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(catalog, "TOOL_CATALOG", "Array", "Every registry entry, in order")
+  Component(tools, "Tool implementations", "tools/{group}/*.tool.ts", "ToolDefinition with schemas and run()")
+  Component(registry, "ToolRegistry", "Service", "Checks entries; get(), forStage()")
+  Component(validator, "SchemaValidator", "Service", "Precompiled input and output schemas")
+  Component(generator, "ToolListGenerator", "Service", "Stage, capabilities and phase filters")
+  Component(caps, "CapabilityDetector", "Service", "Available, needs action or not available")
+  Component(state, "DecisionStateBuilder", "Service", "Puts the list in the model's state")
+  Component(action, "ActionValidator", "Service", "UNKNOWN_TOOL, NOT_ALLOWED_AT_STAGE")
+  Component(checklist, "ChecklistDecider", "Service", "Same list in checklist mode")
+}
+
+Rel(catalog, tools, "Imports")
+Rel(registry, catalog, "Reads")
+Rel(registry, validator, "Checks validators exist")
+Rel(generator, registry, "forStage()")
+Rel(generator, caps, "Capabilities")
+Rel(state, generator, "generate(stage, capabilities)")
+Rel(action, registry, "get(name)")
+Rel(checklist, generator, "generate()")
+@enduml

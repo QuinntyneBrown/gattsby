@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Run a model on phones
+
+Person(person, "Person", "Phone in hand, beside the machine")
+System_Ext(host, "Static host", "Own origin")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Orchestrator unchanged; model adapter chosen at run time")
+  Container(worker, "Phone model worker", "Web Worker, <TO SUPPLY> runtime (OQ-02)", "Loads the weights and runs inference on WebGPU")
+  ContainerDb(cache, "Model cache", "Cache Storage", "The phone model's weights, after the person's download")
+}
+
+Rel(person, spa, "Taps Download the on-device model")
+Rel(spa, worker, "Prompt, JSON schema, abort", "postMessage")
+Rel(worker, cache, "Reads weights")
+Rel(worker, host, "Downloads weights once, on the tap", "HTTPS, connect-src 'self'")
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Build the decision state
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "State builder, prompt composer, tool executor, activity feed")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps with summaries, observations, hypotheses")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Service and characteristic names")
+}
+System_Ext(nano, "Gemini Nano", "Via Chrome's Prompt API")
+
+Rel(person, spa, "Reads the activity feed")
+Rel(spa, idb, "Reads observations and the last summaries; commits steps")
+Rel(spa, kb, "Names UUIDs in summaries")
+Rel(spa, nano, "Measures tokens; sends the fitted prompt", "Prompt API")
+@enduml

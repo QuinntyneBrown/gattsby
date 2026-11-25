@@ -1,0 +1,119 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Maintain the knowledge base
+
+class KnowledgeBase {
+  +version: string
+  +schemaVersion: string
+  +knownServiceUuids(): string[]
+  +blocklist: BlocklistEntry[]
+  +nameOf(uuid: string): string | null
+  +decoderFor(uuid: string): Decoder | null
+  +vendors: VendorSignature[]
+  +profiles: KnownProfile[]
+  +safeLimits(deviceType: string): SafeLimits | null
+  +commands: CommandEntry[]
+  +handshakes: Handshake[]
+  +load(): Promise<void>
+}
+
+class StandardService {
+  +id: string
+  +name: string
+  +shortName: string
+  +uuid: string
+  +characteristics: CharacteristicEntry[]
+  +profiles: KnownProfile[]
+}
+
+class CharacteristicEntry {
+  +uuid: string
+  +name: string
+  +properties: string[]
+  +decoder?: string
+  +deviceType?: string
+}
+
+class VendorSignature {
+  +id: string
+  +brand: string
+  +phase: "MVP" | "P2"
+  +sources: Map<string, Source>
+  +services: UuidFact[]
+  +characteristics: UuidFact[]
+  +namePatterns: NamePatternFact[]
+  +manufacturerIds: ManufacturerIdFact[]
+  +decoders: FieldLayoutFact[]
+  +safeLimits: LimitFact[]
+  +handshakes: HandshakeFact[]
+}
+
+abstract class Fact {
+  +source: string
+}
+
+class UuidFact {
+  +uuid: string
+  +name?: string
+  +service?: string
+}
+
+class NamePatternFact {
+  +pattern: string
+}
+
+class ManufacturerIdFact {
+  +id: number
+}
+
+class Source {
+  +type: "specification" | "vendor-doc" | "open-source" | "own-recording"
+  +title: string
+  +reference: string
+  +retrieved: string
+}
+
+class SafeLimits {
+  +deviceType: string
+  +commands: Map<string, LimitEntry>
+}
+
+class BlocklistEntry {
+  +uuid: string
+  +exclude: "all" | "reads" | "writes"
+}
+
+interface Decoder {
+  +decode(bytes: DataView): DecodedValue | DecodeError
+}
+
+class FieldLayoutDecoder {
+  +layout: FieldLayout
+  +decode(bytes: DataView): DecodedValue | DecodeError
+}
+
+KnowledgeBase "1" *-- "*" StandardService
+KnowledgeBase "1" *-- "*" VendorSignature
+KnowledgeBase "1" *-- "*" SafeLimits
+KnowledgeBase "1" *-- "*" BlocklistEntry
+StandardService "1" *-- "*" CharacteristicEntry
+VendorSignature "1" *-- "*" Fact
+VendorSignature "1" *-- "*" Source
+Fact ..> Source : cites
+Fact <|-- UuidFact
+Fact <|-- NamePatternFact
+Fact <|-- ManufacturerIdFact
+KnowledgeBase ..> Decoder : decoderFor
+Decoder <|.. FieldLayoutDecoder
+@enduml

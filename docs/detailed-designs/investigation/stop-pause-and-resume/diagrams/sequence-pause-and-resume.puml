@@ -1,0 +1,54 @@
+@startuml
+title UML sequence behaviour — Pause, then resume or save and exit
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "InvestigationPage" as page
+  participant "StillThereDialog (paused)" as dialog
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+  participant "ConnectionReleaser" as rel
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+person -> page : Options, Pause
+page -> orch : pause()
+orch -> orch : Finish or abandon the step in progress
+orch -> ble : unsubscribe all; nothing recorded while paused
+orch -> store : setStatus(paused), pausedAt
+page -> dialog : "Paused", picks up at Standard path
+alt Resume
+  person -> dialog : Tap Resume
+  dialog --> page : resume
+  page -> orch : resume(i-42)
+  orch -> ble : Restore subscriptions from GattSession
+  orch -> store : setStatus(running)
+  orch -> orch : Continue the loop at the same stage
+else Save and exit
+  person -> dialog : Tap "Save and exit"
+  dialog --> page : saveAndExit
+  page -> rel : release(2000) on leaving (FR-018)
+  page -> page : Navigate home; Home shows "Resume: Horizon T202"
+else Stop and get a verdict
+  person -> dialog : Tap "Stop and get a verdict"
+  dialog --> page : stop
+  page -> orch : stop('person'), as in the stop sequence
+end
+@enduml

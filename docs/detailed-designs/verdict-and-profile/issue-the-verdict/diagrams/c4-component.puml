@@ -1,0 +1,26 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Issue the verdict
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(stop, "StopConditions", "Service", "Latches the stop reason; starts the conclude path once")
+  Component(tool, "finishTool", "Tool registry entry", "Meta tool: check, build, commit")
+  Component(builder, "VerdictBuilder", "Pure helper", "Evidence rules; check and derive")
+  Component(profile, "ProfileBuilder", "Service", "Builds the DeviceProfile")
+  Component(releaser, "ConnectionReleaser", "Service", "Disconnects before the verdict shows")
+  Component(page, "VerdictPage", "Angular page", "Loads verdict, profile and requests")
+  Component(summary, "VerdictSummary", "Angular component", "Renders verdict and sections as text")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "investigations, profiles, steps, missingToolRequests")
+
+Rel(stop, tool, "Conclude with stop reason")
+Rel(tool, builder, "check(kind) or derive(facts)")
+Rel(tool, profile, "build(facts, verdict)")
+Rel(tool, idb, "commitVerdict")
+Rel(tool, releaser, "Release the device")
+Rel(page, idb, "get(id), profile, requests")
+Rel(page, summary, "Verdict and sections")
+Rel(person, summary, "Reads; taps Export or New investigation")
+@enduml

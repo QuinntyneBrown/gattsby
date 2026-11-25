@@ -1,0 +1,103 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Register and list tools
+
+enum SafetyClass {
+  read
+  listen
+  write
+  control
+  n/a
+}
+
+enum Phase {
+  MVP
+  P2
+  Later
+}
+
+enum ToolGroup {
+  Environment
+  Discovery
+  Connection
+  Inspection
+  Listening
+  Analysis
+  Control
+  Person
+  Meta
+}
+
+interface "ToolDefinition<I, O>" as ToolDefinition {
+  +name: string
+  +group: ToolGroup
+  +description: string
+  +inputSchema: JsonSchema
+  +outputSchema: JsonSchema
+  +safetyClass: SafetyClass
+  +preconditions: Precondition[]
+  +stages: Stage[]
+  +requiredCapabilities: CapabilityKey[]
+  +phase: Phase
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class Precondition {
+  +id: string
+  +message: string
+  +check(ctx: ToolContext): boolean
+}
+
+class ToolRegistry {
+  -byName: Map<string, ToolDefinition>
+  +get(name: string): ToolDefinition | null
+  +all(): ToolDefinition[]
+  +forStage(stage: Stage, capabilities: Capabilities): ToolDefinition[]
+}
+
+class ToolRegistryConfig {
+  +enabledPhases: Phase[]
+}
+
+class ToolListGenerator {
+  +generate(stage: Stage, capabilities: Capabilities): ModelToolList
+}
+
+class ModelToolList {
+  +items: ModelToolItem[]
+  +names: string[]
+}
+
+class ModelToolItem {
+  +name: string
+  +description: string
+  +input: JsonSchema
+}
+
+class SchemaValidator {
+  +has(schemaId: string): boolean
+  +validate(schemaId: string, value: unknown): ValidationResult
+}
+
+ToolRegistry "1" *-- "*" ToolDefinition
+ToolRegistry ..> ToolRegistryConfig
+ToolRegistry ..> SchemaValidator : checks
+ToolDefinition "1" *-- "*" Precondition
+ToolDefinition --> SafetyClass
+ToolDefinition --> Phase
+ToolDefinition --> ToolGroup
+ToolListGenerator ..> ToolRegistry
+ToolListGenerator ..> ModelToolList : builds
+ModelToolList *-- ModelToolItem
+@enduml

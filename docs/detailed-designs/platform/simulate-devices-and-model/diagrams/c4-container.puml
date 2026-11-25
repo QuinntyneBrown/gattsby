@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Simulate devices and the model
+
+Person(dev, "Developer or CI", "Playwright, Chromium only")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Real BLE layer and model adapter; simulation providers in development builds only")
+  Container(sim, "Simulation", "TypeScript, frontend/src/simulation", "Scripted devices and the fake Bluetooth API; not in production builds")
+  Container(e2e, "Behaviour specs", "Playwright, e2e/", "Fixtures, page objects, guards")
+}
+
+Rel(dev, e2e, "npx playwright test", "Chromium")
+Rel(e2e, spa, "Drives through page objects")
+Rel(e2e, sim, "Bundles and installs with addInitScript")
+Rel(sim, spa, "Plays scripted devices behind navigator.bluetooth or the BLUETOOTH token")
+@enduml

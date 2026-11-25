@@ -1,0 +1,108 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Keep commands conservative
+
+enum CommandName {
+  start
+  stop
+  pause
+  setSpeed
+  setIncline
+  setResistance
+  setPower
+}
+
+class SafeLimits {
+  +deviceType: DeviceType
+  +firstSpeedKmh: number
+  +inclineMaxPercent: number
+  +inclineStep: number
+  +resistanceStep: number
+  +powerMaxWatts: number
+  +allowStart: boolean
+  +source: string
+}
+
+class ParameterEncoding {
+  +type: "uint8" | "uint16" | "sint16"
+  +resolution: number
+  +unit: string
+}
+
+class CommandDefinition {
+  +id: string
+  +protocol: string
+  +command: CommandName
+  +characteristic: string
+  +opCode: number
+  +parameter?: ParameterEncoding
+  +fixedBytes?: Uint8Array
+  +isMotion: boolean
+  +risk: string
+  +source: string
+}
+
+class LimitFacts {
+  +deviceType: DeviceType | null
+  +ranges: SupportedRanges
+  +current: CurrentReadings
+  +pendingCommandId?: string
+  +belt: "stopped" | "moving" | "unknown"
+}
+
+class SafeCommand {
+  +command: CommandName
+  +value?: number
+  +characteristic: string
+  +bytes: Uint8Array
+  +isMotion: boolean
+  +reason: string
+}
+
+class SafetyLimits {
+  +offer(command: CommandName, facts: LimitFacts): SafeCommand | ToolError
+  +check(command: CommandName, value: number | undefined, facts: LimitFacts): SafeCommand | ToolError
+  -allowedValues(command: CommandName, limits: SafeLimits, facts: LimitFacts): number[]
+}
+
+class CommandEncoder {
+  +encode(definition: CommandDefinition, value?: number): Uint8Array | ToolError
+}
+
+class KnowledgeBase {
+  +version: string
+  +commands: CommandDefinition[]
+  +safeLimits(deviceType: DeviceType): SafeLimits | null
+  +writeTargets(): ReadonlySet<string>
+}
+
+class MissingToolRecorder {
+  +record(request: MissingToolRequestDraft): Promise<MissingToolRequest>
+}
+
+class ActionValidator {
+  +validate(action: unknown, state: DecisionState): ValidAction | Refusal
+}
+
+SafetyLimits ..> KnowledgeBase : reads
+SafetyLimits ..> CommandEncoder : encodes with
+SafetyLimits ..> LimitFacts : reads
+SafetyLimits ..> SafeCommand : produces
+SafetyLimits ..> MissingToolRecorder : no limit
+KnowledgeBase "1" *-- "*" CommandDefinition
+KnowledgeBase "1" *-- "*" SafeLimits
+CommandDefinition --> ParameterEncoding
+CommandDefinition --> CommandName
+ActionValidator ..> SafetyLimits : check before approval
+@enduml

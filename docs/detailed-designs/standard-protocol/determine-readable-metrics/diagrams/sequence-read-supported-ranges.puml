@@ -1,0 +1,55 @@
+@startuml
+title UML sequence behaviour — Read features and supported ranges
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "readSupportedRangesTool" as tool
+  participant "FitnessMachineFeatureDecoder" as fdec
+  participant "SupportedRangeDecoder" as rdec
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+executor -> tool : run({}, ctx)
+alt No 0x1826 or no 0x2ACC in the GATT layout
+  tool --> executor : PRECONDITION_FAILED (TOOL-031)
+else FTMS present
+  tool -> ble : read(0x1826, 0x2ACC)
+  ble -> device : readValue
+  device --> ble : 8 bytes
+  ble --> tool : bytes
+  tool -> fdec : decode(bytes)
+  fdec --> tool : machine: Total Distance, Inclination, Elapsed Time; target: Speed, Inclination
+  loop each of 0x2AD4-0x2AD8 in the layout
+    tool -> ble : read(0x1826, range)
+    alt Read succeeds
+      ble --> tool : 64 00 B0 04 0A 00
+      tool -> rdec : decode(bytes, speed)
+      rdec --> tool : 1.00-12.00 km/h, increment 0.10
+    else GATT error
+      ble --> tool : GATT_ERROR
+      tool -> tool : Leave range out; name it in the summary
+    end
+  end
+  tool --> executor : ok: machineFeatures, targetSettingFeatures, ranges (FR-027)
+end
+@enduml

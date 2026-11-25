@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Tell candidates apart
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "InvestigationPage", "Angular page", "Shows Pick the one that comes back")
+  Component(channel, "PromptChannel", "Service", "Posts the power-cycle prompt and awaits the tap or Done")
+  Component(rules, "PlaybookRules", "Pure rules", "Chooses automatic or guided; falls back to guided")
+  Component(match, "powerCycleMatchTool", "Tool (read)", "TOOL-005: guided or automatic match")
+  Component(watch, "watchAdvertisementsTool", "Tool (read)", "TOOL-004: advertisement samples (P2)")
+  Component(detector, "PowerCycleDetector", "Pure helper", "Names the candidate whose advertisements stopped and resumed")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "requestDevice; watchAdvertisements or requestLEScan")
+  Component(missing, "MissingToolRecorder", "Service", "Records watch advertisements when unsupported")
+}
+System_Ext(chrome, "Chrome", "Chooser and advertisement events")
+
+Rel(rules, match, "Decides power_cycle_match(mode)")
+Rel(match, channel, "Posts the power-cycle prompt")
+Rel(channel, page, "Renders")
+Rel(person, page, "Taps Find the device, Done or Skip")
+Rel(match, watch, "Automatic: samples each candidate")
+Rel(watch, ble, "watchAdvertisements(deviceId, seconds)")
+Rel(match, detector, "Automatic: find(samples, window)")
+Rel(match, ble, "Guided: requestDevice(options)")
+Rel(ble, chrome, "Web Bluetooth calls")
+Rel(watch, missing, "UNSUPPORTED: record request")
+@enduml

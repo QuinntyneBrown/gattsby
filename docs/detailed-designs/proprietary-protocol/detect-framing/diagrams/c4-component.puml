@@ -1,0 +1,25 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Detect framing
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(rules, "PlaybookRules", "Pure code", "detect_framing after find_varying_bytes, before correlation")
+  Component(executor, "ToolExecutor", "Service", "Runs the call and commits the step")
+  Component(tool, "detectFramingTool", "Tool, read", "Loads one characteristic's packets in order")
+  Component(detector, "FramingDetector", "Pure helper", "Header, length, checksum, counter; shares; fit")
+  Component(sums, "Checksums", "Pure helper", "sum8, xor8, crc8, crc16-ccitt, crc16-modbus")
+  Component(corr, "EffortCorrelator", "Pure helper", "Skips the frame's offsets")
+  Component(resolver, "ReadableMetricResolver", "Pure helper", "Adds the frame to the decoding rule")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "recordings, steps, observations")
+
+Rel(rules, executor, "Decided action")
+Rel(executor, tool, "run({recordingId, uuid})")
+Rel(tool, idb, "Reads packets")
+Rel(tool, detector, "detect(packets)")
+Rel(detector, sums, "compute(algorithm, bytes)")
+Rel(executor, idb, "Commits framing report")
+Rel(corr, idb, "Reads frame offsets")
+Rel(resolver, idb, "Reads frame for the profile")
+@enduml

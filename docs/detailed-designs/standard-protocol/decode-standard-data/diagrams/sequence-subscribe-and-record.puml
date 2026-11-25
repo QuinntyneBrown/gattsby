@@ -1,0 +1,60 @@
+@startuml
+title UML sequence behaviour — Subscribe and record Treadmill Data
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ToolExecutor" as executor
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "subscribeAndRecordTool" as tool
+  participant "NotificationRecorder" as recorder
+  participant "TreadmillDataDecoder" as decoder
+  participant "LiveMetrics" as live
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "WebBluetoothBleLayer" as ble
+  participant "RawTrafficLog" as log
+  participant "InvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  participant "Device" as device
+end box
+
+person -> executor : Taps Ready (request_action)
+executor -> tool : run({characteristics: [0x2ACD], seconds: 10, label: "walk slowly"})
+tool -> tool : Validate input: 1-8 UUIDs, 1-120 s (TOOL-013)
+tool -> ble : subscribe(0x2ACD, recorder.onValue)
+ble -> device : startNotifications
+device --> ble : ok
+tool -> recorder : open("walk slowly", 10 s, signal)
+loop each notification, about 1 Hz
+  device -> ble : 0C 04 2C 01 08 00 00 00 00 00 00 34 00
+  ble -> log : Append entry r-231 (FR-073)
+  ble -> recorder : onValue(0x2ACD, t, bytes, r-231)
+  recorder -> decoder : decode(bytes)
+  decoder --> recorder : speed 3.00 km/h, distance 8 m, elapsed 52 s (FR-024)
+  recorder -> live : Push decoded fields
+  recorder -> recorder : Append RecordedValue with raw and decoded
+end
+recorder -> store : Write values in batches (NFR-005)
+alt Connection drops during the recording
+  ble --> recorder : disconnected
+  recorder -> recorder : Mark recording interrupted; keep values (TOOL-013)
+end
+recorder --> tool : Recording closed after 10 s
+tool --> executor : ok: 10 values, lengths [13], silent false
+executor -> store : commitStep(step, envelope)
+@enduml

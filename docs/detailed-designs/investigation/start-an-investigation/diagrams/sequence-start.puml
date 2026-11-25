@@ -1,0 +1,57 @@
+@startuml
+title UML sequence behaviour — Start an investigation in one tap
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+  participant "InvestigationPage" as page
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "ModeSelector" as sel
+  participant "PlaybookOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "CapabilityDetector" as det
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+person -> home : Tap "Identify a device"
+home -> det : detect() (FR-001, before every investigation)
+alt Bluetooth unusable
+  det --> home : Needs action or not available
+  home -> person : Route to /start with the reason
+else Ready
+  det --> home : Capabilities
+  home -> sel : select(preference)
+  sel --> home : agent or checklist
+  home -> store : create(mode, appVersion 0.1.0, kbVersion 2026.11)
+  store -> idb : put investigations (startedAt, status running)
+  idb --> store : committed
+  store --> home : Investigation i-42
+  opt First investigation on this device
+    home -> store : requestPersistence() (NFR-016)
+    store -> idb : navigator.storage.persist()
+  end
+  home -> page : Navigate /investigations/i-42
+  page -> orch : start(i-42)
+  orch -> orch : Stage Prepare; check_capabilities observation
+  orch -> page : First prompt "What kind of machine is it?"
+  note over home, page : The record exists before the first prompt (FR-007)
+end
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Announce prompts and adapt to the viewport
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "AppShell" as shell
+  participant "InvestigationPage" as page
+  participant "PromptCard" as card
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+end box
+
+orch --> page : prompt signal "Raise the incline to 2%"
+page -> card : Render in the dock (polite live region)
+card -> person : Screen reader announces the prompt (NFR-011)
+alt Viewport under 768 px
+  page -> page : One column; emergency stop pinned top; dock pinned bottom
+  card -> person : Prompt text 20 px; answers 48 x 48 px in the bottom third (NFR-009)
+else 992 px or wider
+  page -> page : Prompt and live readings beside the feed (NFR-010)
+end
+person -> card : Tab to "Incline is at 2%"; Enter
+card --> page : responded (keyboard only)
+page -> orch : PromptChannel.respond(response)
+alt An error or emergency stop
+  orch --> page : status error or stopped
+  page -> shell : Message to the assertive live region
+  shell -> person : Announced at once
+end
+opt prefers-reduced-motion
+  page -> page : No feed or stepper animation
+end
+@enduml

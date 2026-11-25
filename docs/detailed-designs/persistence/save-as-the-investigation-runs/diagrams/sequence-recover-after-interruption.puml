@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Recover after an interruption
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "HomePage" as home
+end box
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "PlaybookOrchestrator" as orch
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "IndexedDbInvestigationStore" as store
+end box
+box "Browser and device" #F2F4F7
+  database "IndexedDB" as idb
+end box
+
+note over person, idb : The tab closed during step 8; steps 1 to 7 committed
+person -> home : Reopen Gattsby
+home -> store : recoverInterrupted()
+store -> idb : byStatus = running
+idb --> store : i-5a10 (lastCommittedStep 7)
+store -> store : recover(i-5a10)
+store -> idb : readwrite: delete rawLog and recordings in byStep [i-5a10, 8]..[i-5a10, Infinity]
+store -> idb : put investigation status paused, interruptedAt
+idb --> store : complete (NFR-007)
+store --> home : [i-5a10]
+home --> person : "Resume: spin bike · Paused at Standard path"
+person -> home : Tap Resume
+home -> orch : resume(i-5a10)
+orch -> store : get(i-5a10)
+store --> orch : Steps 1-7, observations, hypotheses; no step 8
+orch -> orch : Continue from step 8 with a reconnect (FR-009)
+@enduml

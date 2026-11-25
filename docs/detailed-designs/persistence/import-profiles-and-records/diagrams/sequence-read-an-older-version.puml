@@ -1,0 +1,51 @@
+@startuml
+title UML sequence behaviour — Read an older version
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "DeviceProfilePage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "ImportService" as service
+  participant "RecordMigrator" as migrator
+  participant "IndexedDbInvestigationStore" as store
+end box
+
+group On import
+  service -> migrator : plan(profile, declared version)
+  alt Older minor of the current major (1.0 in a 1.1 build)
+    migrator --> service : asIs
+    service -> service : Validate against device-profile-1; store unchanged (NFR-024 AC1)
+  else Older major with a chain (a later build reading 1.x)
+    migrator --> service : migrate, chain [1 → 2]
+    service -> service : Validate against device-profile-1
+    service -> migrator : migrate(doc, plan)
+    migrator --> service : Document in the current major
+    service -> service : Validate against the current schema
+  else Older major with no chain
+    migrator --> service : unsupported
+    service --> service : UNSUPPORTED_VERSION; nothing stored
+  end
+end
+group On opening a stored profile
+  person -> page : Open /profiles/p-0b12
+  page -> store : getProfile(p-0b12)
+  store -> migrator : plan(profile, 0.9)
+  migrator --> store : unsupported
+  store --> page : UNSUPPORTED_VERSION
+  page --> person : "This profile couldn't be opened." The investigation record is intact
+end
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Check capabilities
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(page, "ReadinessPage", "Angular page, /start", "Shows the six capabilities, the headline and the next action")
+  Component(list, "CapabilityList", "Angular component", "Renders each item as Available, Needs action or Not available")
+  Component(detector, "BrowserCapabilityDetector", "Service (CapabilityDetector)", "Runs every probe in parallel within 1 s; never throws")
+  Component(ble, "WebBluetoothBleLayer", "BLE layer", "availability(): API present, secure context, adapter on")
+  Component(model, "PromptApiModelAdapter", "Model adapter, dynamically imported", "availability() with the session options")
+  Component(camera, "MediaDevicesCameraAdapter", "Camera adapter, dynamically imported", "availability(): API present, no getUserMedia call")
+  Component(store, "IndexedDbInvestigationStore", "Store", "usage(): opens, persisted, quota and usage")
+  Component(tool, "checkCapabilitiesTool", "Tool, read", "check_capabilities at Prepare; records the result")
+}
+System_Ext(chrome, "Chrome", "Browser APIs")
+
+Rel(person, page, "Opens the app; taps Check again")
+Rel(page, detector, "detect()")
+Rel(page, list, "Passes CapabilityItem[]")
+Rel(tool, detector, "detect()")
+Rel(detector, ble, "availability()")
+Rel(detector, model, "availability()")
+Rel(detector, camera, "availability()")
+Rel(detector, store, "usage()")
+Rel(ble, chrome, "isSecureContext, bluetooth.getAvailability()")
+Rel(model, chrome, "LanguageModel.availability(options)")
+Rel(camera, chrome, "mediaDevices.getUserMedia present?")
+Rel(store, chrome, "indexedDB.open, storage.persisted(), storage.estimate()")
+@enduml

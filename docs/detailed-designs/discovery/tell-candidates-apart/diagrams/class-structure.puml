@@ -1,0 +1,96 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Tell candidates apart
+
+enum MatchMethod {
+  guided
+  automatic
+}
+
+class PowerCycleMatchInput {
+  +candidates?: string[]
+  +mode: MatchMethod
+}
+
+class PowerCycleMatchOutput {
+  +match: string | null
+  +method: MatchMethod
+  +confidence: number
+}
+
+class WatchAdvertisementsInput {
+  +deviceId: string
+  +seconds: number
+}
+
+class AdvertisementSample {
+  +t: number
+  +rssi: number
+  +txPower?: number
+  +manufacturerData: Record<string, string>
+  +serviceData: Record<string, string>
+}
+
+class WatchAdvertisementsOutput {
+  +samples: AdvertisementSample[]
+  +count: number
+}
+
+class powerCycleMatchTool {
+  +name = "power_cycle_match"
+  +run(input: PowerCycleMatchInput, ctx: ToolContext): Promise<ToolResult<PowerCycleMatchOutput>>
+}
+
+class watchAdvertisementsTool {
+  +name = "watch_advertisements"
+  +requiredCapabilities = ["watchAdvertisements"]
+  +run(input: WatchAdvertisementsInput, ctx: ToolContext): Promise<ToolResult<WatchAdvertisementsOutput>>
+}
+
+class PowerCycleDetector {
+  +find(samples: Map<string, AdvertisementSample[]>, window: OffOnWindow): PowerCycleVerdict
+}
+
+class OffOnWindow {
+  +offAt: number
+  +onAt: number
+}
+
+class PowerCycleVerdict {
+  +match: string | null
+  +stoppedAndResumed: string[]
+}
+
+abstract class BleLayer <<contract>> {
+  +requestDevice(options: RequestDeviceOptions): Promise<ToolResult<ChosenDevice>>
+  +watchAdvertisements(deviceId: string, seconds: number): Promise<ToolResult<AdvertisementSample[]>>
+}
+
+class MissingToolRecorder {
+  +record(request: MissingToolRequest): Promise<void>
+}
+
+powerCycleMatchTool ..> PowerCycleMatchInput
+powerCycleMatchTool ..> PowerCycleMatchOutput : returns
+powerCycleMatchTool ..> watchAdvertisementsTool : automatic
+powerCycleMatchTool ..> PowerCycleDetector : automatic
+powerCycleMatchTool ..> BleLayer : guided requestDevice
+watchAdvertisementsTool ..> BleLayer : watchAdvertisements
+watchAdvertisementsTool ..> WatchAdvertisementsOutput : returns
+WatchAdvertisementsOutput "1" *-- "*" AdvertisementSample
+PowerCycleDetector ..> OffOnWindow
+PowerCycleDetector ..> PowerCycleVerdict : returns
+watchAdvertisementsTool ..> MissingToolRecorder : on UNSUPPORTED
+PowerCycleMatchOutput --> MatchMethod
+@enduml

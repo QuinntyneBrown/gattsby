@@ -1,0 +1,90 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Request control
+
+enum ControlResult {
+  success
+  opNotSupported
+  invalidParameter
+  operationFailed
+  controlNotPermitted
+}
+
+class ToolDefinition<I, O> {
+  +name: string
+  +safetyClass: SafetyClass
+  +stages: Stage[]
+  +preconditions: Precondition[]
+  +run(input: I, ctx: ToolContext): Promise<ToolResult<O>>
+}
+
+class requestControlTool <<const>> {
+  +name = "request_control"
+  +safetyClass = "control"
+  +stages = ["control"]
+  +run(input: {}, ctx: ToolContext): Promise<ToolResult<RequestControlOutput>>
+}
+
+class RequestControlOutput {
+  +result: ControlResult
+  +raw: string
+}
+
+class ControlPointExchange {
+  +timeoutMs: number = 5000
+  +send(bytes: Uint8Array, approvalId: string, signal: AbortSignal): Promise<ControlPointOutcome | ToolError>
+}
+
+class ControlPointResponseDecoder {
+  +decode(bytes: Uint8Array): ControlPointResponse | DecodeError
+}
+
+class ControlPointResponse {
+  +requestOpCode: number
+  +resultCode: number
+  +result: ControlResult
+  +raw: string
+}
+
+class ControlPointOutcome {
+  +response: ControlPointResponse
+  +writeEntryId: string
+  +indicationEntryId: string
+  +elapsedMs: number
+}
+
+abstract class BleLayer <<contract>> {
+  +subscribe(characteristic: string, onValue: (v: DataView) => void): Promise<ToolResult<void>>
+  +write(characteristic: string, bytes: Uint8Array, approvalId: string | null): Promise<ToolResult<void>>
+  +disconnected: Observable<DisconnectEvent>
+}
+
+class GattSession {
+  +deviceId: string
+  +controlGranted: boolean
+  +subscriptions: Set<string>
+  +clearControl(reason: string): void
+}
+
+ToolDefinition <|-- requestControlTool
+requestControlTool ..> ControlPointExchange : uses
+requestControlTool ..> RequestControlOutput : returns
+requestControlTool ..> GattSession : sets controlGranted
+ControlPointExchange ..> BleLayer : subscribe and write
+ControlPointExchange ..> ControlPointResponseDecoder : decodes
+ControlPointExchange ..> ControlPointOutcome : returns
+ControlPointOutcome --> ControlPointResponse
+ControlPointResponse --> ControlResult
+RequestControlOutput --> ControlResult
+@enduml

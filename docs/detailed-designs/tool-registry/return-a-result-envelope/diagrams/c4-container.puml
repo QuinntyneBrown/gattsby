@@ -1,0 +1,18 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Return a result envelope
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Pages, dialogs, agent orchestrator, tools, adapters")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Investigations, steps, raw log, recordings, photos, profiles, missing-tool requests, settings")
+}
+System_Ext(nano, "Gemini Nano", "On-device model behind Chrome's Prompt API")
+System_Ext(device, "Device", "Treadmill, bike, rower, cross-trainer or sensor under investigation (Bluetooth LE)")
+
+Rel(person, spa, "Follows the activity feed", "Touch or keyboard")
+Rel(spa, device, "Tool calls", "Web Bluetooth")
+Rel(spa, nano, "Summary and error code per step", "Prompt API")
+Rel(spa, idb, "Full envelope and StepError with each step")
+@enduml

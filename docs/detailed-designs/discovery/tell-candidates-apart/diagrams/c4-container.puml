@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Tell candidates apart
+
+Person(person, "Person", "Developer or helper beside the machine")
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Power-cycle prompt, matching tools, BLE layer")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Match observation, advertisement samples, missing-tool requests")
+}
+System_Ext(chrome, "Chrome", "Device chooser; watchAdvertisements or requestLEScan (experimental)")
+
+Rel(person, spa, "Follows the prompt", "Touch or keyboard")
+Rel(spa, chrome, "Opens the chooser; watches advertisements", "Web Bluetooth")
+Rel(spa, idb, "Commits the match, its evidence and any missing-tool request")
+@enduml

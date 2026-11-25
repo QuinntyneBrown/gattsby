@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Match known profiles
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(rules, "PlaybookRules", "Pure rules", "Identify heuristics; decided or ambiguous")
+  Component(match, "matchKnownProfilesTool", "Tool (read)", "TOOL-012")
+  Component(vendor, "vendorSignatureLookupTool", "Tool (read)", "TOOL-020")
+  Component(pm, "ProfileMatcher", "Pure helper", "Deterministic 0-100 score per profile")
+  Component(vsm, "VendorSignatureMatcher", "Pure helper", "Name patterns, UUIDs, manufacturer IDs")
+  Component(kb, "KnowledgeBase", "Service", "profiles, vendors")
+  Component(decider, "Decider", "Contract", "ModelDecider or ChecklistDecider, for ambiguous cases")
+  Component(tracker, "HypothesisTracker", "Service", "Applies the top candidate")
+}
+ContainerDb(idb, "Investigation database", "IndexedDB", "Facts and results")
+System_Ext(nano, "Gemini Nano", "On-device model")
+
+Rel(rules, match, "Decides match_known_profiles after enumerate_gatt")
+Rel(match, pm, "score(facts)")
+Rel(pm, kb, "profiles")
+Rel(rules, vendor, "Decides vendor_signature_lookup")
+Rel(vendor, vsm, "match(name, uuids, manufacturerId)")
+Rel(vsm, kb, "vendors")
+Rel(match, idb, "Reads layout, name, Device Information")
+Rel(rules, tracker, "Decided: top candidate")
+Rel(rules, decider, "Ambiguous: options")
+Rel(decider, nano, "ModelDecider only", "Prompt API")
+@enduml

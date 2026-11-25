@@ -1,0 +1,31 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Stop, pause and resume
+
+Person(person, "Person", "Beside the machine")
+Container_Boundary(spa, "Gattsby web app") {
+  Component(dialogs, "StopInvestigationDialog / StillThereDialog", "Angular dialogs", "Stop this investigation? / Paused")
+  Component(home, "HomePage", "Angular page, /", "Resume card for a paused or interrupted investigation")
+  Component(orch, "PlaybookOrchestrator", "Service (AgentOrchestrator)", "stop(reason), pause(), resume(id)")
+  Component(stopc, "StopConditions", "Service", "Person stop ends the loop")
+  Component(releaser, "ConnectionReleaser", "Service", "Unsubscribes and disconnects within 2 s")
+  Component(ledger, "ApprovalLedger", "BLE layer", "revokeAll(): no further command")
+  Component(verdict, "VerdictBuilder / ProfileBuilder", "Outcome", "Stopped by the person, with what was learned")
+  Component(sup, "ConnectionSupervisor", "Service", "Reconnects on resume")
+  Component(store, "IndexedDbInvestigationStore", "Store", "Status, last completed step")
+}
+System_Ext(device, "Device", "Bluetooth LE")
+
+Rel(person, dialogs, "Taps Stop and get the verdict, Pause or Resume")
+Rel(dialogs, orch, "stop('person'), pause(), resume()")
+Rel(person, home, "Taps Resume")
+Rel(home, orch, "resume(id)")
+Rel(orch, stopc, "Records the stop reason")
+Rel(orch, ledger, "revokeAll()")
+Rel(orch, releaser, "release()")
+Rel(releaser, device, "gatt.disconnect()", "Web Bluetooth")
+Rel(orch, verdict, "Builds the partial verdict and profile")
+Rel(orch, sup, "Reconnect first on resume")
+Rel(orch, store, "Commits status, verdict; loads on resume")
+@enduml

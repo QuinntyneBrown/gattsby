@@ -1,0 +1,16 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Validate every action
+
+System_Boundary(gattsby, "Gattsby") {
+  Container(spa, "Gattsby web app", "Angular (pending ADR 0001), TypeScript", "Action validator, tool registry, safety checks, tool executor")
+  Container(kb, "Knowledge base data", "Versioned JSON files", "Safe limits, known handshakes")
+  ContainerDb(idb, "Investigation database", "IndexedDB", "Steps, including refusals")
+}
+System_Ext(nano, "Gemini Nano", "Via Chrome's Prompt API")
+
+Rel(nano, spa, "Candidate action", "Prompt API")
+Rel(spa, kb, "Reads safe limits and handshake IDs")
+Rel(spa, idb, "Commits each refusal as a step")
+@enduml

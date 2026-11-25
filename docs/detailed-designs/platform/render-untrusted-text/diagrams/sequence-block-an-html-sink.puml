@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Block a string that reaches an HTML sink
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "A component" as comp
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "TrustedTypesPolicy" as policy
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome" as chrome
+end box
+box "Test fixtures (never product code)" #F2F4F7
+  participant "Playwright fixture" as fx
+end box
+
+policy -> chrome : trustedTypes.createPolicy("gattsby", { createScriptURL })
+note right of policy : No createHTML and no createScript: no HTML from Gattsby code
+alt A code path assigns a string to innerHTML
+  comp -> chrome : element.innerHTML = untrusted
+  chrome -> chrome : require-trusted-types-for 'script' (NFR-013)
+  chrome --> comp : TypeError; nothing inserted
+  chrome -> fx : securitypolicyviolation, pageerror
+  fx -> fx : Fail the spec at teardown
+else Registering the service worker
+  comp -> policy : scriptUrl("/ngsw-worker.js")
+  policy -> policy : Same origin and on the allowlist?
+  policy --> comp : TrustedScriptURL
+  comp -> chrome : serviceWorker.register(trustedUrl)
+else Any other script URL
+  comp -> policy : scriptUrl("https://other.example/x.js")
+  policy --> comp : throws; nothing loaded
+end
+@enduml

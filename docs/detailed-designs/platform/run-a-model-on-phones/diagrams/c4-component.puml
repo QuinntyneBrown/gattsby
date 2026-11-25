@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components — Run a model on phones
+
+Container_Boundary(spa, "Gattsby web app") {
+  Component(orch, "PlaybookOrchestrator", "Service", "Unchanged; depends on Decider only")
+  Component(md, "ModelDecider", "Service", "Depends on the ModelAdapter contract only")
+  Component(loader, "ModelAdapterLoader", "Service", "Imports the adapter that fits this browser")
+  Component(prompt, "PromptApiModelAdapter", "Model adapter", "Desktop Chrome: Gemini Nano")
+  Component(gpu, "WebGpuModelAdapter", "Model adapter, dynamically imported", "Phone: WebGPU runtime in a worker")
+  Component(dl, "ModelDownloadController", "Service", "Size, mobile-data note, progress; starts on tap")
+  Component(sel, "ModeSelector", "Service", "agent when a session can be created")
+}
+Container(worker, "Phone model worker", "Web Worker", "Inference on WebGPU")
+System_Ext(chrome, "Chrome", "Prompt API, WebGPU")
+
+Rel(orch, md, "decide(state, signal)")
+Rel(md, loader, "Gets the ModelAdapter")
+Rel(sel, loader, "Gets the ModelAdapter")
+Rel(dl, loader, "Gets the ModelAdapter")
+Rel(loader, prompt, "import() when LanguageModel is available")
+Rel(loader, gpu, "import() when WebGPU and OQ-01 allow")
+Rel(prompt, chrome, "LanguageModel")
+Rel(gpu, worker, "promptAction, abort")
+Rel(worker, chrome, "navigator.gpu")
+@enduml

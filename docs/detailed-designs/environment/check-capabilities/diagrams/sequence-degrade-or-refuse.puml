@@ -1,0 +1,59 @@
+@startuml
+title UML sequence behaviour — Degrade or refuse when a capability is missing
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+actor "Person" as person
+box "Frontend — Gattsby web app: UI" #E0F2FE
+  participant "ReadinessPage" as page
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "BrowserCapabilityDetector" as det
+  participant "WebBluetoothBleLayer" as ble
+end box
+box "Browser and device" #F2F4F7
+  participant "Chrome APIs" as chrome
+end box
+
+page -> det : detect()
+det -> ble : availability()
+alt Not a secure context
+  ble -> chrome : isSecureContext
+  chrome --> ble : false
+  ble --> det : api false, reason insecure
+  det --> page : secureContext false
+  page -> person : "Bluetooth needs a secure address." No scan offered (FR-003)
+else No Web Bluetooth (Safari, Firefox, iOS)
+  ble -> chrome : 'bluetooth' in navigator
+  chrome --> ble : false
+  note right of ble : No call to navigator.bluetooth (FR-002)
+  ble --> det : api false
+  det --> page : bluetooth.api false, platform iOS
+  page -> person : "Gattsby can't run on iPhone." Names Chrome; no Start; View saved devices
+else Bluetooth adapter off
+  ble -> chrome : bluetooth.getAvailability()
+  chrome --> ble : false
+  ble --> det : adapterAvailable false
+  det --> page : Bluetooth needs action
+  page -> person : "Turn on Bluetooth"; Start disabled (FR-001)
+  person -> page : Tap Check again
+  page -> det : detect()
+  det --> page : adapterAvailable true
+  page -> person : Start enabled once the re-check passes
+else A probe throws or does not answer within 1 s
+  ble -[#A11D1D]x chrome : getAvailability() hangs
+  det -> det : Report that capability unavailable (TOOL-001)
+  det --> page : Capabilities, no uncaught error (NFR-021)
+end
+@enduml

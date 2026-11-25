@@ -1,0 +1,102 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Guess field encodings
+
+enum IntType {
+  uint8
+  sint8
+  uint16
+  sint16
+  uint24
+  sint24
+  uint32
+  sint32
+}
+
+enum ByteOrder {
+  LE
+  BE
+}
+
+class FieldCandidate {
+  +uuid: string
+  +length: number
+  +offset: number
+  +width: 1 | 2 | 4
+  +byteOrder: ByteOrder
+  +correlation: number
+  +accumulating: boolean
+}
+
+class ExpectedRange {
+  +metric: string
+  +unit: string
+  +min: number
+  +max: number
+}
+
+class Encoding {
+  +type: IntType
+  +byteOrder?: ByteOrder
+  +scale: 1 | 0.1 | 0.01 | 0.001
+}
+
+class EncodingFit {
+  +type: IntType
+  +byteOrder?: ByteOrder
+  +scale: number
+  +unit: string
+  +coverage: number
+  +span: number
+  +median: number
+}
+
+class FieldReader {
+  +{static} read(bytes: Uint8Array, offset: number, width: number, signed: boolean, order: ByteOrder): number | null
+}
+
+class EffortCorrelator {
+  +{static} rank(recordings: Recording[], order: string[], skip: VaryingBytesReport): FieldCandidate[]
+  -{static} spearman(values: number[], ranks: number[]): number
+}
+
+class EncodingGuesser {
+  +{static} candidates(width?: number): Encoding[]
+  +{static} fit(values: Uint8Array[], offset: number, width: number | undefined, expected: ExpectedRange): EncodingFit[]
+}
+
+class correlateWithActionTool <<tool>> {
+  +name: "correlate_with_action"
+  +safetyClass: "read"
+  +run(input: { recordingIds: string[], order: string[] }, ctx: ToolContext): Promise<ToolResult<{ ranked: FieldCandidate[] }>>
+}
+
+class guessFieldEncodingTool <<tool>> {
+  +name: "guess_field_encoding"
+  +safetyClass: "read"
+  +run(input: GuessInput, ctx: ToolContext): Promise<ToolResult<{ fits: EncodingFit[] }>>
+}
+
+correlateWithActionTool ..> EffortCorrelator : calls
+guessFieldEncodingTool ..> EncodingGuesser : calls
+EffortCorrelator ..> FieldReader : reads with
+EncodingGuesser ..> FieldReader : reads with
+EffortCorrelator ..> FieldCandidate : returns
+EncodingGuesser ..> Encoding : enumerates
+EncodingGuesser ..> ExpectedRange : tests against
+EncodingGuesser ..> EncodingFit : returns
+FieldCandidate --> ByteOrder
+Encoding --> IntType
+EncodingFit --> IntType
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+title UML sequence behaviour — Generate the tool list
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+box "Frontend — Gattsby web app: agent orchestrator" #D1FADF
+  participant "DecisionStateBuilder" as state
+end box
+box "Frontend — Gattsby web app: tools, knowledge base and analysis" #ECFDF3
+  participant "ToolListGenerator" as generator
+  participant "ToolRegistry" as registry
+end box
+box "Frontend — Gattsby web app: adapters (BLE, model, store, camera)" #FFF4E5
+  participant "BrowserCapabilityDetector" as caps
+end box
+
+state -> caps : current capabilities
+caps --> state : bluetooth available, watchAdvertisements not available
+state -> generator : generate(identify, capabilities)
+generator -> registry : forStage(identify, capabilities)
+loop Each entry in catalog order
+  alt identify not in stages
+    registry -> registry : Skip (no control tool at Identify, FR-071 AC2)
+  else A required capability is not available
+    registry -> registry : Skip (watch_advertisements, FR-071 AC1)
+  else Phase not enabled
+    registry -> registry : Skip
+  else Allowed
+    registry -> registry : Keep
+  end
+end
+registry --> generator : enumerate_gatt, read_device_info, read_characteristic, match_known_profiles, ...
+generator -> generator : Compact input schemas; names enum
+generator --> state : ModelToolList
+state -> state : Add to the decision state within the prompt budget
+@enduml

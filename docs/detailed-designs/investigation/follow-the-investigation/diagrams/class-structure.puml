@@ -1,0 +1,99 @@
+@startuml
+' --- shared skin header ---
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+' --------------------------
+title Class structure — Follow the investigation
+
+enum StageState {
+  done
+  now
+  toDo
+  skipped
+}
+
+class StepView {
+  +tool: string
+  +label: string
+  +startedAt: number
+}
+
+class FeedEntry {
+  +id: string
+  +kind: "message" | "tool" | "answer" | "hypothesis" | "stageStart" | "error"
+  +stage: Stage
+  +speaker: "agent" | "checklist" | "person" | null
+  +text: string
+  +why: string | null
+  +tool: string | null
+  +summary: string | null <<max 200>>
+  +durationMs: number | null
+  +observations: ObservationView[]
+  +evidenceIds: string[]
+}
+
+abstract class AgentOrchestrator <<contract>> {
+  +stage: Signal<Stage>
+  +stageStates: Signal<Record<Stage, StageState>>
+  +step: Signal<StepView | null>
+  +feed: Signal<FeedEntry[]>
+  +prompt: Signal<PersonPrompt | null>
+  +mode: Signal<OperatingMode>
+  +status: Signal<OrchestratorStatus>
+}
+
+class ToolDefinition {
+  +name: string
+  +labels: { running: string, done: string }
+  +description: string
+}
+
+class InvestigationPage <<component>> {
+  +connected: Signal<boolean>
+  +title: Signal<string>
+  +subtitle: Signal<string>
+}
+
+class StageStepper <<component>> {
+  +states: input<Record<Stage, StageState>>
+  +current: input<Stage>
+}
+
+class ActivityFeed <<component>> {
+  +entries: input<FeedEntry[]>
+  +running: input<StepView | null>
+  +openEvidence: output<string>
+}
+
+class PromptCard <<component>> {
+  +prompt: input<PersonPrompt>
+  +responded: output<PromptResponse>
+}
+
+class ConfidenceBadge <<component>> {
+  +level: input<"confirmed" | "likely" | "guess" | "claimedOnly">
+}
+
+class EmergencyStopButton <<component>> {
+  +pressed: output<void>
+}
+
+InvestigationPage ..> AgentOrchestrator : reads signals
+InvestigationPage *-- StageStepper
+InvestigationPage *-- ActivityFeed
+InvestigationPage *-- PromptCard
+InvestigationPage *-- EmergencyStopButton
+ActivityFeed *-- ConfidenceBadge
+ActivityFeed ..> FeedEntry
+StageStepper ..> StageState
+AgentOrchestrator ..> ToolDefinition : labels
+AgentOrchestrator ..> StepView
+@enduml
