@@ -44,4 +44,6 @@ export abstract class InvestigationStore {
   }>;
   /** Asks the browser once for persistent storage (NFR-016); a refusal is not an error. */
   abstract requestPersistence(): Promise<boolean>;
+  abstract recordCapabilityDiagnostics(rows: readonly CapabilityDiagnostic[]): Promise<void>;
 }
+import type { CapabilityDiagnostic } from '../environment/capability-diagnostic';

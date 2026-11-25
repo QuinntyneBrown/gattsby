@@ -245,3 +245,16 @@ None; this is the first entry.
   investigation route closes. The Verdict page can export that commit from memory or retry it.
 - The phone comparison exposed a crowded action bar and checkbox. Moving the profile link to
   the app bar and reusing the design system's choice control resolved both.
+
+## Journey 5 — Check readiness
+
+- The fresh-tab test first stayed on Home. Readiness now opens first and checks each capability
+  before offering to continue. Subsequent Home visits in the tab retain the person's choice.
+- The simulated Bluetooth API exposes advertisement scanning only when the spec asks for it.
+  Merely defining a stub method made the old detection report the capability incorrectly.
+- Start the Chrome download from the button handler and destroy the temporary session when it
+  finishes. The controller keeps reporting progress if the person continues to Home.
+- A simulated stall now lets the real storage probe settle before advancing the fake clock.
+  This applies journey 3's separation of timed events from IndexedDB completion.
+- Readiness keeps up to 50 probe failure diagnostics in local storage. It returns the same
+  diagnostics with the Prepare result so they can appear in the investigation record.

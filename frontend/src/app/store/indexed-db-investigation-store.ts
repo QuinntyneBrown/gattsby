@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import type { CapabilityDiagnostic } from '../environment/capability-diagnostic';
 import { InvestigationStore } from './investigation-store';
 import {
   DATABASE_NAME,
@@ -352,6 +353,20 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return granted;
   }
 
+  async recordCapabilityDiagnostics(rows: readonly CapabilityDiagnostic[]): Promise<void> {
+    if (!rows.length) return;
+    await this.write(['settings'], 'relaxed', (tx) => {
+      const settings = tx.objectStore('settings');
+      const key = 'capabilityDiagnostics';
+      const lookup = settings.get(key);
+      lookup.onsuccess = () => {
+        const previous =
+          (lookup.result as { value?: CapabilityDiagnostic[] } | undefined)?.value ?? [];
+        settings.put({ key, value: [...previous, ...rows].slice(-50) });
+      };
+    });
+  }
+
   private async setting(key: string): Promise<unknown> {
     const db = await this.open();
     const row = await request(
@@ -388,7 +403,14 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
         () => reject(new StoreError('STORAGE_UNAVAILABLE', 'Chrome didn’t answer.')),
         OPEN_TIMEOUT_MS,
       );
-      const open = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+      let open: IDBOpenDBRequest;
+      try {
+        open = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+      } catch (error) {
+        clearTimeout(timer);
+        reject(error);
+        return;
+      }
       open.onupgradeneeded = (event) => upgrade(open.result, event.oldVersion);
       open.onsuccess = () => {
         clearTimeout(timer);

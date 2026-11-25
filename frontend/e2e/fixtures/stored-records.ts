@@ -76,6 +76,11 @@ export class StoredRecords {
     return this.readAll<unknown>('profiles');
   }
 
+  async capabilityDiagnostics(): Promise<unknown[]> {
+    const settings = await this.readAll<{ key: string; value: unknown[] }>('settings');
+    return settings.find(({ key }) => key === 'capabilityDiagnostics')?.value ?? [];
+  }
+
   async investigation(id: string): Promise<StoredInvestigation | undefined> {
     return (await this.investigations()).find((investigation) => investigation.id === id);
   }

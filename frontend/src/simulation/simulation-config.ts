@@ -5,6 +5,9 @@
 export type ChooserStep = { readonly pick: string } | { readonly cancel: true };
 
 export interface BluetoothScript {
+  readonly advertisementScanning?: boolean;
+  readonly absent?: boolean;
+  readonly blocked?: boolean;
   /** What `getAvailability()` reports; true when omitted. */
   readonly available?: boolean;
   /** Ids of the scripted devices nearby. */
@@ -28,6 +31,7 @@ export type ScriptedResponse =
 export interface ModelScript {
   readonly availability: ModelAvailability;
   readonly responses: readonly ScriptedResponse[];
+  readonly downloadFailures?: number;
 }
 
 export interface SimulationConfig {

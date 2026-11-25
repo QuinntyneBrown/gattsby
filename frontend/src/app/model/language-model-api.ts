@@ -9,6 +9,8 @@ export interface LanguageModelApi {
     monitor?: (monitor: EventTarget) => void;
     signal?: AbortSignal;
     initialPrompts?: readonly object[];
+    expectedInputs?: readonly { type: 'text' | 'image' | 'audio'; languages?: readonly string[] }[];
+    expectedOutputs?: readonly { type: 'text'; languages?: readonly string[] }[];
   }): Promise<LanguageModelSessionApi>;
 }
 

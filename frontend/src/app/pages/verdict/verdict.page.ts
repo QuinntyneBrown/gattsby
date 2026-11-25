@@ -269,7 +269,7 @@ export class VerdictPage implements OnInit {
     this.starting.set(true);
     try {
       const id = await this.starter.start();
-      await this.router.navigate(['/investigations', id]);
+      await this.router.navigate(id ? ['/investigations', id] : ['/start']);
     } finally {
       this.starting.set(false);
     }
