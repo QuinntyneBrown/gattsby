@@ -5,6 +5,8 @@ import { RawTrafficLog } from '../ble/raw-traffic-log';
 import { CapabilityDetector } from '../environment/capability-detector';
 import { KnowledgeBase } from '../knowledge-base/knowledge-base';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
+import type { ModelSession } from '../model/model-session';
+import { ModelSessions } from '../model/model-sessions';
 import { HypothesisTracker } from '../outcome/hypothesis-tracker';
 import { buildProfile } from '../outcome/profile-builder';
 import { verdictLabel, type VerdictFacts } from '../outcome/verdict-builder';
@@ -73,12 +75,14 @@ export class PlaybookOrchestrator {
   private readonly clock = inject(Clock);
   private readonly config = inject(LOOP_CONFIG);
   private readonly decider = inject(Decider);
+  private readonly modelSessions = inject(ModelSessions);
   private readonly router = inject(Router);
   readonly prompts = inject(PromptChannel);
   readonly registry = new ToolRegistry(TOOL_CATALOG);
 
   private readonly kbSignal = signal<KnowledgeBaseIndex | null>(null);
   private tracker: HypothesisTracker | null = null;
+  private modelSession: ModelSession | null = null;
   private abort = new AbortController();
   private stopReason: StopReason | null = null;
   private concludeNow = false;
@@ -224,6 +228,7 @@ export class PlaybookOrchestrator {
       this.statusSignal.set('paused');
       return;
     }
+    this.modelSession = this.modelSessions.take(id);
     this.statusSignal.set('running');
     this.log.begin(id, 0);
     await this.loop();
@@ -245,6 +250,7 @@ export class PlaybookOrchestrator {
   async leave(): Promise<void> {
     this.abort.abort();
     this.prompts.cancel();
+    this.releaseModel();
     this.log.clear();
     await this.ble.disconnect();
   }
@@ -376,6 +382,7 @@ export class PlaybookOrchestrator {
       investigationId: id,
       n,
       id: `s-${n}`,
+      mode: this.mode(),
       stage: action.stage,
       tool: action.tool,
       input: action.input,
@@ -426,6 +433,7 @@ export class PlaybookOrchestrator {
         evidence: result.evidence,
       };
       this.statusSignal.set('concluding');
+      this.releaseModel();
       await this.ble.disconnect();
       rawLog.push(...this.log.takePending());
       const referenced = [
@@ -532,12 +540,18 @@ export class PlaybookOrchestrator {
   }
 
   private fault(error: unknown): void {
+    this.releaseModel();
     this.pending.set(null);
     this.statusSignal.set('error');
     this.errorSignal.set(
       error instanceof ToolDefect || error instanceof Error ? error.message : String(error),
     );
     console.warn('Gattsby stopped the investigation after an unexpected error:', error);
+  }
+
+  private releaseModel(): void {
+    this.modelSession?.destroy();
+    this.modelSession = null;
   }
 }
 

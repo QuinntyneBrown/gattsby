@@ -76,7 +76,10 @@ defines it (`kind` `gattsby.device-profile`, `formatVersion` `1.0`, `kbVersion`)
 fields added: `exportedAt` and `appVersion`. Notes are added as `notes` only when the person ticks
 "Include notes and photos"; a profile never holds photos.
 
-### Record format 1.0
+### Record formats 1.0 and 1.1
+
+Format 1.1 adds an operating mode to each step. It retains the 1.0 fields. For older stored
+steps, the exporter uses the investigation's mode.
 
 ```json
 {

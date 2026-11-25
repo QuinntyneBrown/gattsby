@@ -3,6 +3,7 @@ import validateRawLog from '../../schemas/generated/raw-log-page-1.js';
 import type { InvestigationStore } from './investigation-store';
 import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
+import type { OperatingMode } from './model/operating-mode';
 import type { Step } from './model/step';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
@@ -36,7 +37,7 @@ export async function buildRecordExport(
   const notes = note ? [note] : [];
   const payload = {
     kind: 'gattsby.investigation-record',
-    formatVersion: '1.0',
+    formatVersion: '1.1',
     kbVersion,
     appVersion,
     exportedAt: iso(Date.now()),
@@ -47,7 +48,7 @@ export async function buildRecordExport(
       endedAt: endedAt === null ? null : iso(endedAt),
       interruptedAt: interruptedAt === null ? null : iso(interruptedAt),
     },
-    steps: record.steps.map(exportStep),
+    steps: record.steps.map((step) => exportStep(step, header.mode)),
     observations: record.observations.map(withoutInvestigationId),
     hypotheses: record.hypotheses.map(withoutInvestigationId),
     recordings: recordings.map(withoutInvestigationId),
@@ -113,11 +114,12 @@ async function* recordPages(store: InvestigationStore, id: string, pending?: Ver
   if (pending?.rawLog.length) yield pending.rawLog;
 }
 
-function exportStep(step: Step) {
+function exportStep(step: Step, investigationMode: OperatingMode) {
   const { investigationId, tool, input, decidedBy, ruleId, startedAt, endedAt, ...row } = step;
   void investigationId;
   return {
     ...row,
+    mode: row.mode ?? investigationMode,
     tool,
     action: { type: 'call_tool', tool, input: input ?? null, decidedBy, ruleId },
     startedAt: iso(startedAt),

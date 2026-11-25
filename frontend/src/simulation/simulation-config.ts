@@ -32,6 +32,7 @@ export interface ModelScript {
   readonly availability: ModelAvailability;
   readonly responses: readonly ScriptedResponse[];
   readonly downloadFailures?: number;
+  readonly createError?: string;
 }
 
 export interface SimulationConfig {

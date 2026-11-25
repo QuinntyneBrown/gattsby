@@ -226,7 +226,10 @@ test('exports the whole record with attachments excluded by default', async ({
       }),
     ]),
     steps: expect.arrayContaining([
-      expect.objectContaining({ exchange: expect.objectContaining({ answer: 'Ready' }) }),
+      expect.objectContaining({
+        mode: 'agent',
+        exchange: expect.objectContaining({ answer: 'Ready' }),
+      }),
     ]),
     includesNotesAndPhotos: false,
     omitted: { photos: 1 },

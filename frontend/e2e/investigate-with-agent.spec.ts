@@ -30,3 +30,38 @@ test('uses the saved choice to start without calling the model', async ({ page, 
   });
   expect(fakeModel.calls()).toHaveLength(before);
 });
+
+test('opens one agent session before Prepare and releases it when leaving', async ({
+  page,
+  fakeModel,
+}) => {
+  const home = new HomePage(page);
+  const investigation = new InvestigationPage(page);
+  await home.goto();
+  await home.identify();
+  await investigation.waitForPrompt('What kind of machine is it?');
+  await expect(investigation.subtitle).toHaveText('Agent · Prepare');
+  expect(fakeModel.calls().filter((method) => method === 'create')).toHaveLength(1);
+  expect(fakeModel.prompts()).toEqual([]);
+  await investigation.leave.click();
+  await expect.poll(() => fakeModel.calls()).toContain('destroy');
+});
+
+test.describe('The model refuses a session', () => {
+  test.use({
+    model: { availability: 'available', createError: 'NotSupportedError', responses: [] },
+  });
+  test('starts in checklist mode when Chrome cannot create the session', async ({
+    page,
+    fakeModel,
+  }) => {
+    const home = new HomePage(page);
+    const investigation = new InvestigationPage(page);
+    await home.goto();
+    await home.identify();
+    await investigation.waitForPrompt('What kind of machine is it?');
+    await expect(investigation.subtitle).toHaveText('Checklist · Prepare');
+    expect(fakeModel.calls().filter((method) => method === 'create')).toHaveLength(1);
+    expect(fakeModel.prompts()).toEqual([]);
+  });
+});

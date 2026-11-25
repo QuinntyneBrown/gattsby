@@ -154,7 +154,7 @@ test('Given an identified FTMS treadmill, when the person starts walking, then n
   await expect(investigation.liveRate).toHaveText('1 Hz');
   expect(fakeBluetooth.writes()).toEqual([]);
   expect(fakeModel.prompts()).toEqual([]);
-  expect(fakeModel.calls()).not.toContain('create');
+  expect(fakeModel.calls().filter((method) => method === 'create')).toHaveLength(1);
 });
 
 test('Given a timed recording, when the baseline finishes, then each Treadmill Data notification is stored with its decoded fields and raw bytes', async ({

@@ -62,7 +62,7 @@ test.describe('Identify a standard machine', () => {
         expect(stored?.status).toBe('concluded');
         expect(fakeBluetooth.calls().at(-1)).toBe('disconnect');
         expect(fakeModel.prompts()).toEqual([]);
-        expect(fakeModel.calls()).not.toContain('create');
+        expect(fakeModel.calls().filter((method) => method === 'create')).toHaveLength(1);
       },
     );
 
