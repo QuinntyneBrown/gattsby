@@ -15,9 +15,13 @@ export function verdictSummary(kind: VerdictKind, facts: VerdictFacts): string {
         ? `Identified as ${protocol} from its services${maker ? ' and Device Information' : ''}. No metric has been confirmed with live data yet.`
         : 'Some fields were decoded, but not enough to name a known protocol.';
     case 'needsMissingTool':
-      return 'I connected, but what it exposes isn’t in my knowledge base, so I couldn’t decode it.';
+      return facts.everConnected
+        ? 'I connected, but what it exposes isn’t in my knowledge base, so I couldn’t decode it.'
+        : 'The scans and checks did not establish why the device was unreachable.';
     case 'notConnectable':
-      return 'I couldn’t reach a Bluetooth Low Energy device here.';
+      return facts.reachability?.likelyCauses.includes('held by another central')
+        ? 'Chrome could not connect. Another app or watch may still be holding the connection.'
+        : 'The device was not recognised in three Bluetooth Low Energy scans after checking power, other connections and range. It may use Bluetooth Classic, ANT+, Wi-Fi or USB. Chrome’s Bluetooth connection only works with Bluetooth Low Energy.';
     case 'stoppedByPerson':
       return 'You stopped the investigation before a verdict. Everything found so far is kept.';
   }
@@ -25,6 +29,16 @@ export function verdictSummary(kind: VerdictKind, facts: VerdictFacts): string {
 
 // Conclude: finish with the verdict the evidence supports (FR-054).
 export const CONCLUDE_RULES: readonly StageRule[] = [
+  {
+    id: 'conclude.assess-reachability',
+    stage: 'conclude',
+    when: ({ state, facts }) =>
+      facts.stopReason === 'finish' &&
+      !state.everConnected &&
+      !state.reachability &&
+      state.scans.length > 0,
+    then: () => decided('conclude.assess-reachability', 'conclude', 'assess_reachability', {}),
+  },
   {
     id: 'conclude.finish',
     stage: 'conclude',

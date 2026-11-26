@@ -333,3 +333,12 @@ None; this is the first entry.
   subscription without saving a duplicate recording.
 - Fake-clock specs cover manual pause, the two-minute Still there pause and the hidden-page
   deadline. Returning before the deadline clears the timer.
+
+## Journey 12 — Report a non-connectable device
+
+- Apply the chooser lesson from journey 9. Chrome reports cancellation and grants no access to
+  the list. Record the chooser event and the person's answers rather than claiming an empty list.
+- A Bluetooth permission or adapter refusal does not support a transport diagnosis. Require the
+  reachability assessment for the verdict and keep the transport uncertain if a check was unanswered.
+- Verify both outcomes of the third scan. When the person finds the device, the existing Identify
+  path still runs. When they cannot, the verdict links all three scan events and the checks.

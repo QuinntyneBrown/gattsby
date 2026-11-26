@@ -94,10 +94,28 @@ import { verdictView, type VerdictView } from './verdict-view';
                 <g-verdict-mark [kind]="verdict.kind" [large]="true" />{{ verdict.label }}
               </h1>
               <p class="verdict__summary">{{ verdict.summary }}</p>
-              <dl class="verdict__protocol">
-                <dt>Protocol</dt>
-                <dd>{{ view()?.protocol }}</dd>
-              </dl>
+              @if (verdict.kind !== 'notConnectable') {
+                <dl class="verdict__protocol">
+                  <dt>Protocol</dt>
+                  <dd>{{ view()?.protocol }}</dd>
+                </dl>
+              }
+              @if (verdict.kind === 'notConnectable') {
+                <section class="group">
+                  <div class="group__head"><h2>What might work instead</h2></div>
+                  <ol class="numbered">
+                    @if (view()?.heldByOther) {
+                      <li>Disconnect other apps or watches before trying again.</li>
+                    }
+                    <li>Check the console for a Bluetooth Low Energy or FTMS option.</li>
+                    <li>
+                      Check the maker’s documentation for a native app or an adapter that supports
+                      the device.
+                    </li>
+                    <li>Ask the maker which interfaces this model supports.</li>
+                  </ol>
+                </section>
+              }
               @for (request of r.missingToolRequests; track request.id) {
                 <section class="tool-card" [attr.aria-labelledby]="request.id">
                   <p class="tool-card__eyebrow">Missing-tool request raised</p>
@@ -155,17 +173,19 @@ import { verdictView, type VerdictView } from './verdict-view';
                   </ul>
                 </section>
               }
-              <section class="group">
-                <div class="group__head"><h2>Couldn’t determine</h2></div>
-                <ul class="group__items">
-                  @for (item of view()!.undetermined; track $index) {
-                    <li>
-                      <span class="group__k">{{ item.key }}</span>
-                      <span class="group__v">{{ item.value }}</span>
-                    </li>
-                  }
-                </ul>
-              </section>
+              @if (verdict.kind !== 'notConnectable') {
+                <section class="group">
+                  <div class="group__head"><h2>Couldn’t determine</h2></div>
+                  <ul class="group__items">
+                    @for (item of view()!.undetermined; track $index) {
+                      <li>
+                        <span class="group__k">{{ item.key }}</span>
+                        <span class="group__v">{{ item.value }}</span>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
             } @else {
               <p class="lead">This investigation has no verdict yet.</p>
             }

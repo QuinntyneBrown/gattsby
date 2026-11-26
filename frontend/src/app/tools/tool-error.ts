@@ -6,6 +6,7 @@ export class ToolError extends Error {
   constructor(
     readonly code: ErrorCode,
     message: string,
+    readonly evidence: readonly string[] = [],
   ) {
     super(message);
     this.name = 'ToolError';

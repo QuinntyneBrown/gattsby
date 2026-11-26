@@ -121,13 +121,24 @@ export async function scanBehindTap(
         value: 'cancelled',
         text: 'The list was closed without choosing',
         tag: 'confirmed',
-        evidence: [],
+        evidence: error.evidence,
       });
       return fail(
         'USER_CANCELLED',
         error.message,
         'You closed the list without choosing, so your machine may not have been in it.',
+        error.evidence,
       );
+    }
+    if (error instanceof ToolError) {
+      ctx.observe({
+        kind: 'scan-failed',
+        subject: mode,
+        value: error.code,
+        text: error.message,
+        tag: 'confirmed',
+        evidence: error.evidence,
+      });
     }
     throw error;
   }

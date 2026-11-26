@@ -1,4 +1,10 @@
 import type { ChosenDevice } from '../ble/chosen-device';
+import type { ReachabilityAssessment } from '../analysis/reachability-assessment';
+import {
+  REACHABILITY_CHECKS,
+  type ReachabilityCheck,
+  type ReachabilityCheckResult,
+} from '../analysis/reachability-checks';
 import type { GattServiceInfo } from '../ble/gatt-layout';
 import type { SupportedRange } from '../knowledge-base/supported-range';
 import type { ReadableMetric } from '../outcome/readable-metric';
@@ -25,6 +31,10 @@ export interface DecisionState {
   readonly brand: string | null | undefined;
   readonly poweredOn: boolean;
   readonly scans: readonly ScanAttempt[];
+  readonly reachabilityChecks: Readonly<
+    Partial<Record<ReachabilityCheck, ReachabilityCheckResult>>
+  >;
+  readonly reachability: ReachabilityAssessment | null;
   readonly candidateHelp: boolean;
   readonly reportedCandidates: readonly string[] | null;
   readonly powerCycleAttempted: boolean;
@@ -75,6 +85,8 @@ export const INITIAL_STATE: DecisionState = {
   brand: undefined,
   poweredOn: false,
   scans: [],
+  reachabilityChecks: {},
+  reachability: null,
   candidateHelp: false,
   reportedCandidates: null,
   powerCycleAttempted: false,
@@ -138,7 +150,29 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
     return next;
   const data = step.result.ok ? (step.result.data as Record<string, unknown>) : null;
   const answer = step.exchange && !step.exchange.skipped ? step.exchange.answer : null;
+  const check = REACHABILITY_CHECKS.find(({ key }) => step.ruleId === `find.check.${key}`);
+  if (check) {
+    const confirmed = check.confirmed.some((value) => value === answer);
+    const status = confirmed
+      ? 'confirmed'
+      : answer && answer === check.issue
+        ? 'needs-action'
+        : 'unknown';
+    return { ...next, reachabilityChecks: { ...state.reachabilityChecks, [check.key]: status } };
+  }
+  const repair = REACHABILITY_CHECKS.find(({ key }) => step.ruleId === `find.repair.${key}`);
+  if (repair) {
+    return {
+      ...next,
+      reachabilityChecks: {
+        ...state.reachabilityChecks,
+        [repair.key]: answer === 'Done' ? 'confirmed' : 'blocked',
+      },
+    };
+  }
   switch (step.tool) {
+    case 'assess_reachability':
+      return { ...next, reachability: data as unknown as ReachabilityAssessment | null };
     case 'check_capabilities':
       return {
         ...next,

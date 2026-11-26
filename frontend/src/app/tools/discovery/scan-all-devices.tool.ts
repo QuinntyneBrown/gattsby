@@ -3,11 +3,15 @@ import { scanBehindTap, type ScanOutput } from './scan';
 
 // scan_all_devices (TOOL-003): Chrome's chooser accepting every device (FR-012). Its tap prompt
 // also offers "Scan again", which runs the filtered request instead (scan-for-the-device design).
-export const scanAllDevicesTool = entry<Record<string, never>, ScanOutput>({
+export const scanAllDevicesTool = entry<{ last?: boolean }, ScanOutput>({
   name: 'scan_all_devices',
   group: 'Discovery',
   description: 'Open Chrome’s list of every nearby Bluetooth device, on the person’s tap.',
-  inputSchema: { type: 'object', additionalProperties: false },
+  inputSchema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: { last: { type: 'boolean' } },
+  },
   outputSchema: { type: 'object' },
   safetyClass: 'read',
   preconditions: [
@@ -26,18 +30,19 @@ export const scanAllDevicesTool = entry<Record<string, never>, ScanOutput>({
     purpose: () => 'Open Chrome’s list of every nearby Bluetooth device',
     card: true,
   },
-  run(_input, ctx) {
+  run(input, ctx) {
     return scanBehindTap(
       ctx,
       {
-        title: 'Not in the list?',
-        detail:
-          'Show every nearby Bluetooth device, not just fitness ones, or scan again if the machine was asleep.',
+        title: input.last ? 'Check Chrome’s list once more' : 'Not in the list?',
+        detail: input.last
+          ? 'Look in the full list again now that you have checked the device.'
+          : 'Show every nearby Bluetooth device, not just fitness ones, or scan again if the machine was asleep.',
       },
       [
         { label: 'Show all nearby devices', mode: 'acceptAll' },
-        { label: 'Scan again', mode: 'filtered' },
-        ...(!ctx.state.powerCycleAttempted
+        ...(!input.last ? [{ label: 'Scan again', mode: 'filtered' as const }] : []),
+        ...(!input.last && !ctx.state.powerCycleAttempted
           ? [{ label: 'Several names look alike', mode: 'candidateHelp' as const }]
           : []),
       ],

@@ -20,6 +20,7 @@ const MVP_TOOLS = [
   'read_supported_ranges',
   'subscribe_and_record',
   'decode_standard',
+  'assess_reachability',
   'request_control',
   'send_command',
   'check_command_effect',

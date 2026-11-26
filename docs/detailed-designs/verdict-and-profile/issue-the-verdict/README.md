@@ -77,7 +77,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 | `connected` | "Connected — *protocol*" | The hypothesis names a protocol in the knowledge base, and at least one metric is confirmed by live data (A-12) |
 | `partiallyDecoded` | "Partially decoded" | At least one field was decoded or found varying with the person's effort |
 | `needsMissingTool` | "Needs a missing tool" | The investigation holds at least one missing-tool request |
-| `notConnectable` | "Not connectable" | No connection to the device succeeded (see the conclude-not-connectable design) |
+| `notConnectable` | "Not connectable" | No connection succeeded and the reachability assessment is `no` (see the conclude-not-connectable design) |
 | `stoppedByPerson` | "Stopped by the person" | The stop reason is `personStop` (FR-009); neither the model nor the checklist may request it |
 
 The protocol in the label is the knowledge base's short name for the hypothesis's protocol:
@@ -93,7 +93,8 @@ The wording for sensors that are not machines is open (OQ-11).
    data; none is." The refusal counts as a step, and the loop continues (TOOL-030 AC1).
 3. A requested kind whose rule holds is issued as requested.
 4. On any other stop, `derive` picks the first kind whose rule holds, in this order:
-   `stoppedByPerson`, `connected`, `partiallyDecoded`, `needsMissingTool`, `notConnectable`.
+   `stoppedByPerson`, `connected`, `partiallyDecoded`, `notConnectable`, `needsMissingTool`.
+   A confirmed reachability outcome takes precedence over a missing tool unrelated to the connection.
 5. A connected device with nothing decoded, nothing varying and no missing-tool request supports no
    kind. The design proposes `needsMissingTool`, with a request "Decode service *UUID*" recorded for
    each unknown service; this extends FR-058's list of triggers and is `<TO SUPPLY>` for
