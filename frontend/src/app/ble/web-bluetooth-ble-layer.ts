@@ -3,9 +3,11 @@ import { Subject } from 'rxjs';
 import type { GattProperty } from '../knowledge-base/knowledge-base-data';
 import type { NotificationDecoding } from '../store/model/notification-decoding';
 import { canonicalUuid } from '../knowledge-base/uuid';
+import { FTMS_CONTROL_POINT, FTMS_SERVICE } from '../knowledge-base/ftms-control-point';
 import { Clock } from '../shared/clock';
 import { ToolError } from '../tools/tool-error';
 import type { BleAvailability } from './ble-availability';
+import { ApprovalLedger } from './approval-ledger';
 import { BleLayer, type ReadResult } from './ble-layer';
 import { BLUETOOTH } from './bluetooth.token';
 import type { ChosenDevice } from './chosen-device';
@@ -37,6 +39,7 @@ export class WebBluetoothBleLayer extends BleLayer {
   private readonly bluetooth = inject(BLUETOOTH);
   private readonly clock = inject(Clock);
   private readonly log = inject(RawTrafficLog);
+  private readonly approvals = inject(ApprovalLedger);
   private readonly devices = new Map<string, BluetoothDevice>();
   private readonly services = new Map<string, BluetoothRemoteGATTService>();
   private readonly subscriptions = new Map<string, () => Promise<void>>();
@@ -275,6 +278,49 @@ export class WebBluetoothBleLayer extends BleLayer {
         throw error;
       }
       return stop;
+    } catch (error) {
+      throw this.gattError(error);
+    }
+  }
+
+  async write(
+    service: string,
+    characteristic: string,
+    bytes: Uint8Array,
+    approvalId: string,
+  ): Promise<string> {
+    this.requireConnected();
+    const serviceUuid = canonicalUuid(service);
+    const uuid = canonicalUuid(characteristic);
+    if (serviceUuid !== FTMS_SERVICE || uuid !== FTMS_CONTROL_POINT) {
+      throw new ToolError(
+        'PRECONDITION_FAILED',
+        'This characteristic is not a known write target.',
+      );
+    }
+    const handle = this.services.get(serviceUuid);
+    const deviceId = this.device!.id;
+    const connectedAt = this.state().connectedAt!;
+    if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
+    try {
+      const target = await handle.getCharacteristic(uuid);
+      if (!target.properties.write)
+        throw new ToolError('PROPERTY_MISSING', 'This characteristic is not writable.');
+      this.requireConnected();
+      if (this.device?.id !== deviceId || this.state().connectedAt !== connectedAt)
+        throw new ToolError('NOT_CONNECTED', 'The connection changed.');
+      const payload = new Uint8Array(bytes);
+      this.approvals.consume(approvalId, deviceId, connectedAt, serviceUuid, uuid, payload);
+      const entryId = this.log.append({
+        kind: 'write',
+        direction: 'out',
+        service: serviceUuid,
+        uuid,
+        hex: toHex(payload),
+        approvalId,
+      });
+      await target.writeValueWithResponse(payload);
+      return entryId;
     } catch (error) {
       throw this.gattError(error);
     }

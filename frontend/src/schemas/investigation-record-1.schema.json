@@ -100,8 +100,12 @@
             "additionalProperties": false,
             "required": ["from", "to", "reason", "stage", "step", "rejectedActionIds", "at"],
             "properties": {
-              "from": { "const": "agent" },
-              "to": { "const": "checklist" },
+              "from": {
+                "const": "agent"
+              },
+              "to": {
+                "const": "checklist"
+              },
               "reason": {
                 "enum": ["sessionFailed", "twoTimeouts", "contextExhausted", "threeInvalidActions"]
               },
@@ -116,10 +120,16 @@
                   "conclude"
                 ]
               },
-              "step": { "type": "integer", "minimum": 1 },
+              "step": {
+                "type": "integer",
+                "minimum": 1
+              },
               "rejectedActionIds": {
                 "type": "array",
-                "items": { "type": "string", "pattern": "^s-[1-9][0-9]*$" }
+                "items": {
+                  "type": "string",
+                  "pattern": "^s-[1-9][0-9]*$"
+                }
               },
               "at": {
                 "type": "string",
@@ -225,6 +235,52 @@
               "type": "null"
             }
           ]
+        },
+        "emergencyStoppedAt": {
+          "type": "number"
+        },
+        "emergencyStop": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tappedAt", "stage", "mode", "outcome", "reported", "approvals", "evidence"],
+          "properties": {
+            "tappedAt": {
+              "type": "number"
+            },
+            "stage": {
+              "enum": [
+                "prepare",
+                "find",
+                "identify",
+                "standard",
+                "proprietary",
+                "control",
+                "conclude"
+              ]
+            },
+            "mode": {
+              "enum": ["agent", "checklist"]
+            },
+            "outcome": {
+              "enum": ["acknowledged", "notAcknowledged", "noKnownStop"]
+            },
+            "reported": {
+              "enum": ["stopped", "stillMoving", null]
+            },
+            "approvals": {
+              "type": "array",
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/approval"
+              }
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -272,15 +328,28 @@
           "mode": {
             "enum": ["agent", "checklist"]
           },
+          "approval": {
+            "$ref": "#/$defs/approval"
+          },
           "modelDecision": {
             "type": "object",
             "additionalProperties": false,
             "required": ["startedAt", "promptTokens", "modelMs"],
             "properties": {
-              "startedAt": { "type": "number" },
-              "promptTokens": { "type": ["number", "null"] },
-              "modelMs": { "type": "number", "minimum": 0 },
-              "rawText": { "type": "string", "maxLength": 8192 }
+              "startedAt": {
+                "type": "number"
+              },
+              "promptTokens": {
+                "type": ["number", "null"]
+              },
+              "modelMs": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rawText": {
+                "type": "string",
+                "maxLength": 8192
+              }
             }
           },
           "action": {
@@ -335,7 +404,9 @@
                     "type": "string"
                   },
                   "data": {},
-                  "error": { "type": "null" },
+                  "error": {
+                    "type": "null"
+                  },
                   "evidence": {
                     "type": "array",
                     "items": {
@@ -355,7 +426,9 @@
                   "summary": {
                     "type": "string"
                   },
-                  "data": { "type": "null" },
+                  "data": {
+                    "type": "null"
+                  },
                   "error": {
                     "type": "object"
                   },
@@ -627,7 +700,9 @@
           },
           "evidence": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           },
           "proposedConfidence": {
             "type": "number"
@@ -795,6 +870,105 @@
           "required": ["photos"]
         }
       ]
+    }
+  },
+  "$defs": {
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "request", "decision", "standClearConfirmed", "decidedAt"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tool",
+            "title",
+            "detail",
+            "risk",
+            "isMotion",
+            "sequence",
+            "deviceId",
+            "connectedAt",
+            "service",
+            "characteristic",
+            "bytes"
+          ],
+          "properties": {
+            "tool": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "detail": {
+              "type": "string"
+            },
+            "risk": {
+              "type": "string"
+            },
+            "isMotion": {
+              "type": "boolean"
+            },
+            "sequence": {
+              "type": "string"
+            },
+            "deviceId": {
+              "type": "string"
+            },
+            "connectedAt": {
+              "type": "number"
+            },
+            "effect": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["metric", "from", "to", "baselineId"],
+              "properties": {
+                "metric": {
+                  "enum": ["speed", "resistance"]
+                },
+                "from": {
+                  "type": "number"
+                },
+                "to": {
+                  "type": "number"
+                },
+                "baselineId": {
+                  "type": "string"
+                }
+              }
+            },
+            "service": {
+              "type": "string"
+            },
+            "characteristic": {
+              "type": "string"
+            },
+            "bytes": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
+            }
+          }
+        },
+        "decision": {
+          "enum": ["send", "decline", "cancel"]
+        },
+        "standClearConfirmed": {
+          "type": "boolean"
+        },
+        "decidedAt": {
+          "type": "number"
+        }
+      }
     }
   }
 }

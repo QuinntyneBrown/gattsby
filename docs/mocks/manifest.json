@@ -318,6 +318,7 @@
         "confirmed",
         "failed",
         "stop",
+        "request-control",
         "handshake"
       ],
       "not_applicable": {

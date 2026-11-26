@@ -24,7 +24,8 @@ The person reaches this step from the Investigation page, state `control`
 (`docs/mocks/pages/investigation/control.html`), by tapping "Test control" on the "Test control?"
 prompt. `request_control` is a tool of safety class `control`, so it opens the Approve a command
 dialog first (see the approve-a-command design). It moves nothing, so its prompt carries no
-stand-clear check (OQ-12). While the device answers, the dialog shows its busy state
+stand-clear check (resolved OQ-12). Its approval is shown in
+`docs/mocks/dialogs/approval/request-control.html`. While the device answers, the dialog shows its busy state
 (`docs/mocks/dialogs/approval/busy.html`: "waiting up to 5 s for the treadmill to answer"); a refusal
 shows the failed state (`docs/mocks/dialogs/approval/failed.html`). The evidence log records the
 exchange as "Approved: request control", "Sent: 0x2AD9 control point `00`" and "Received: 0x2AD9

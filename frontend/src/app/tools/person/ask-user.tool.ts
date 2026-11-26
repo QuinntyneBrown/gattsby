@@ -9,6 +9,7 @@ export interface AskUserInput {
   /** Set by the playbook: "Question 1 of 3". */
   readonly sequence?: string;
   readonly detail?: string;
+  readonly optionalStage?: true;
 }
 
 export interface AskUserOutput {
@@ -45,6 +46,7 @@ export const askUserTool = entry<AskUserInput, AskUserOutput>({
   description: 'Ask the person one question with 2 to 6 suggested answers.',
   inputSchema: {
     type: 'object',
+    additionalProperties: false,
     required: ['question', 'answers'],
     properties: {
       question: { type: 'string', maxLength: 140 },
@@ -67,10 +69,11 @@ export const askUserTool = entry<AskUserInput, AskUserOutput>({
   async run(input, ctx) {
     const check = checkAskUser(input);
     if (!check.valid) return fail('INVALID_INPUT', check.message);
-    const answers = check.answers;
+    const optionalStage = ctx.stage === 'control' && input.optionalStage === true;
+    const answers = optionalStage ? input.answers : check.answers;
     const response = await ctx.prompts.post(
       {
-        kind: 'question',
+        kind: optionalStage ? 'checklist' : 'question',
         title: input.question,
         detail: input.detail ?? null,
         why: null,
@@ -80,27 +83,28 @@ export const askUserTool = entry<AskUserInput, AskUserOutput>({
         steps: [],
         allowFreeText: !!input.allowFreeText,
         needsReady: false,
-        skippable: true,
+        skippable: !optionalStage,
         stoppable: false,
       },
       ctx.signal,
     );
     const freeText = response.freeText?.slice(0, FREE_TEXT_LIMIT);
-    const answer = response.skipped ? 'Skipped' : (freeText ?? response.answer);
+    const skipped = response.skipped || (optionalStage && response.answer === answers.at(-1));
+    const answer = skipped ? 'Skipped' : (freeText ?? response.answer);
     const id = ctx.observe({
       kind: 'answer',
       subject: input.question,
       value: answer,
-      text: response.skipped ? `Skipped: ${input.question}` : `${input.question} ${answer}`,
+      text: skipped ? `Skipped: ${input.question}` : `${input.question} ${answer}`,
       tag: 'confirmed',
       evidence: [],
     });
     return ok(
-      response.skipped ? 'The person skipped the question.' : `The person answered “${answer}”.`,
+      skipped ? 'The person skipped the question.' : `The person answered “${answer}”.`,
       {
         answer,
         ...(freeText !== undefined ? { freeText } : {}),
-        skipped: response.skipped,
+        skipped,
       },
       [id],
     );

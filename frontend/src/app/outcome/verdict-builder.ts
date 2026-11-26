@@ -11,6 +11,7 @@ export interface VerdictFacts {
   readonly missingToolRequests: readonly MissingToolRequest[];
   readonly everConnected: boolean;
   readonly stopReason: StopReason;
+  readonly emergencyAcknowledged?: boolean;
   /** Whether the protocol is one the knowledge base holds. */
   readonly protocolKnown: boolean;
 }

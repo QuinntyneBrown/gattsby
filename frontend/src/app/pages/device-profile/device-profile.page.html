@@ -135,12 +135,18 @@
                     @for (feature of p.features; track feature.feature) {
                       <tr>
                         <td>
-                          {{ feature.feature }}
+                          {{ featureLabel(feature.feature) }}
                           <span class="data-table__rule">
                             op {{ feature.command.opCode }}
+                            @if (feature.command.parameter; as parameter) {
+                              · {{ parameter.type }} × {{ parameter.scale }} {{ parameter.unit }}
+                            }
                             @if (feature.range; as range) {
                               · {{ range.min }}–{{ range.max }}
                               {{ feature.command.parameter?.unit }}
+                            }
+                            @if (feature.test; as test) {
+                              · tested {{ test.from }} → {{ test.to }}
                             }
                           </span>
                         </td>

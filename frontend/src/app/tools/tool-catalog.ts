@@ -2,6 +2,9 @@ import { scanAllDevicesTool } from './discovery/scan-all-devices.tool';
 import { scanDevicesTool } from './discovery/scan-devices.tool';
 import { connectTool } from './connection/connect.tool';
 import { disconnectTool } from './connection/disconnect.tool';
+import { requestControlTool } from './control/request-control.tool';
+import { sendCommandTool } from './control/send-command.tool';
+import { checkCommandEffectTool } from './control/check-command-effect.tool';
 import { checkCapabilitiesTool } from './environment/check-capabilities.tool';
 import { enumerateGattTool } from './inspection/enumerate-gatt.tool';
 import { matchKnownProfilesTool } from './inspection/match-known-profiles.tool';
@@ -32,6 +35,9 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   readSupportedRangesTool,
   subscribeAndRecordTool,
   decodeStandardTool,
+  requestControlTool,
+  sendCommandTool,
+  checkCommandEffectTool,
   askUserTool,
   requestActionTool,
   updateHypothesisTool,

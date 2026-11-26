@@ -16,7 +16,25 @@ const DECODER_IDS: string[] = JSON.parse(
   ),
 );
 const BASE_SUFFIX = '-0000-1000-8000-00805f9b34fb';
-const KINDS = ['manifest', 'blocklist', 'standard-service', 'vendor', 'brand-suggestions'];
+const KINDS = [
+  'manifest',
+  'blocklist',
+  'standard-service',
+  'vendor',
+  'brand-suggestions',
+  'command-set',
+  'control-limits',
+];
+const FTMS_COMMANDS = new Map([
+  ['requestControl', 0],
+  ['reset', 1],
+  ['setTargetSpeed', 2],
+  ['setTargetIncline', 3],
+  ['setTargetResistance', 4],
+  ['setTargetPower', 5],
+  ['start', 7],
+  ['stop', 8],
+]);
 
 type Json = Record<string, unknown>;
 
@@ -159,12 +177,69 @@ export function buildKnowledgeBase(dir: string): { errors: string[]; output: Jso
     ...services.map((s) => s.uuid),
     ...vendors.flatMap((v) => (v['services'] as Json[]).map((s) => String(s['uuid']))),
   ].filter((uuid) => !excluded.has(uuid));
+  const commandIds = new Set<string>();
+  const commands = (byKind.get('command-set') ?? []).flatMap(({ path, data }) =>
+    (data['commands'] as Json[]).map((command, index) => {
+      const id = String(command['id']);
+      const opCode = FTMS_COMMANDS.get(id);
+      const fixed = command['fixedBytes'] as number[] | undefined;
+      if (commandIds.has(id) || command['opCode'] !== opCode)
+        errors.push(`${path}: /commands/${index}: unexpected or duplicate FTMS command`);
+      const usesParameter = opCode !== undefined && opCode >= 2 && opCode <= 5;
+      if (
+        usesParameter
+          ? !command['parameter'] || !!fixed
+          : command['parameter'] || fixed?.length !== (id === 'stop' ? 1 : 0)
+      )
+        errors.push(`${path}: /commands/${index}: incorrect parameters for this FTMS command`);
+      commandIds.add(id);
+      return {
+        ...command,
+        protocol: data['protocol'],
+        service: canonical(String(data['service'])),
+        characteristic: canonical(String(data['characteristic'])),
+        ...(command['rangeCharacteristic'] && {
+          rangeCharacteristic: canonical(String(command['rangeCharacteristic'])),
+        }),
+      };
+    }),
+  );
+  const controlLimits: Record<string, unknown> = {};
+  for (const { path, data } of byKind.get('control-limits') ?? []) {
+    const deviceType = String(data['deviceType']);
+    const test = data['test'] as {
+      command: string;
+      direction: number;
+      minValue: number;
+      maxValue: number;
+      maxStep: number;
+    };
+    const expected =
+      deviceType === 'treadmill'
+        ? 'setTargetSpeed'
+        : deviceType === 'bike'
+          ? 'setTargetResistance'
+          : null;
+    if (
+      controlLimits[deviceType] ||
+      !commandIds.has(test.command) ||
+      test.command !== expected ||
+      test.minValue >= test.maxValue ||
+      (deviceType === 'treadmill' &&
+        (test.direction !== -1 || test.maxValue > 6 || test.maxStep > 0.1)) ||
+      (deviceType === 'bike' && (test.direction !== 1 || test.maxValue > 10 || test.maxStep > 1))
+    )
+      errors.push(`${path}: /test: invalid control limits for ${deviceType}`);
+    controlLimits[deviceType] = test;
+  }
 
   if (errors.length > 0) return { errors, output: null };
   const manifest = manifests[0].data;
   const body = {
     services,
     vendors,
+    commands,
+    controlLimits,
     blocklist,
     brandSuggestions: (byKind.get('brand-suggestions') ?? [])[0]?.data['byMachineType'] ?? {},
     knownServiceUuids,

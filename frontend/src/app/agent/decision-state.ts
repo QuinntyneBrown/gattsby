@@ -1,8 +1,10 @@
 import type { ChosenDevice } from '../ble/chosen-device';
 import type { GattServiceInfo } from '../ble/gatt-layout';
+import type { SupportedRange } from '../knowledge-base/supported-range';
 import type { ReadableMetric } from '../outcome/readable-metric';
 import type { Stage } from '../store/model/stage';
 import type { Step } from '../store/model/step';
+import type { ControlEffect } from '../store/model/control-effect';
 import type { DeviceInformation } from './device-information';
 import type { ProfileCandidate } from './profile-candidate';
 
@@ -37,6 +39,8 @@ export interface DecisionState {
   readonly reads: readonly string[];
   readonly rangesAttempted: boolean;
   readonly machineFeatures: readonly string[];
+  readonly targetSettingFeatures: readonly string[];
+  readonly supportedRanges: Readonly<Record<string, SupportedRange>>;
   readonly machineFeatureEvidence: readonly string[];
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
   readonly standardRecordingId: string | null;
@@ -46,6 +50,14 @@ export interface DecisionState {
   readonly inclineAction: number | 'skipped' | null;
   readonly inclineConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly inclineBaseline: number | null;
+  readonly controlChoice: 'test' | 'skip' | null;
+  readonly controlRequested: boolean;
+  readonly controlGrantedAt: number | null;
+  readonly controlAttempted: boolean;
+  readonly controlTest: (ControlEffect & { readonly sentAt: number }) | null;
+  readonly controlAnswer: string | null;
+  readonly controlEffectStatus: 'confirmed' | 'notSeen' | 'opposite' | null;
+  readonly controlStopped: boolean;
   readonly finished: boolean;
 }
 
@@ -72,6 +84,8 @@ export const INITIAL_STATE: DecisionState = {
   reads: [],
   rangesAttempted: false,
   machineFeatures: [],
+  targetSettingFeatures: [],
+  supportedRanges: {},
   machineFeatureEvidence: [],
   standardRecording: 'pending',
   standardRecordingId: null,
@@ -81,6 +95,14 @@ export const INITIAL_STATE: DecisionState = {
   inclineAction: null,
   inclineConfirmation: null,
   inclineBaseline: null,
+  controlChoice: null,
+  controlRequested: false,
+  controlGrantedAt: null,
+  controlAttempted: false,
+  controlTest: null,
+  controlAnswer: null,
+  controlEffectStatus: null,
+  controlStopped: false,
   finished: false,
 };
 
@@ -115,6 +137,12 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       }
       if (step.ruleId === 'standard.incline-follow-up') {
         return { ...next, inclineConfirmation: 'reported' };
+      }
+      if (step.ruleId === 'control.offer') {
+        return { ...next, controlChoice: answer === 'Test control' ? 'test' : 'skip' };
+      }
+      if (step.ruleId === 'control.confirm') {
+        return { ...next, controlAnswer: answer ?? DONT_KNOW };
       }
       return next;
     case 'request_action':
@@ -189,10 +217,41 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
         ...next,
         rangesAttempted: true,
         machineFeatures: (data?.['machineFeatures'] as string[] | undefined) ?? [],
+        targetSettingFeatures: (data?.['targetSettingFeatures'] as string[] | undefined) ?? [],
+        supportedRanges: (data?.['ranges'] as Record<string, SupportedRange> | undefined) ?? {},
         machineFeatureEvidence: step.result.ok ? step.result.evidence.slice(0, 1) : [],
       };
     case 'disconnect':
-      return { ...next, connected: false };
+      return { ...next, connected: false, controlGrantedAt: null };
+    case 'request_control':
+      return {
+        ...next,
+        controlRequested: true,
+        controlGrantedAt:
+          data?.['result'] === 'success' && typeof data['connectedAt'] === 'number'
+            ? data['connectedAt']
+            : null,
+      };
+    case 'send_command': {
+      if (step.ruleId === 'control.stop') return { ...next, controlStopped: true };
+      const effect = data?.['effect'] as ControlEffect | undefined;
+      const sentAt = data?.['sentAt'];
+      return {
+        ...next,
+        controlAttempted: true,
+        controlTest: effect && typeof sentAt === 'number' ? { ...effect, sentAt } : null,
+      };
+    }
+    case 'request_missing_tool':
+      return step.ruleId === 'control.test' ? { ...next, controlAttempted: true } : next;
+    case 'check_command_effect':
+      return {
+        ...next,
+        controlEffectStatus:
+          data?.['status'] === 'confirmed' || data?.['status'] === 'opposite'
+            ? data['status']
+            : 'notSeen',
+      };
     case 'update_hypothesis':
       return step.result.ok &&
         step.ruleId === 'identify.ambiguous' &&

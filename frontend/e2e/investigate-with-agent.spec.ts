@@ -259,7 +259,7 @@ test.describe('The model returns unstructured or forbidden actions', () => {
     expect(refused.map((step) => step.result.error?.code)).toEqual([
       'INVALID_INPUT',
       'NOT_ALLOWED_AT_STAGE',
-      'UNKNOWN_TOOL',
+      'NOT_ALLOWED_AT_STAGE',
     ]);
     expect(fakeBluetooth.writes()).toEqual([]);
   });

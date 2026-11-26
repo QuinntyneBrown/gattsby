@@ -30,20 +30,53 @@ function install(config: SimulationConfig): void {
       throw new Error(`No scripted device "${id}".`);
     }
     const periods = config.bluetooth.notificationPeriods;
+    const controlReplies = config.bluetooth.controlReplies;
+    const controlEffect = config.bluetooth.controlEffectSpeedKmh;
+    const losesControl = config.bluetooth.loseControlAfterGrant;
     const omitted = new Set((config.bluetooth.omitCharacteristics ?? []).map(canonicalUuid));
-    if (!periods && !omitted.size) return device;
+    if (
+      !periods &&
+      !omitted.size &&
+      !controlReplies &&
+      controlEffect === undefined &&
+      !losesControl
+    )
+      return device;
     return {
       ...device,
       services: device.services.map((service) => ({
         ...service,
         characteristics: service.characteristics
           .filter((characteristic) => !omitted.has(canonicalUuid(characteristic.uuid)))
-          .map((characteristic) => ({
-            ...characteristic,
-            notificationIntervalMs:
-              periods?.[canonicalUuid(characteristic.uuid)] ??
-              characteristic.notificationIntervalMs,
-          })),
+          .map((characteristic) => {
+            const uuid = canonicalUuid(characteristic.uuid);
+            const write = characteristic.onWrite;
+            return {
+              ...characteristic,
+              notificationIntervalMs: periods?.[uuid] ?? characteristic.notificationIntervalMs,
+              ...(losesControl &&
+                uuid === canonicalUuid(0x2ada) && {
+                  notify: ((state) =>
+                    state.values['control'] ? [0xff] : [0x01]) satisfies NonNullable<
+                    typeof characteristic.notify
+                  >,
+                }),
+              ...(uuid === canonicalUuid(0x2ad9) &&
+                write && {
+                  onWrite: ((bytes, state) => {
+                    const opCode = bytes[0];
+                    if (controlReplies && Object.hasOwn(controlReplies, opCode)) {
+                      const result = controlReplies[opCode];
+                      return result === null ? {} : { reply: [0x80, opCode, result] };
+                    }
+                    const response = write(bytes, state);
+                    if (controlEffect !== undefined && opCode === 0x02)
+                      state.values['targetSpeed'] = Math.round(controlEffect * 100);
+                    return response;
+                  }) satisfies typeof write,
+                }),
+            };
+          }),
       })),
     };
   });

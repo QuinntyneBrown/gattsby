@@ -84,6 +84,12 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     });
   }
 
+  async latchEmergencyStop(id: string, at: number): Promise<void> {
+    await this.write(['investigations'], 'strict', (tx) => {
+      this.patch(tx, id, { emergencyStoppedAt: at });
+    });
+  }
+
   async commitVerdict(commit: VerdictCommit): Promise<void> {
     const stores = [
       'investigations',

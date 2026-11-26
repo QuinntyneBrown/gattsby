@@ -1,5 +1,6 @@
 import type { DecisionState } from '../agent/decision-state';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
+import type { ApprovalRequest } from '../store/model/approval-request';
 import type { Stage } from '../store/model/stage';
 import type { ErrorCode } from './error-code';
 import type { SafetyClass, ToolGroup } from './safety-class';
@@ -43,6 +44,7 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   readonly preconditions: readonly Precondition[];
   /** A precondition that depends on the selected input as well as the investigation state. */
   readonly inputPrecondition?: (input: I, state: DecisionState) => string | null;
+  readonly approval?: (input: I, context: ToolContext) => ApprovalRequest;
   readonly stages: readonly Stage[];
   readonly requiredCapabilities: readonly string[];
   readonly phase: 'MVP' | 'P2';

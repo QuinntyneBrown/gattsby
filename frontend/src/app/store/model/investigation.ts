@@ -1,5 +1,6 @@
 import type { OperatingMode } from './operating-mode';
 import type { ModeChange } from './mode-change';
+import type { EmergencyStopEvent } from './emergency-stop-event';
 import type { Stage } from './stage';
 import type { Verdict } from './verdict';
 
@@ -11,6 +12,8 @@ export interface Investigation {
   readonly startedAt: number;
   readonly mode: OperatingMode;
   readonly modeChanges?: readonly ModeChange[];
+  readonly emergencyStoppedAt?: number;
+  readonly emergencyStop?: EmergencyStopEvent;
   readonly appVersion: string;
   readonly kbVersion: string;
   readonly recordFormat: number;
@@ -33,6 +36,8 @@ export type InvestigationPatch = Partial<
     | 'stage'
     | 'mode'
     | 'modeChanges'
+    | 'emergencyStoppedAt'
+    | 'emergencyStop'
     | 'status'
     | 'lastCommittedStep'
     | 'deviceName'

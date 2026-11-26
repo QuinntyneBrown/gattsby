@@ -1,8 +1,10 @@
 import { StoreError } from '../store/store-error';
+import type { ApprovalDecision } from '../store/model/approval-decision';
 import type { ToolContext } from '../tools/tool-context';
 import type { ToolDefinition } from '../tools/tool-definition';
 import { ToolError } from '../tools/tool-error';
 import { fail, normaliseSummary, type ToolResult } from '../tools/tool-result';
+import type { ApprovalGate } from './approval-gate';
 
 /** Thrown for a defect: a throw that is not a refusal. The loop ends with the reason `failure`. */
 export class ToolDefect extends Error {
@@ -25,6 +27,8 @@ export async function executeTool(
   input: unknown,
   ctx: ToolContext,
   handedOut: () => readonly string[],
+  approvalGate?: ApprovalGate,
+  recordApproval?: (decision: ApprovalDecision) => void,
 ): Promise<ToolResult<unknown>> {
   for (const precondition of tool.preconditions) {
     if (!precondition.check(ctx)) return fail(precondition.code, precondition.message);
@@ -32,8 +36,20 @@ export async function executeTool(
   const inputRefusal = tool.inputPrecondition?.(input, ctx.state);
   if (inputRefusal) return fail('PRECONDITION_FAILED', inputRefusal);
   let result: ToolResult<unknown>;
+  let approval: ApprovalDecision | undefined;
+  const requiresApproval = tool.safetyClass === 'write' || tool.safetyClass === 'control';
   try {
-    result = await tool.run(input, ctx);
+    if (requiresApproval) {
+      if (!tool.approval || !approvalGate || !recordApproval)
+        return fail('APPROVAL_REQUIRED', 'This command needs its own approval.');
+      approval = await approvalGate.approve(
+        tool.approval(input, ctx),
+        ctx.stepN,
+        ctx.signal,
+        recordApproval,
+      );
+    }
+    result = await tool.run(input, approval ? { ...ctx, approval } : ctx);
   } catch (error) {
     if (error instanceof ToolError) {
       result = fail(error.code, error.message);
@@ -44,6 +60,8 @@ export async function executeTool(
     } else {
       throw new ToolDefect(tool.name, error);
     }
+  } finally {
+    if (requiresApproval) approvalGate?.clear(approval?.id);
   }
   const evidence = [...new Set([...result.evidence, ...handedOut()])];
   return result.ok

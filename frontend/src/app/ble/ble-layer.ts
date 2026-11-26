@@ -25,6 +25,12 @@ export abstract class BleLayer {
   abstract connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }>;
   abstract primaryServices(): Promise<GattServiceInfo[]>;
   abstract read(service: string, characteristic: string): Promise<ReadResult>;
+  abstract write(
+    service: string,
+    characteristic: string,
+    bytes: Uint8Array,
+    approvalId: string,
+  ): Promise<string>;
   abstract subscribe(
     service: string,
     characteristic: string,

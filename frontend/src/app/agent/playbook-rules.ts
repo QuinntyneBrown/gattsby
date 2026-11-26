@@ -2,18 +2,20 @@ import { STAGES, type Stage } from '../store/model/stage';
 import { CHECKLIST_LABELS } from './playbook';
 import type { RuleAction, RuleOption, RuleOutcome } from './rule-outcome';
 import { CONCLUDE_RULES } from './rules/conclude.rules';
+import { CONTROL_RULES } from './rules/control.rules';
 import { FIND_RULES } from './rules/find.rules';
 import { IDENTIFY_RULES } from './rules/identify.rules';
 import { PREPARE_RULES } from './rules/prepare.rules';
 import { STANDARD_RULES } from './rules/standard.rules';
 import type { RuleContext, StageRule } from './stage-rule';
 
-// The Proprietary path (journey 13) and Control (journey 8) join when they are built.
+// The Proprietary path joins the playbook in journey 13.
 const RULES: Readonly<Partial<Record<Stage, readonly StageRule[]>>> = {
   prepare: PREPARE_RULES,
   find: FIND_RULES,
   identify: IDENTIFY_RULES,
   standard: STANDARD_RULES,
+  control: CONTROL_RULES,
   conclude: CONCLUDE_RULES,
 };
 
