@@ -242,3 +242,36 @@ test('stops listening before the recording window ends when a packet flush exhau
   expect(fakeBluetooth.calls()).toContain('stopNotifications');
   expect(await new StoredRecords(page).recordings(investigation.id())).toEqual([]);
 });
+
+// Given only one usable level, when the person tries a quick baseline and one
+// activity, then the comparison names the characteristic and its changed offset.
+test('offers a quick comparison after one usable level', async ({ page, fakeBluetooth }) => {
+  const investigation = await connectToRower(page);
+  const id = investigation.id();
+  const starts = () => fakeBluetooth.calls().filter((call) => call === 'startNotifications').length;
+  const readyAndRecord = async () => {
+    const before = starts();
+    await investigation.choose('Ready');
+    await expect.poll(starts).toBeGreaterThan(before);
+    await page.clock.runFor(10_300);
+  };
+  await investigation.waitForPrompt('Keep the rower idle, then tap Ready');
+  await readyAndRecord();
+  await investigation.waitForPrompt('Row at an easy pace, then tap Ready');
+  await investigation.choose('Skip');
+  await investigation.waitForPrompt('Row a little faster, then tap Ready');
+  await investigation.choose('Skip');
+  await investigation.waitForPrompt('Try one comparison?');
+  await readyAndRecord();
+  await investigation.waitForPrompt('Row at an easy pace, then tap Ready');
+  // The other scripted active level wraps through zero in both byte positions.
+  await fakeBluetooth.setEffort(2);
+  await readyAndRecord();
+  await expect(new VerdictPage(page).title).toHaveText('Partially decoded');
+  const steps = await new StoredRecords(page).steps(id);
+  const comparison = steps.find(({ tool }) => tool === 'baseline_vs_activity');
+  expect(comparison?.result.data).toMatchObject({
+    changed: expect.arrayContaining([{ uuid: dataUuid, offsets: expect.arrayContaining([5]) }]),
+  });
+  expect(fakeBluetooth.writes()).toEqual([]);
+});

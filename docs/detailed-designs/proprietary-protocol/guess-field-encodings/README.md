@@ -29,7 +29,8 @@ On screen, the feature shows as steps in the Investigation page's activity feed,
 results reach the Device profile page, state `partial` (`docs/mocks/pages/device-profile/partial.html`),
 as rules such as "Calories kcal 0x0035 · bytes 9–10 · uint16 LE per stroke likely", and the Verdict
 page, state `partial` (`docs/mocks/pages/verdict/partial.html`), as "Calories bytes 9–10, uint16 LE
-likely". No mock draws these two steps' result lines in the feed; their wording is `<TO SUPPLY>`.
+likely". The ranking reports the best candidate's correlation with effort. The candidate encoding
+reports the offset, integer type, byte order, scale and unit in the partial verdict.
 
 Both tools are deterministic analysis code over stored recordings. The model may choose which field
 to test and what range to expect, but it never scores a fit (AGENTS.md).

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verdict · varying bytes — Gattsby mocks</title>
+<meta name="mock:kind" content="page">
+<meta name="mock:screen" content="verdict">
+<meta name="mock:state" content="partial-varying">
+<meta name="mock:requirements" content="FR-009 FR-014 FR-018 FR-029 FR-030 FR-031 FR-033 FR-054 FR-056 FR-057 FR-058 FR-060 FR-062 FR-063">
+<meta name="description" content="Varying bytes, candidate encoding and framing from an unidentified protocol.">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/ui.css">
+<link rel="stylesheet" href="../../assets/mock.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app app--fixed"><header class="appbar" style="border-bottom: 0;"><a class="btn btn--ghost btn--icon" href="../../pages/home/default.html" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></a><span class="appbar__titles"></span><a class="btn btn--ghost" href="../device-profile/default.html">Device profile</a></header><main id="main" class="scroll"><div class="page page--reading"><p class="verdict__meta">PM5 430071234 · 1 min · 20 steps</p><h1 class="verdict__title"><svg class="vdot vdot--lg" viewBox="0 0 12 12" aria-hidden="true"><circle class="vdot__partial-ring" cx="6" cy="6" r="4.5"/><path class="vdot__partial-half" d="M6 1.5 A4.5 4.5 0 0 1 6 10.5 Z"/></svg>Partially decoded</h1><p class="verdict__summary">Some bytes changed with effort. The recordings show where the readings may be encoded.</p><dl class="verdict__protocol"><dt>Protocol</dt><dd>Not identified</dd></dl><section class="group"><div class="group__head"><h2>Observed</h2></div><ul class="group__items group__items--observed"><li><span class="group__k">Silent characteristic</span><span class="group__v"><bdi>ce060033-43e5-11e4-916c-0800200c9a66 sent no notifications in the recordings.</bdi></span><span class="conf conf--confirmed">confirmed</span></li><li><span class="group__k">Varying bytes</span><span class="group__v"><bdi>5, 6, 9 in 10-byte packets from ce060031-43e5-11e4-916c-0800200c9a66.</bdi></span><span class="conf conf--likely">likely</span></li><li><span class="group__k">Varying bytes</span><span class="group__v"><bdi>5, 6, 8 in 9-byte packets from ce060031-43e5-11e4-916c-0800200c9a66.</bdi></span><span class="conf conf--likely">likely</span></li><li><span class="group__k">Candidate encoding</span><span class="group__v"><bdi>Offset 5, uint16 LE ×0.1 spm.</bdi></span><span class="conf conf--likely">likely</span></li><li><span class="group__k">Framing candidates</span><span class="group__v"><bdi>Header F0, length candidate at byte 2, counter at byte 1, sum8. Packet fit 100%.</bdi></span><span class="conf conf--likely">likely</span></li></ul></section><section class="group"><div class="group__head"><h2>Couldn’t determine</h2></div><ul class="group__items"><li><span class="group__k">Protocol</span><span class="group__v">More evidence is needed.</span></li></ul></section></div></main><div class="action-bar"><div class="action-bar__inner"><a class="btn btn--primary btn--lg" href="../../dialogs/export/default.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export profile</a><a class="btn btn--lg" href="../../dialogs/export/default.html">Export full record</a><a class="btn btn--lg" href="../../pages/investigation/prepare.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>New<span class="sm-hide-text">&nbsp;investigation</span></a></div></div></div>
+
+<nav class="mock-bar" aria-label="Mock navigation">
+  <a class="mock-bar__home" href="../../index.html" aria-label="All mocks">⌂</a>
+  <span class="mock-bar__screen">Verdict</span>
+  <ul class="mock-bar__states"><li><a href="default.html">default</a></li><li><a href="loading.html">loading</a></li><li><a href="error.html">error</a></li><li><a href="partial.html">partial</a></li><li><a href="partial-varying.html" aria-current="page">partial-varying</a></li><li><a href="missing-tool.html">missing-tool</a></li><li><a href="not-connectable.html">not-connectable</a></li><li><a href="stopped.html">stopped</a></li></ul>
+  <button type="button" data-theme-toggle aria-pressed="false">☾ Dark</button>
+  <button type="button" data-chrome-toggle aria-label="Hide mock chrome">×</button>
+</nav>
+<script src="../../assets/mock.js"></script>
+</body>
+</html>

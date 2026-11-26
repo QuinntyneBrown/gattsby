@@ -67,6 +67,7 @@ export interface DecisionState {
   readonly proprietaryRanking: readonly FieldCandidate[] | null;
   readonly proprietaryEncodingAttempted: boolean;
   readonly proprietaryFramingAttempted: boolean;
+  readonly proprietaryQuickComparison: 'ready' | 'done' | null;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly readableMetrics: readonly ReadableMetric[];
@@ -124,6 +125,7 @@ export const INITIAL_STATE: DecisionState = {
   proprietaryRanking: null,
   proprietaryEncodingAttempted: false,
   proprietaryFramingAttempted: false,
+  proprietaryQuickComparison: null,
   speedAction: null,
   speedConfirmation: null,
   readableMetrics: [],
@@ -197,6 +199,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return { ...next, proprietaryEncodingAttempted: true };
     case 'detect_framing':
       return { ...next, proprietaryFramingAttempted: true };
+    case 'baseline_vs_activity':
+      return { ...next, proprietaryQuickComparison: 'done' };
     case 'check_capabilities':
       return {
         ...next,
@@ -226,6 +230,11 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return next;
     case 'request_action':
       if (step.stage === 'proprietary') {
+        if (step.ruleId === 'proprietary.quick-ready')
+          return {
+            ...next,
+            proprietaryQuickComparison: typeof data?.['readyAt'] === 'number' ? 'ready' : 'done',
+          };
         const level = PROPRIETARY_LEVELS.find(
           (level) => step.ruleId === `proprietary.ready.${level}`,
         );

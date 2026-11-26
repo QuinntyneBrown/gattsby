@@ -125,6 +125,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 3. Given a device whose byte 3 rises with cadence, "pedal faster" yields `changed` with that
    characteristic and offset 3 (TOOL-014 AC1).
 4. The person's "Skip" returns `USER_CANCELLED`; the baseline is kept.
+5. When only one of the three levels has usable packets, offer "Try one comparison?" in the
+   existing action prompt. Ready starts the new baseline. Skip ends the comparison path.
 
 ### Evidence for the verdict
 

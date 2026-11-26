@@ -2,6 +2,7 @@ import type { findVaryingBytes } from '../../analysis/varying-bytes-finder';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { entry } from '../tool-definition';
 import { fail, ok } from '../tool-result';
+import type { ToolContext } from '../tool-context';
 
 export const findVaryingBytesTool = entry<
   { recordingIds: readonly string[] },
@@ -78,16 +79,7 @@ export const findVaryingBytesTool = entry<
       }
     }
     const varying = report.perCharacteristic.filter(({ betweenLabels }) => betweenLabels.length);
-    for (const group of varying) {
-      ctx.observe({
-        kind: 'varying-field',
-        subject: group.uuid,
-        value: `${group.length}/${group.betweenLabels.join(',')}`,
-        text: `Varying bytes: ${group.betweenLabels.join(', ')} in ${group.length}-byte packets from ${shortUuid(group.uuid)}.`,
-        tag: 'likely',
-        evidence: group.packets.flatMap(({ recordingId, rawLogId }) => [recordingId, rawLogId]),
-      });
-    }
+    observeVaryingGroups(ctx, varying);
     if (!report.perCharacteristic.length)
       return fail(
         'INSUFFICIENT_DATA',
@@ -102,3 +94,19 @@ export const findVaryingBytesTool = entry<
     );
   },
 });
+
+export function observeVaryingGroups(
+  ctx: ToolContext,
+  groups: ReturnType<typeof findVaryingBytes>['perCharacteristic'],
+): void {
+  for (const group of groups) {
+    ctx.observe({
+      kind: 'varying-field',
+      subject: group.uuid,
+      value: `${group.length}/${group.betweenLabels.join(',')}`,
+      text: `Varying bytes: ${group.betweenLabels.join(', ')} in ${group.length}-byte packets from ${shortUuid(group.uuid)}.`,
+      tag: 'likely',
+      evidence: group.packets.flatMap(({ recordingId, rawLogId }) => [recordingId, rawLogId]),
+    });
+  }
+}

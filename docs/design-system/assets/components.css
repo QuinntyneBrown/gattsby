@@ -538,6 +538,10 @@ a.row:hover, .row--link:hover { background: color-mix(in srgb, var(--color-bg-su
 .group__items li:first-child { border-top: 0; }
 .group__k { flex: 1; min-width: 0; }
 .group__v { font: var(--text-code-sm); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.group__items--observed li { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.group__items--observed .group__k { grid-column: 1; grid-row: 1; }
+.group__items--observed .group__v { grid-column: 1 / -1; grid-row: 2; overflow-wrap: anywhere; }
+.group__items--observed .conf { grid-column: 2; grid-row: 1; }
 .group__items a { color: var(--color-fg-muted); font: var(--text-label); font-size: var(--font-size-xs); display: inline-flex; align-items: center; min-height: var(--target-min); margin-block: calc(-1 * var(--space-3)); }
 .numbered { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); counter-reset: n; }
 .numbered li { display: flex; gap: var(--space-3); line-height: var(--line-height-snug); counter-increment: n; }

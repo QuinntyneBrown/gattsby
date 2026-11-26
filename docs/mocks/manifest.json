@@ -145,6 +145,9 @@
         "FR-009",
         "FR-014",
         "FR-018",
+        "FR-029",
+        "FR-030",
+        "FR-031",
         "FR-033",
         "FR-054",
         "FR-056",
@@ -159,6 +162,7 @@
         "loading",
         "error",
         "partial",
+        "partial-varying",
         "missing-tool",
         "not-connectable",
         "stopped"

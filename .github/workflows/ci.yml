@@ -58,7 +58,8 @@ jobs:
         run: npx playwright install --with-deps --only-shell chromium
 
       # Critical paths cover the app shell, readiness, identification, live FTMS confirmation,
-      # profile export, agent and checklist, FTMS control, device matching, reconnect, stop and reachability.
+      # profile export, agent and checklist, FTMS control, device matching, reconnect, stop,
+      # reachability and proprietary packet evidence.
       - name: Run the critical behaviour specs
         run: npm run e2e:critical
 

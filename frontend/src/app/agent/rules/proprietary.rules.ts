@@ -98,6 +98,34 @@ export const PROPRIETARY_RULES: readonly StageRule[] = [
     },
   },
   {
+    id: 'proprietary.quick-ready',
+    stage: 'proprietary',
+    when: (ctx) =>
+      needsProprietary(ctx) &&
+      !nextLevel(ctx) &&
+      ctx.state.proprietaryQuickComparison === null &&
+      recordingIds(ctx).length === 1 &&
+      Object.values(ctx.state.proprietaryRecordings).some(({ count }) => (count ?? 0) >= 5),
+    then: ({ state }) =>
+      decided('proprietary.quick-ready', 'proprietary', 'request_action', {
+        title: 'Try one comparison?',
+        instruction: proprietaryInstruction(state.machineType, 'idle'),
+        detail: `${proprietaryInstruction(state.machineType, 'idle')}. I’ll record an idle baseline and then ask for one activity.`,
+        needsReady: true,
+      }),
+  },
+  {
+    id: 'proprietary.quick',
+    stage: 'proprietary',
+    when: ({ state }) => state.proprietaryQuickComparison === 'ready',
+    then: (ctx) =>
+      decided('proprietary.quick', 'proprietary', 'baseline_vs_activity', {
+        characteristics: proprietaryCharacteristics(ctx).slice(0, 8),
+        seconds: PROPRIETARY_RECORDING_SECONDS,
+        action: proprietaryInstruction(ctx.state.machineType, 'slow'),
+      }),
+  },
+  {
     id: 'proprietary.compare',
     stage: 'proprietary',
     when: (ctx) =>

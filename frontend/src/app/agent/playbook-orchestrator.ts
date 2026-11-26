@@ -163,7 +163,7 @@ export class PlaybookOrchestrator {
     () => this.pending()?.action.stage ?? this.choosingStage() ?? this.state().stage,
   );
   readonly recording = computed(
-    () => this.status() === 'running' && this.pending()?.action.tool === 'subscribe_and_record',
+    () => this.status() === 'running' && isRecordingTool(this.pending()?.action.tool),
   );
   readonly mode = computed(() => this.investigationSignal()?.mode ?? 'agent');
   readonly modeChange = computed(() => this.investigationSignal()?.modeChanges?.at(-1) ?? null);
@@ -318,7 +318,7 @@ export class PlaybookOrchestrator {
       )
         return;
       const recordingSeconds =
-        this.pending()?.action.tool === 'subscribe_and_record' && this.stepStartedAt !== null
+        isRecordingTool(this.pending()?.action.tool) && this.stepStartedAt !== null
           ? Math.floor((event.at - this.stepStartedAt) / 1_000)
           : null;
       this.recovery.dropped(event, recordingSeconds);
@@ -801,7 +801,7 @@ export class PlaybookOrchestrator {
     };
     let result: ToolResult<unknown>;
     let approval: ApprovalDecision | undefined;
-    const quota = action.tool === 'subscribe_and_record' ? new AbortController() : null;
+    const quota = isRecordingTool(action.tool) ? new AbortController() : null;
     if (refusal) {
       result = fail(refusal.code, refusal.message);
     } else if (!tool) {
@@ -1003,7 +1003,7 @@ export class PlaybookOrchestrator {
       if (
         !(error instanceof StoreError) ||
         error.code !== 'STORAGE_FULL' ||
-        action.tool !== 'subscribe_and_record'
+        !isRecordingTool(action.tool)
       )
         throw error;
       this.pending.set(null);
@@ -1121,6 +1121,10 @@ export class PlaybookOrchestrator {
 
 function keyOf(o: Observation): string {
   return `${o.kind}|${o.subject}|${o.value}`;
+}
+
+function isRecordingTool(tool: string | undefined): boolean {
+  return tool === 'subscribe_and_record' || tool === 'baseline_vs_activity';
 }
 
 function isConnectionRecoveryStep(tool: string): boolean {

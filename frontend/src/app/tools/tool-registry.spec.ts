@@ -19,6 +19,7 @@ const MVP_TOOLS = [
   'match_known_profiles',
   'read_supported_ranges',
   'subscribe_and_record',
+  'baseline_vs_activity',
   'decode_standard',
   'assess_reachability',
   'find_varying_bytes',

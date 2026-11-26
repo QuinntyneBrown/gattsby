@@ -29,7 +29,7 @@ On screen, the feature shows as the step `detect_framing` in the Investigation p
 state `proprietary` (`docs/mocks/pages/investigation/proprietary.html`), whose live readings show the
 raw frame `A5 5A 10 3C 9F…` of a 16-byte packet. That packet's first two bytes and its length byte
 (`0x10`, 16) are the kind of frame the detector finds. No mock draws the step's result line yet;
-its wording is `<TO SUPPLY>`.
+the result reports which framing candidates matched and the share of packets they explain.
 
 ## Description
 
