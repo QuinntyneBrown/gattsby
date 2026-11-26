@@ -45,7 +45,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - **`GattSession`** (`ble/gatt-session.ts`) — holds the `Subscription`s
   (`ble/subscription.ts`: service, characteristic, kind, value handler). `rebind(server)` resolves
   each characteristic again on the new connection, calls `startNotifications()` and re-attaches the
-  `characteristicvaluechanged` listener, returning the UUIDs restored.
+  `characteristicvaluechanged` listener, returning the UUIDs restored. The Web Bluetooth layer
+  holds the subscription descriptions so they survive the loss of the browser's GATT handles.
 - **`WebBluetoothBleLayer`** (`ble/web-bluetooth-ble-layer.ts`) — turns `gattserverdisconnected` into a
   `DisconnectEvent` (`deviceId`, `t`, `intentional`), appends a `disconnect` entry to
   `RawTrafficLog`, and reconnects through `connect(deviceId, timeoutMs)`.
@@ -62,13 +63,15 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 2. The loop pauses at once. No new tool runs and no model call is made until the reconnect ends.
 3. The first attempt starts 1 second after the drop; the next two follow at 2 and 4 seconds
    (FR-016, TOOL-007). Each attempt uses `connect`'s default timeout of 10,000 ms.
-4. After a successful reconnect every subscription active before the drop is restarted and listed in
-   `restoredSubscriptions` (TOOL-007).
+4. After a successful reconnect every data subscription active before the drop is restarted and
+   listed in `restoredSubscriptions` (TOOL-007). The FTMS Control Point exchange has its own
+   lifecycle and is released when its connection drops.
 5. The reconnect restores notifications only. It replays no write and restores no control session.
    A device that granted control before the drop needs a new `request_control`, with a new approval
    (see the approve-a-command and request-control designs).
-6. The loop resumes by repeating the interrupted step (FR-016). Whether the repeat counts against the
-   step budget and the no-progress rule is `<TO SUPPLY>` (see the end-the-loop design).
+6. The loop resumes by repeating the interrupted read, listen, or person prompt (FR-016).
+   Reconnect cycles and interrupted steps remain in the investigation record. They do not consume
+   the action or no-progress budgets. An interrupted write or control step is never replayed.
 7. After 3 failed attempts the banner offers "Try again", which runs another cycle of 3 attempts, and
    "Stop", which stops the investigation with the verdict *Stopped by the person* (FR-009).
 8. Emergency stop during a reconnect aborts it and stops the loop (see the emergency-stop design).
@@ -95,11 +98,11 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 ### Tests that prove it
 
-Acceptance specs use the dropping device of `e2e/fixtures/fake-bluetooth.ts`, scripted to drop
-during a recording with two subscriptions active and to accept the second attempt; they assert the
-paused loop, the drop in the raw log, the restored subscriptions and the repeated step. A second
-script refuses all attempts and asserts the `danger` banner and its two buttons. Unit tests cover
-`ReconnectPolicy` and the supervisor's timing on a fake clock.
+Acceptance specs drop the fake FTMS treadmill during a recording and accept the second attempt.
+They assert that the loop waits, the drop appears in the raw log and the recording repeats. A
+second script refuses all attempts and verifies that Try again starts a fresh cycle and Stop
+ends the investigation. Unit tests advance a fake clock through the delays and verify that the
+Bluetooth adapter restores two simultaneous subscriptions and receives packets on both.
 
 ## Requirements
 

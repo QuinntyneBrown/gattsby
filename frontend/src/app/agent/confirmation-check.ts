@@ -36,6 +36,13 @@ export class ConfirmationCheck {
   private openedAt: number | null = null;
   private wake: (() => void) | null = null;
 
+  discardBaseline(): void {
+    this.baseline.speed.length = 0;
+    this.baseline.heartRate.length = 0;
+    this.paceBaseline.clear();
+    this.latestIncline = null;
+  }
+
   begin(metric: ConfirmationMetric): void {
     this.metric = metric;
     this.reference =

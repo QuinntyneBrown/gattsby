@@ -130,6 +130,12 @@ export const DONT_KNOW = 'Don’t know';
 /** The state after one more committed step. Pure. */
 export function applyStep(state: DecisionState, step: Step): DecisionState {
   const next: DecisionState = { ...state, stage: step.stage, stepCount: step.n };
+  if (
+    step.status === 'interrupted' &&
+    step.tool !== 'send_command' &&
+    step.tool !== 'request_control'
+  )
+    return next;
   const data = step.result.ok ? (step.result.data as Record<string, unknown>) : null;
   const answer = step.exchange && !step.exchange.skipped ? step.exchange.answer : null;
   switch (step.tool) {
@@ -248,6 +254,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
         supportedRanges: (data?.['ranges'] as Record<string, SupportedRange> | undefined) ?? {},
         machineFeatureEvidence: step.result.ok ? step.result.evidence.slice(0, 1) : [],
       };
+    case 'reconnect':
+      return { ...next, connected: !!data?.['connected'], controlGrantedAt: null };
     case 'disconnect':
       return { ...next, connected: false, controlGrantedAt: null };
     case 'request_control':

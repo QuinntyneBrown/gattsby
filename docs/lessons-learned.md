@@ -311,3 +311,12 @@ None; this is the first entry.
   when the samples do not identify one device.
 - Apply the fake-clock lesson from journey 6 to the baseline, power-off window and return.
   Built tests cover both advertisement APIs and verify that each watch ends before connecting.
+
+## Journey 10 — Recover a dropped connection
+
+- Save the partial recording and raw disconnect together. Mark the step interrupted before
+  recovery so the repeated step gets a new recording ID and only its new baseline is analysed.
+- Reconnect through the original browser permission. Re-resolve GATT handles and rebind data
+  subscriptions after the drop. The previous Control Point session and approvals are invalidated.
+- Apply the fake-clock lesson from journeys 6 and 9 to reconnect delays. Check the same device
+  is retried, notifications return, and the Stop choice produces one verdict after a failed retry.

@@ -4,6 +4,7 @@ import { reportCandidateNamesTool } from './discovery/report-candidate-names.too
 import { powerCycleMatchTool } from './discovery/power-cycle-match.tool';
 import { watchAdvertisementsTool } from './discovery/watch-advertisements.tool';
 import { connectTool } from './connection/connect.tool';
+import { reconnectTool } from './connection/reconnect.tool';
 import { disconnectTool } from './connection/disconnect.tool';
 import { requestControlTool } from './control/request-control.tool';
 import { sendCommandTool } from './control/send-command.tool';
@@ -33,6 +34,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   powerCycleMatchTool,
   watchAdvertisementsTool,
   connectTool,
+  reconnectTool,
   disconnectTool,
   enumerateGattTool,
   readDeviceInfoTool,
