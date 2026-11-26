@@ -7,6 +7,7 @@ import type { Stage } from './model/stage';
 import type { ModeChange } from './model/mode-change';
 import type { MissingToolListEntry } from './model/missing-tool-list-entry';
 import type { StorageUsage } from './model/storage-usage';
+import type { LocalDataCounts } from './model/local-data-counts';
 import type { VerdictCommit } from './model/verdict-commit';
 
 // The contract of the investigation store, the only code that touches IndexedDB
@@ -31,6 +32,9 @@ export abstract class InvestigationStore {
   abstract getInvestigation(id: string): Promise<Investigation>;
   abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
   abstract list(): Promise<Investigation[]>;
+  abstract delete(id: string): Promise<void>;
+  abstract deleteAll(onBlocked?: () => void): Promise<void>;
+  abstract localDataCounts(): Promise<LocalDataCounts>;
   abstract listProfiles(limit?: number): Promise<import('./model/device-profile').DeviceProfile[]>;
   abstract listMissingTools(): Promise<MissingToolListEntry[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
@@ -51,7 +55,7 @@ export abstract class InvestigationStore {
   /** Whether storage opens, and how much of the quota is used; prompts for nothing. */
   abstract usage(): Promise<StorageUsage>;
   /** Asks the browser once for persistent storage (NFR-016); a refusal is not an error. */
-  abstract requestPersistence(): Promise<boolean>;
+  abstract requestPersistence(tryAgain?: boolean): Promise<boolean>;
   abstract useAgentWhenAvailable(): Promise<boolean>;
   abstract setUseAgentWhenAvailable(enabled: boolean): Promise<void>;
   abstract recordCapabilityDiagnostics(rows: readonly CapabilityDiagnostic[]): Promise<void>;

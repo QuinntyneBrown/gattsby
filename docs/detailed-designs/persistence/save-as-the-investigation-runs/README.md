@@ -111,12 +111,12 @@ treats an uncommitted step as saved.
 
 1. **Persistence.** The first `create()` on this browser calls `requestPersistence()`, which calls
    `navigator.storage.persist()` once and stores the answer in `settings` (NFR-008). The Settings
-   toggle "Keep data when space is low" shows `navigator.storage.persisted()`. The web platform has
-   no call that withdraws persistence, so turning the toggle off is `<TO SUPPLY>`.
-2. **Usage.** `usage()` combines `navigator.storage.estimate()` with object store counts:
-   `{ usedBytes, quotaBytes, ratio, persisted, investigations, profiles, photos }`. The orchestrator
-   checks it on start and after committed steps, at most once every 30 seconds (a proposed interval).
-   Above a ratio of 0.9 it raises the warning toast "Storage is nearly full. Gattsby is using 92% of
+   action "Keep data when space is low" can retry a refused request. A granted result is displayed
+   as a status, since Chrome manages the persistence grant.
+2. **Usage.** `usage()` reports `usageBytes`, `quotaBytes` and `persisted` from the browser.
+   Settings reads separate counts for investigations, profiles and photos. The orchestrator
+   checks usage on start and after committed steps, at most once every 30 seconds.
+   At a ratio of 0.9 or higher it shows "Storage is nearly full. Gattsby is using 92% of
    the space Chrome allows it. Export old investigations, then delete them." with "Open past
    investigations", at most once per investigation.
 3. **Quota failure.** When a transaction aborts with `QuotaExceededError`, the store rejects with
@@ -124,12 +124,12 @@ treats an uncommitted step as saved.
    stops notifications. The store removes only the failed step's provisional packets. The dock
    shows "Storage is full" and leaves all preceding steps and recordings readable. "Record again"
    starts a fresh recording of the same level. "Stop" opens the existing confirmation and
-   concludes with the saved evidence. The History link for freeing space arrives with journey 15.
+   concludes with the saved evidence. "Free up space" opens History through the same safe Leave
+   confirmation used by the rest of the Investigation page.
    A refused verdict commit keeps the exportable result in memory for "Try saving again" and
    "Export full record".
-4. **Showing use in the history.** NFR-008 asks for storage use in the history. The Past
-   investigations mock shows only the count ("8 on this device · newest first"); Settings shows the
-   full line. The history's storage line waits on a mock update, `<TO SUPPLY>`.
+4. **Showing use in the history.** Past investigations shows the use and quota Chrome reports,
+   with the same near-full warning. It keeps the list available when the estimate is unavailable.
 
 ### Data shapes
 

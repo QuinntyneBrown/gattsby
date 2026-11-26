@@ -70,7 +70,8 @@
         "loading",
         "empty",
         "error",
-        "checklist"
+        "checklist",
+        "deleted"
       ]
     },
     {
@@ -249,7 +250,8 @@
         "default",
         "loading",
         "empty",
-        "error"
+        "error",
+        "near-full"
       ]
     },
     {
@@ -538,7 +540,8 @@
         "default",
         "invalid",
         "confirm",
-        "busy"
+        "busy",
+        "blocked"
       ]
     },
     {

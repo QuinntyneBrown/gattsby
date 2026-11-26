@@ -82,6 +82,10 @@ export class InvestigationPage {
     await this.connectionBanner.getByRole('button', { name, exact: true }).click();
   }
 
+  get freeUpSpace() {
+    return this.dock.getByRole('link', { name: 'Free up space', exact: true });
+  }
+
   async chooseOption(name: string): Promise<void> {
     await this.options.click();
     await this.page

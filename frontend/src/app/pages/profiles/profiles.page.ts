@@ -31,6 +31,7 @@ const DEVICE_FILTERS = [
       display: contents;
     }
     .profiles {
+      width: 100%;
       max-width: 48rem;
       margin-inline: auto;
     }

@@ -99,15 +99,14 @@ applies no automatic retention limit (OQ-10).
 2. `deleteAll()` closes the store's connection and calls `indexedDB.deleteDatabase('gattsby')`, so
    IndexedDB holds no Gattsby database afterwards (FR-065 AC1). The next store call recreates an
    empty one from `DatabaseSchema`.
-3. If another Gattsby tab holds the database open, the request fires `blocked`. Every Gattsby
-   connection closes on `versionchange`, so the block clears unless the other tab is frozen; after
-   5 seconds blocked (a proposed limit) the store rejects with `DATABASE_BLOCKED`.
-4. Gattsby keeps every setting in the `settings` store and writes nothing to `localStorage`,
-   `sessionStorage` or cookies, so deleting the database deletes every setting. The service
-   worker's cache holds only static files, and Chrome's copy of the model is not Gattsby data; both
-   remain.
-5. After deletion the app navigates to Home, which shows its empty state
-   (`docs/mocks/pages/home/empty.html`). A confirmation toast is `<TO SUPPLY>`; no mock shows one.
+3. If another Gattsby tab holds the database open, the request fires `blocked`. Each app
+   connection closes on `versionchange`. If Chrome is still waiting, the busy dialog says to
+   close other tabs. IndexedDB's pending delete request cannot be cancelled.
+4. The store removes the database, including every durable setting. Settings also resets the
+   readiness choice kept in the current tab's session storage and clears the in-memory verdict
+   preview.
+5. After deletion the app navigates to Home, which shows "Data deleted from this device" and
+   skips the first store read. The next action needing local data opens an empty database.
 
 ### Errors
 
@@ -115,7 +114,7 @@ applies no automatic retention limit (OQ-10).
 |---|---|---|
 | `STORAGE_UNAVAILABLE` | `list()` | "Couldn't read your investigations. Chrome didn't answer when Gattsby opened its storage. Nothing has been lost. Try again, or reload the page." |
 | `NOT_FOUND` | `delete(id)` | The row is already gone; the history reloads |
-| `DATABASE_BLOCKED` | `deleteAll()` | "Close Gattsby's other tabs, then try again." (provisional; no mock) |
+| `blocked` notification | `deleteAll()` | "Close Gattsby’s other tabs to finish deleting the data." |
 
 ### Tests that prove it
 

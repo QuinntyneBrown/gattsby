@@ -48,6 +48,9 @@ import { MissingToolsService } from '../../outcome/missing-tools.service';
     </header>
     <main id="main" class="page page--reading" tabindex="-1">
       <section style="padding-top: var(--space-8)">
+        @if (dataDeleted()) {
+          <p role="status">Data deleted from this device.</p>
+        }
         @if (returning()) {
           <h1 class="hero__title">What are we looking at today?</h1>
           <p class="lead">Treadmill, bike, rower, strap or trainer — switch it on and start.</p>
@@ -174,6 +177,7 @@ export class HomePage implements OnInit {
   private readonly missingTools = inject(MissingToolsService);
   private readonly router = inject(Router);
   protected readonly returning = signal(false);
+  protected readonly dataDeleted = signal(false);
   protected readonly investigationCount = signal(0);
   protected readonly resumable = signal<readonly Investigation[]>([]);
   protected readonly profiles = signal<readonly DeviceProfile[]>([]);
@@ -184,6 +188,11 @@ export class HomePage implements OnInit {
   protected readonly openMissingTools = signal<number | null>(null);
 
   ngOnInit(): void {
+    const navigation = this.router.currentNavigation() ?? this.router.lastSuccessfulNavigation();
+    if (navigation?.extras.info === 'local-data-deleted') {
+      this.dataDeleted.set(true);
+      return;
+    }
     void this.store.listProfiles(4).then(
       (profiles) => this.profiles.set(profiles),
       () => undefined,

@@ -45,6 +45,10 @@ export class HomePage {
     return this.page.getByRole('link', { name: /Past investigations/ });
   }
 
+  get dataDeleted(): Locator {
+    return this.page.getByRole('status').filter({ hasText: 'Data deleted from this device.' });
+  }
+
   get savedDevices(): Locator {
     return this.page.getByRole('link', { name: 'View all saved devices', exact: true });
   }

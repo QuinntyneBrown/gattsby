@@ -14,4 +14,14 @@ export class HistoryPage {
   get storage(): Locator {
     return this.page.getByRole('region', { name: 'Storage' });
   }
+
+  get storageWarning(): Locator {
+    return this.page.getByRole('status').filter({ hasText: 'Storage is nearly full' });
+  }
+
+  deleteInvestigation(name: string): Locator {
+    return this.page.getByRole('button', {
+      name: new RegExp(`^Delete the investigation of ${name}`),
+    });
+  }
 }

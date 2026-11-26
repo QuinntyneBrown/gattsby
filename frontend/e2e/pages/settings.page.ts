@@ -10,4 +10,8 @@ export class SettingsPage {
   get back() {
     return this.page.getByRole('link', { name: 'Back' });
   }
+
+  get deleteAll() {
+    return this.page.getByRole('button', { name: 'Delete all data', exact: true });
+  }
 }

@@ -86,6 +86,17 @@ export class StoredRecords {
     return this.readAll<unknown>('profiles');
   }
 
+  async photoCount(id: string): Promise<number> {
+    const photos = await this.readAll<{ investigationId: string }>('photos');
+    return photos.filter(({ investigationId }) => investigationId === id).length;
+  }
+
+  async databasePresent(): Promise<boolean> {
+    return this.page.evaluate(async () =>
+      (await indexedDB.databases()).some(({ name }) => name === 'gattsby'),
+    );
+  }
+
   async capabilityDiagnostics(): Promise<unknown[]> {
     const settings = await this.readAll<{ key: string; value: unknown[] }>('settings');
     return settings.find(({ key }) => key === 'capabilityDiagnostics')?.value ?? [];

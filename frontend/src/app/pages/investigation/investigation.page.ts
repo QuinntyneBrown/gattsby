@@ -172,6 +172,18 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
               (dismissed)="modeBannerDismissed.set(true)"
             />
           }
+          @if (orchestrator.status() === 'running' && orchestrator.storageWarning(); as percent) {
+            <div class="alert alert--warning" role="status">
+              <div class="alert__body">
+                <p class="alert__title">Storage is nearly full</p>
+                <p>
+                  Gattsby is using {{ percent }}% of the space Chrome allows it. Export old
+                  investigations, then delete them.
+                </p>
+                <a class="btn btn--ghost" routerLink="/investigations">Open past investigations</a>
+              </div>
+            </div>
+          }
           <div class="feed-scroll" #feedScroll>
             <div class="feed-wrap">
               <g-activity-feed [entries]="orchestrator.feed()" />
@@ -188,11 +200,8 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
                   old investigations to make room, then record again.
                 </p>
                 <div class="prompt__actions">
-                  <button
-                    class="btn btn--primary btn--lg"
-                    type="button"
-                    (click)="orchestrator.recordAgain()"
-                  >
+                  <a class="btn btn--primary btn--lg" routerLink="/investigations">Free up space</a>
+                  <button class="btn btn--lg" type="button" (click)="orchestrator.recordAgain()">
                     Record again
                   </button>
                   <button class="btn btn--lg" type="button" (click)="stopOpen.set(true)">
