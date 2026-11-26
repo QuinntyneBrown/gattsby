@@ -83,21 +83,23 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 1. The candidates are devices the page can watch: devices permitted earlier in the
    investigation, or devices seen through `requestLEScan` where that API exists.
-2. The tool starts watching every candidate, then asks the person to switch the machine off and on
-   and to tap "Done" when it is back on. "Ready" and "Done" mark the off/on window.
+2. The person taps Start watching (`find-watch-candidates.html`). Gattsby records a short baseline
+   before asking the person to switch the machine off and on (`find-power-cycle.html`). Done marks
+   the return window.
 3. `PowerCycleDetector` returns the candidates whose advertisements stopped inside the window and
-   resumed after it. The gap length that counts as "stopped" is `<TO SUPPLY>`.
+   resumed after it. The detector requires regular baseline packets, a gap of at least four seconds
+   and a return within two seconds of Done. It declines to choose when the evidence is ambiguous.
 4. Exactly one such candidate is the `match`, with `method: "automatic"` (FR-013). None or more than
    one returns `match: null`, and the rules fall back to the guided match.
-5. Watching ends when the tool returns, on stop, and on emergency stop; the BLE layer aborts every
-   watch it started.
+5. Watching ends when the tool returns, on stop, and on emergency stop. The watch is limited to
+   one minute and eight previously permitted candidates. The BLE layer stops every watch it starts.
 
 ### Candidate names
 
 The `find-candidates` mock lists four candidate names, each tagged FTMS, under the `scan_devices`
 step. The page cannot read the chooser (A-10), so in the guided match those names are known only as
-the person reports them, or from advertisement samples where watching is available. OQ-06 is
-resolved with one optional field for comma-separated names. The feed attributes those names to
+the person reports them, or from advertisement samples where watching is available. The guided
+path offers one optional field for comma-separated names. The feed attributes those names to
 the person. Chrome still receives the actual selection in its chooser.
 
 ### Errors

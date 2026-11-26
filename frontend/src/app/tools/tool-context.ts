@@ -5,6 +5,7 @@ import type { DecisionState } from '../agent/decision-state';
 import type { ControlTelemetry } from '../agent/control-telemetry';
 import type { ConfirmationCheck } from '../agent/confirmation-check';
 import type { PromptChannel } from '../agent/prompt-channel';
+import type { Clock } from '../shared/clock';
 import type { NewObservation } from '../store/model/observation';
 import type { ApprovalDecision } from '../store/model/approval-decision';
 import type { Stage } from '../store/model/stage';
@@ -33,6 +34,7 @@ export interface ToolContext {
   readonly confirmationCheck: ConfirmationCheck;
   readonly kb: KnowledgeBaseIndex;
   readonly prompts: PromptChannel;
+  readonly clock: Clock;
   readonly capabilities: CapabilityDetector;
   readonly signal: AbortSignal;
   readonly hypotheses: HypothesisProposer;

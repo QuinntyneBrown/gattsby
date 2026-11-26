@@ -16,6 +16,8 @@ export function capabilityAvailable(name: string, capabilities: Capabilities): b
       return capabilities.model.availability === 'available';
     case 'watchAdvertisements':
       return capabilities.watchAdvertisements;
+    case 'advertisements':
+      return capabilities.watchAdvertisements || capabilities.requestLEScan;
     case 'requestLEScan':
       return capabilities.requestLEScan;
     case 'getDevices':

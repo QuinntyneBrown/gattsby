@@ -301,3 +301,13 @@ None; this is the first entry.
   the known stop sequence. The simulator checks both the acknowledged path and the timeout.
 - The command results are committed to the feed and the verdict. The approval dialog currently
   closes after the result, so separate confirmed and failed dialog states remain outstanding.
+
+## Journey 9 — Pick the right device
+
+- A cancelled Chrome chooser gives Gattsby neither its list nor any new device permissions.
+  Attribute optional candidate names to the person. Keep the actual selection in Chrome.
+- A gap alone can be a slow device or a missed advertisement. Require a regular baseline,
+  a return near Done and exactly one eligible candidate. Ask the person to use the chooser
+  when the samples do not identify one device.
+- Apply the fake-clock lesson from journey 6 to the baseline, power-off window and return.
+  Built tests cover both advertisement APIs and verify that each watch ends before connecting.

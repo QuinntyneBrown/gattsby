@@ -28,6 +28,7 @@ export interface DecisionState {
   readonly candidateHelp: boolean;
   readonly reportedCandidates: readonly string[] | null;
   readonly powerCycleAttempted: boolean;
+  readonly automaticMatchAttempted: boolean;
   readonly device: ChosenDevice | null;
   readonly connectAttempts: number;
   readonly connectFailures: number;
@@ -77,6 +78,7 @@ export const INITIAL_STATE: DecisionState = {
   candidateHelp: false,
   reportedCandidates: null,
   powerCycleAttempted: false,
+  automaticMatchAttempted: false,
   device: null,
   connectAttempts: 0,
   connectFailures: 0,
@@ -201,7 +203,10 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
     case 'power_cycle_match':
       return {
         ...next,
-        powerCycleAttempted: true,
+        powerCycleAttempted:
+          state.powerCycleAttempted || (step.input as { mode?: string }).mode === 'guided',
+        automaticMatchAttempted:
+          state.automaticMatchAttempted || (step.input as { mode?: string }).mode === 'automatic',
         device: (data?.['device'] as ChosenDevice | undefined) ?? state.device,
       };
     case 'connect':

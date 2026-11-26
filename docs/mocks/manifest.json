@@ -113,6 +113,8 @@
         "find",
         "find-candidates",
         "find-report-candidates",
+        "find-watch-candidates",
+        "find-power-cycle",
         "find-cancelled",
         "cannot-find",
         "identify",

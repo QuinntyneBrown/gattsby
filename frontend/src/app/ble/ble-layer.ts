@@ -6,6 +6,7 @@ import type { ConnectionState, DisconnectEvent } from './connection-state';
 import type { GattServiceInfo } from './gatt-layout';
 import type { ScanRequest } from './scan-request';
 import type { NotificationDecoding } from '../store/model/notification-decoding';
+import type { AdvertisementSample } from '../store/model/advertisement-sample';
 
 export interface ReadResult {
   readonly bytes: Uint8Array;
@@ -22,6 +23,12 @@ export abstract class BleLayer {
   abstract availability(): Promise<BleAvailability>;
   /** Opens Chrome's chooser; must run inside the person's tap. */
   abstract requestDevice(request: ScanRequest): Promise<ChosenDevice>;
+  abstract permittedDevices(): Promise<ChosenDevice[]>;
+  abstract watchAdvertisements(
+    deviceIds: readonly string[],
+    receive: (sample: AdvertisementSample) => void,
+    signal: AbortSignal,
+  ): Promise<void>;
   abstract connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }>;
   abstract primaryServices(): Promise<GattServiceInfo[]>;
   abstract read(service: string, characteristic: string): Promise<ReadResult>;

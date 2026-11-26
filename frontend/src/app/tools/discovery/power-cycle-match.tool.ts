@@ -1,5 +1,6 @@
 import { entry } from '../tool-definition';
 import { fail, ok } from '../tool-result';
+import { matchByAdvertisements } from './match-by-advertisements';
 import { machineWord, scanBehindTap } from './scan';
 
 interface PowerCycleInput {
@@ -42,7 +43,36 @@ export const powerCycleMatchTool = entry<PowerCycleInput, unknown>({
       });
     }
     if (input.mode === 'automatic') {
-      return fail('UNSUPPORTED', 'Automatic matching needs advertisement watching.');
+      if (!ctx.state.advertisementsAvailable) {
+        return fail('UNSUPPORTED', 'Automatic matching needs advertisement watching.');
+      }
+      const matched = await matchByAdvertisements(ctx, input.candidates);
+      if (!matched) {
+        return ok('The advertisements did not identify a single candidate. Try the chooser.', {
+          match: null,
+          method: 'automatic',
+          confidence: 0,
+        });
+      }
+      const name = matched.device.name ?? 'Unnamed device';
+      const id = ctx.observe({
+        kind: 'candidate-match',
+        subject: matched.device.deviceId,
+        value: 'automatic',
+        text: `${name} stopped advertising and returned.`,
+        tag: 'confirmed',
+        evidence: matched.evidence,
+      });
+      return ok(
+        `${name} stopped advertising and returned.`,
+        {
+          match: matched.device.deviceId,
+          method: 'automatic',
+          confidence: 1,
+          device: matched.device,
+        },
+        [...matched.evidence, id],
+      );
     }
     const device = machineWord(ctx.state.machineType);
     const result = await scanBehindTap(

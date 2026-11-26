@@ -100,7 +100,7 @@ export class PlaybookOrchestrator {
   private readonly modelSessions = inject(ModelSessions);
   private readonly router = inject(Router);
   readonly prompts = inject(PromptChannel);
-  readonly registry = new ToolRegistry(TOOL_CATALOG);
+  readonly registry = new ToolRegistry(TOOL_CATALOG, ['MVP', 'P2']);
 
   private readonly kbSignal = signal<KnowledgeBaseIndex | null>(null);
   private tracker: HypothesisTracker | null = null;
@@ -463,6 +463,7 @@ export class PlaybookOrchestrator {
       lockControl: () => this.approvalLedger.lock(),
       kb,
       prompts: this.prompts,
+      clock: this.clock,
       capabilities: { detect: () => this.capabilities.detect({ model: this.mode() === 'agent' }) },
       signal,
       hypotheses: {
