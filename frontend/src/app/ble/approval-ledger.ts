@@ -42,7 +42,7 @@ export class ApprovalLedger {
     service: string,
     characteristic: string,
     bytes: Uint8Array,
-  ): void {
+  ): ApprovalRequest {
     const tokens = this.locked ? this.emergency : this.unused;
     const token = tokens.get(id);
     if (this.locked && !token) this.ensureOpen();
@@ -58,6 +58,7 @@ export class ApprovalLedger {
       throw new ToolError('APPROVAL_REQUIRED', 'This write has no matching approval.');
     }
     tokens.delete(id);
+    return token;
   }
 
   revoke(id: string): void {

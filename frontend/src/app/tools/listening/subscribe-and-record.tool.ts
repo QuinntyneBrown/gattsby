@@ -1,6 +1,7 @@
 import { canonicalUuid } from '../../knowledge-base/uuid';
+import { ProtectedGattError } from '../../ble/protected-gatt-error';
 import { entry } from '../tool-definition';
-import { ToolError } from '../tool-error';
+import { isProtected, recordProtected } from '../protected-characteristic';
 import { fail, ok } from '../tool-result';
 import type { RecordingSource } from './recording-source';
 import type { PacketSample } from '../../analysis/packet-sample';
@@ -92,6 +93,8 @@ export async function recordNotifications(
   }
   const sources: RecordingSource[] = [];
   for (const uuid of characteristics) {
+    if (isProtected(ctx.verdictFacts().observations, uuid))
+      return fail('PRECONDITION_FAILED', 'The characteristic is protected.');
     const service = ctx.state.layout?.find((s) =>
       s.characteristics.some(
         (c) =>
@@ -115,15 +118,13 @@ export async function recordNotifications(
       onSample,
     );
   } catch (error) {
-    if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
-      ctx.raiseMissingTool({
-        capabilityKey: 'encrypted-notifications',
-        source: 'encrypted',
-        title: 'Listen to protected notifications',
-        reason: 'The device requires authentication or encryption.',
-        evidence: [],
-      });
-    }
+    if (error instanceof ProtectedGattError)
+      return fail(
+        'AUTH_REQUIRED',
+        error.message,
+        'The characteristic is protected.',
+        recordProtected(ctx, error),
+      );
     throw error;
   }
   ctx.saveRecording({

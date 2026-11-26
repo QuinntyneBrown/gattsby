@@ -91,6 +91,7 @@ export function buildKnowledgeBase(dir: string): { errors: string[]; output: Jso
         'characteristics',
         'namePatterns',
         'manufacturerIds',
+        'handshakes',
         'entries',
       ]) {
         check(data[key], `/${key}`);
@@ -158,17 +159,46 @@ export function buildKnowledgeBase(dir: string): { errors: string[]; output: Jso
 
   const vendors = (byKind.get('vendor') ?? []).map(({ path, data }) => {
     for (const s of data['services'] as Json[]) claim(String(s['uuid']), path, undefined);
+    const handshakes = ((data['handshakes'] ?? []) as Json[]).map((handshake) => ({
+      ...handshake,
+      service: canonical(String(handshake['service'])),
+      command: canonical(String(handshake['command'])),
+      data: canonical(String(handshake['data'])),
+    }));
+    const characteristics = (data['characteristics'] as Json[]).map((c) => ({
+      ...c,
+      uuid: canonical(String(c['uuid'])),
+      service: canonical(String(c['service'])),
+    }));
+    const ids = new Set<unknown>();
+    for (const [index, handshake] of handshakes.entries()) {
+      const entry = (data['handshakes'] as Json[])[index];
+      const has = (uuid: string, property: string) =>
+        characteristics.some(
+          (c) =>
+            c.service === handshake.service &&
+            c.uuid === uuid &&
+            (c as Json)['properties'] instanceof Array &&
+            ((c as Json)['properties'] as unknown[]).includes(property),
+        );
+      if (
+        ids.has(entry['id']) ||
+        !has(handshake.command, 'write') ||
+        !has(handshake.data, 'notify')
+      )
+        errors.push(
+          `${path}: /handshakes/${index}: expected a unique id and sourced command and data characteristics`,
+        );
+      ids.add(entry['id']);
+    }
     return {
       ...data,
+      handshakes,
       services: (data['services'] as Json[]).map((s) => ({
         ...s,
         uuid: canonical(String(s['uuid'])),
       })),
-      characteristics: (data['characteristics'] as Json[]).map((c) => ({
-        ...c,
-        uuid: canonical(String(c['uuid'])),
-        service: canonical(String(c['service'])),
-      })),
+      characteristics,
     };
   });
 

@@ -94,12 +94,11 @@ test('offers another cycle and can stop after reconnection fails', async ({
   await page.clock.runFor(6_000);
   await fakeBluetooth.dropConnection(6);
   await expect(investigation.connectionBanner).toContainText('Connection dropped');
-  await page.clock.runFor(7_200);
+  await advanceReconnectCycle(page, investigation);
   await expect(investigation.connectionBanner).toContainText('Couldn’t reconnect after 3 tries.');
   expect(fakeBluetooth.calls().filter((name) => name === 'connect')).toHaveLength(4);
   await investigation.chooseRecovery('Try again');
-  await expect(investigation.connectionBanner).toContainText('attempt 1 of 3');
-  await page.clock.runFor(7_200);
+  await advanceReconnectCycle(page, investigation);
   await expect(investigation.connectionBanner).toContainText('Everything so far is saved.');
   expect(fakeBluetooth.calls().filter((name) => name === 'connect')).toHaveLength(7);
   await investigation.chooseRecovery('Stop');
@@ -111,3 +110,10 @@ test('offers another cycle and can stop after reconnection fails', async ({
   expect(fakeBluetooth.requestDeviceOptions()).toHaveLength(1);
   expect(fakeBluetooth.writes()).toEqual([]);
 });
+
+async function advanceReconnectCycle(page: Page, investigation: InvestigationPage): Promise<void> {
+  for (const [index, delay] of [1_000, 2_000, 4_000].entries()) {
+    await expect(investigation.connectionBanner).toContainText(`attempt ${index + 1} of 3`);
+    await page.clock.runFor(delay + 100);
+  }
+}

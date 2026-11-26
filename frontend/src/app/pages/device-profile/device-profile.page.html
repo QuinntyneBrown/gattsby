@@ -120,6 +120,29 @@
                 <p class="text-muted">No readable data established.</p>
               }
             </section>
+            @if (p.handshake; as handshake) {
+              <section aria-labelledby="required-handshake">
+                <h2 id="required-handshake" class="section-title">Required handshake</h2>
+                <dl class="kv">
+                  <dt>Vendor</dt>
+                  <dd>
+                    <bdi>{{ handshake.vendor }}</bdi>
+                  </dd>
+                  <dt>Characteristic</dt>
+                  <dd>
+                    <bdi>{{ shortUuid(handshake.characteristic) }}</bdi>
+                  </dd>
+                  <dt>Bytes</dt>
+                  <dd>
+                    <bdi>{{ handshake.bytes }}</bdi>
+                  </dd>
+                  <dt>Source</dt>
+                  <dd style="overflow-wrap: anywhere">
+                    <bdi>{{ handshake.source }}</bdi>
+                  </dd>
+                </dl>
+              </section>
+            }
             <section>
               <h2 class="section-title">Controllable</h2>
               @if (p.features.length) {

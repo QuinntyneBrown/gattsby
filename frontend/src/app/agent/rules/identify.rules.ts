@@ -136,6 +136,21 @@ export const IDENTIFY_RULES: readonly StageRule[] = [
     then: () => decided('identify.match', 'identify', 'match_known_profiles', {}),
   },
   {
+    id: 'identify.vendor-signature',
+    stage: 'identify',
+    when: ({ state }) =>
+      state.connected &&
+      state.layout !== null &&
+      state.candidates?.length === 0 &&
+      state.vendorMatches === null &&
+      (!!state.device?.name || state.layout.length > 0),
+    then: ({ state }) =>
+      decided('identify.vendor-signature', 'identify', 'vendor_signature_lookup', {
+        ...(state.device?.name ? { name: state.device.name.slice(0, 512) } : {}),
+        uuids: state.layout!.map(({ uuid }) => uuid).slice(0, 512),
+      }),
+  },
+  {
     id: 'identify.supported-ranges',
     stage: 'identify',
     when: (ctx) =>

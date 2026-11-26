@@ -1,0 +1,61 @@
+{
+  "kind": "vendor",
+  "id": "movesense",
+  "brand": "Movesense",
+  "phase": "P2",
+  "sources": {
+    "gsp": {
+      "type": "specification",
+      "title": "Movesense GATT SensorData Protocol",
+      "reference": "https://www.movesense.com/docs/esw/gatt_sensordata_protocol/"
+    },
+    "name": {
+      "type": "specification",
+      "title": "Movesense Android Developer Guide",
+      "reference": "https://www.movesense.com/docs/mobile/android/main/"
+    },
+    "company": {
+      "type": "specification",
+      "title": "Bluetooth SIG Assigned Numbers, Movesense Oy",
+      "reference": "https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1711447219034"
+    }
+  },
+  "machineTypes": ["other"],
+  "services": [
+    {
+      "uuid": "34802252-7185-4d5d-b431-630e7050e8f0",
+      "name": "Movesense GATT SensorData",
+      "source": "gsp"
+    }
+  ],
+  "characteristics": [
+    {
+      "uuid": "34800001-7185-4d5d-b431-630e7050e8f0",
+      "service": "34802252-7185-4d5d-b431-630e7050e8f0",
+      "name": "GSP Command",
+      "properties": ["write"],
+      "source": "gsp"
+    },
+    {
+      "uuid": "34800002-7185-4d5d-b431-630e7050e8f0",
+      "service": "34802252-7185-4d5d-b431-630e7050e8f0",
+      "name": "GSP Data",
+      "properties": ["notify"],
+      "source": "gsp"
+    }
+  ],
+  "namePatterns": [{ "pattern": "^Movesense", "prefix": "Movesense", "source": "name" }],
+  "manufacturerIds": [{ "id": 3219, "source": "company" }],
+  "handshakes": [
+    {
+      "id": "accelerometer",
+      "purpose": "Ask the sensor to send accelerometer readings for this connection.",
+      "service": "34802252-7185-4d5d-b431-630e7050e8f0",
+      "command": "34800001-7185-4d5d-b431-630e7050e8f0",
+      "data": "34800002-7185-4d5d-b431-630e7050e8f0",
+      "bytes": [1, 1, 47, 77, 101, 97, 115, 47, 65, 99, 99, 47, 49, 51],
+      "dataPrefix": [2, 1],
+      "source": "gsp"
+    }
+  ]
+}

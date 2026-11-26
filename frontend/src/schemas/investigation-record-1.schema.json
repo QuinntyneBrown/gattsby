@@ -25,7 +25,7 @@
       "const": "gattsby.investigation-record"
     },
     "formatVersion": {
-      "enum": ["1.0", "1.1"]
+      "enum": ["1.0", "1.1", "1.2"]
     },
     "kbVersion": {
       "type": "string"
@@ -556,6 +556,10 @@
           "approvalId": {
             "type": "string"
           },
+          "source": {
+            "type": "string",
+            "maxLength": 200
+          },
           "detail": {
             "type": "string"
           },
@@ -985,6 +989,10 @@
             "characteristic": {
               "type": "string"
             },
+            "characteristicLabel": { "type": "string", "maxLength": 200 },
+            "expectedData": { "type": "string", "maxLength": 300 },
+            "sourceTitle": { "type": "string", "maxLength": 300 },
+            "provenance": { "type": "string", "maxLength": 200 },
             "bytes": {
               "type": "array",
               "minItems": 1,

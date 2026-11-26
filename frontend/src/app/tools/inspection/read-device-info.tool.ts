@@ -1,5 +1,7 @@
 import type { DeviceInformation } from '../../agent/device-information';
+import { ProtectedGattError } from '../../ble/protected-gatt-error';
 import { entry } from '../tool-definition';
+import { isProtected, recordProtected } from '../protected-characteristic';
 import { ToolError } from '../tool-error';
 import { fail, ok } from '../tool-result';
 
@@ -57,6 +59,7 @@ export const readDeviceInfoTool = entry<Record<string, never>, DeviceInformation
       const present = service.characteristics.some((c) => c.uuid === kbChar.uuid);
       const field = kbChar.field;
       if (!present || !field) continue;
+      if (isProtected(ctx.verdictFacts().observations, kbChar.uuid)) continue;
       if (ctx.kb.isBlocklisted(kbChar.uuid, 'reads')) {
         hidden.push(field);
         continue;
@@ -79,12 +82,14 @@ export const readDeviceInfoTool = entry<Record<string, never>, DeviceInformation
         );
       } catch (error) {
         if (error instanceof ToolError && error.code === 'NOT_CONNECTED') throw error;
+        if (error instanceof ProtectedGattError) evidence.push(...recordProtected(ctx, error));
         failed.push(field);
       }
     }
     const fields = Object.keys(info);
     if (fields.length === 0 && failed.length > 0) {
-      return fail('GATT_ERROR', `The device refused every read (${failed.join(', ')}).`);
+      const message = `The device refused every read (${failed.join(', ')}).`;
+      return fail('GATT_ERROR', message, message, evidence);
     }
     const said = fields.map((f) => `${LABELS[f]} ${info[f]}`).join(', ');
     const notes = [

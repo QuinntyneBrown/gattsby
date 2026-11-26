@@ -1,8 +1,9 @@
 import { toHex } from '../../ble/hex-codec';
+import { ProtectedGattError } from '../../ble/protected-gatt-error';
 import { DecodeError } from '../../knowledge-base/decoders/decoder';
 import { shortUuid } from '../../knowledge-base/uuid';
 import { entry } from '../tool-definition';
-import { ToolError } from '../tool-error';
+import { isProtected, recordProtected } from '../protected-characteristic';
 import { fail, ok } from '../tool-result';
 import { candidateDecodings, type CandidateDecoding } from './candidate-decodings';
 
@@ -65,21 +66,19 @@ export const readCharacteristicTool = entry<ReadCharacteristicInput, ReadCharact
       return fail('PROPERTY_MISSING', 'That characteristic cannot be read.');
     }
     const name = nameOf(input.characteristic, ctx.kb.nameOf(input.characteristic));
+    if (isProtected(ctx.verdictFacts().observations, input.characteristic))
+      return fail('PRECONDITION_FAILED', 'The characteristic is protected.');
     let read;
     try {
       read = await ctx.ble.read(input.service, input.characteristic);
     } catch (error) {
-      if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
-        const id = ctx.raiseMissingTool({
-          capabilityKey: `encrypted-read:${input.characteristic}`,
-          source: 'encrypted',
-          title: `Read the protected ${name}`,
-          reason:
-            'The device asks for authentication or encryption that Gattsby does not have, and Gattsby never tries to bypass it.',
-          evidence: [],
-        });
-        return fail('AUTH_REQUIRED', error.message, `${name} is protected.`, [id]);
-      }
+      if (error instanceof ProtectedGattError)
+        return fail(
+          'AUTH_REQUIRED',
+          error.message,
+          `${name} is protected.`,
+          recordProtected(ctx, error),
+        );
       throw error;
     }
     const decoder = ctx.kb.decoderFor(input.characteristic);

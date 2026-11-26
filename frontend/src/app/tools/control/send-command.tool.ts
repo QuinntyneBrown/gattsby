@@ -109,6 +109,7 @@ function prepareCommand(input: SendCommandInput, ctx: ToolContext): ApprovalRequ
   assertPermission(ctx, connection.connectedAt);
   const request = {
     tool: 'send_command',
+    provenance: `command:${command.id}`,
     deviceId: connection.deviceId,
     connectedAt: connection.connectedAt,
     service: command.service,

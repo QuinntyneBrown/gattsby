@@ -39,6 +39,7 @@ export const requestControlTool = entry<Record<string, never>, unknown>({
       throw new ToolError('UNSUPPORTED', 'Request Control is missing from the knowledge base.');
     return {
       tool: 'request_control',
+      provenance: 'command:requestControl',
       title: 'Request control?',
       detail:
         'Ask this machine to let Gattsby send a command. This request does not move the device.',

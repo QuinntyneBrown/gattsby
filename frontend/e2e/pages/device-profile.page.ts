@@ -3,6 +3,10 @@ import type { Page } from '@playwright/test';
 export class DeviceProfilePage {
   constructor(private readonly page: Page) {}
 
+  get requiredHandshake() {
+    return this.page.getByRole('region', { name: 'Required handshake', exact: true });
+  }
+
   get readableData() {
     return this.page.getByRole('table', { name: 'Readable metrics and how to decode them' });
   }

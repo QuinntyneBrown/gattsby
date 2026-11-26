@@ -1,12 +1,14 @@
 // Traces to: NFR-004, NFR-006, NFR-012, NFR-014
-import { finishTreadmill } from './fixtures/finish-treadmill';
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
 import { HomePage } from './pages/home.page';
+import { InvestigationPage } from './pages/investigation.page';
+import { VerdictPage } from './pages/verdict.page';
 
 test.use({
   serviceWorkers: 'allow',
   bluetooth: { devices: [devices.treadmill.id], chooser: [{ pick: devices.treadmill.id }] },
+  model: { availability: 'absent', responses: [] },
 });
 
 // Given an online first visit, when the browser goes offline and opens the app again,
@@ -34,7 +36,32 @@ test('runs a full investigation offline after one online load @critical', async 
   const navigation = page.waitForResponse(
     (response) => response.request().isNavigationRequest() && response.fromServiceWorker(),
   );
-  await finishTreadmill(page, fakeBluetooth);
+  await home.goto();
+  await home.identify();
+  const investigation = new InvestigationPage(page);
+  await investigation.prepare('Treadmill', 'Don’t know');
+  for (const step of [
+    'Find the device',
+    'Connect to the device',
+    'List exposed services',
+    'Read device information',
+    'Match known profiles',
+    'Read supported ranges',
+  ]) {
+    await investigation.choose(step);
+  }
+  await fakeBluetooth.setEffort(1);
+  await investigation.choose('Ready');
+  await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+  await page.clock.runFor(10_500);
+  await investigation.waitForPrompt('Now speed up to about 6 km/h. Change only the speed.');
+  await fakeBluetooth.setEffort(2);
+  await page.clock.runFor(2_100);
+  await investigation.choose('Done');
+  await investigation.waitForPrompt('Raise the incline to 2%, and keep the same speed.');
+  await investigation.choose('Skip');
+  await investigation.choose('Skip — finish read-only');
+  await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
   const cachedShell = await navigation;
   expect(cachedShell.ok()).toBe(true);
   expect(cachedShell.headers()['content-security-policy']).toContain(

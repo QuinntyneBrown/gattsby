@@ -20,7 +20,7 @@ export interface ScriptedCharacteristic {
   /** The value a read returns. */
   readonly read?: (state: SimulationState) => readonly number[];
   /** The value sent at each interval while notifications are on. */
-  readonly notify?: (state: SimulationState) => readonly number[];
+  readonly notify?: (state: SimulationState) => readonly number[] | undefined;
   /** Defaults to one second. */
   readonly notificationIntervalMs?: number;
   /** How the device answers a write. */

@@ -79,7 +79,7 @@ the write transaction has started it completes or aborts whole.
 | Kind | Current | Reads | Rule |
 |---|---|---|---|
 | Device profile | 1.0 | 1.0 | A minor version only adds optional fields; a major version ships a migration from the previous major (NFR-024) |
-| Investigation record | 1.1 | 1.0 and 1.1 | Both minor versions use the same schema. Optional fields introduced in 1.1 remain optional on import. |
+| Investigation record | 1.2 | 1.0, 1.1 and 1.2 | The schema accepts earlier minor versions. Version 1.2 adds optional write provenance and the approval dialog's expected data and source. |
 
 1. An older minor of the current major is stored as it is, without migration and without loss: a
    1.0 profile in a build that writes 1.1 keeps every field (NFR-024 AC1).

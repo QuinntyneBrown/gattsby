@@ -12,5 +12,9 @@ export interface ApprovalRequest {
   readonly service: string;
   readonly characteristic: string;
   readonly bytes: readonly number[];
+  readonly provenance?: string;
+  readonly characteristicLabel?: string;
+  readonly expectedData?: string;
+  readonly sourceTitle?: string;
   readonly effect?: ControlEffect;
 }
