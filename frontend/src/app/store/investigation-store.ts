@@ -6,6 +6,7 @@ import type { StepCommit } from './model/step-commit';
 import type { Stage } from './model/stage';
 import type { ModeChange } from './model/mode-change';
 import type { MissingToolListEntry } from './model/missing-tool-list-entry';
+import type { StorageUsage } from './model/storage-usage';
 import type { VerdictCommit } from './model/verdict-commit';
 
 // The contract of the investigation store, the only code that touches IndexedDB
@@ -47,12 +48,7 @@ export abstract class InvestigationStore {
     limitPerCharacteristic?: number,
   ): Promise<RawLogEntry[] | null>;
   /** Whether storage opens, and how much of the quota is used; prompts for nothing. */
-  abstract usage(): Promise<{
-    open: boolean;
-    persisted: boolean;
-    quotaBytes: number;
-    usageBytes: number;
-  }>;
+  abstract usage(): Promise<StorageUsage>;
   /** Asks the browser once for persistent storage (NFR-016); a refusal is not an error. */
   abstract requestPersistence(): Promise<boolean>;
   abstract useAgentWhenAvailable(): Promise<boolean>;

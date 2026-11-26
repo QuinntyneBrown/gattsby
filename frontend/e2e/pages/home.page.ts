@@ -41,6 +41,10 @@ export class HomePage {
     return this.page.getByRole('link', { name: /Missing tools/ });
   }
 
+  get pastInvestigations(): Locator {
+    return this.page.getByRole('link', { name: /Past investigations/ });
+  }
+
   resumeInvestigation(name: string) {
     return this.page.getByRole('link', { name: new RegExp(`^Resume: ${name}`) });
   }

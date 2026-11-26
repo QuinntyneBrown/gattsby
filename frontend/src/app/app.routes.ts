@@ -19,6 +19,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/readiness/readiness.page').then((m) => m.ReadinessPage),
   },
   {
+    path: 'investigations',
+    pathMatch: 'full',
+    title: 'Past investigations · Gattsby',
+    loadComponent: () => import('./pages/history/history.page').then((m) => m.HistoryPage),
+  },
+  {
     path: 'investigations/:id',
     canMatch: [investigationExists],
     canDeactivate: [leaveInvestigation],

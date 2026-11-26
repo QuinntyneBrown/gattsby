@@ -108,6 +108,17 @@ import { MissingToolsService } from '../../outcome/missing-tools.service';
           }
         </section>
       }
+      @if (returning()) {
+        <a class="row" routerLink="/investigations" style="margin-top: var(--space-6)">
+          <span class="row__body">
+            <span class="row__title">Past investigations</span>
+            <span class="row__meta">{{ investigationCount() }} on this device</span>
+          </span>
+          <svg class="icon row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      }
       @if (returning() && openMissingTools() !== null) {
         <a class="row" routerLink="/missing-tools" style="margin-top: var(--space-6)">
           <span class="row__body">
@@ -133,6 +144,7 @@ export class HomePage implements OnInit {
   private readonly missingTools = inject(MissingToolsService);
   private readonly router = inject(Router);
   protected readonly returning = signal(false);
+  protected readonly investigationCount = signal(0);
   protected readonly resumable = signal<readonly Investigation[]>([]);
   protected readonly stageNames = STAGE_NAMES;
   protected readonly starting = signal(false);
@@ -144,6 +156,7 @@ export class HomePage implements OnInit {
     void this.store.list().then(
       (investigations) => {
         this.returning.set(investigations.length > 0);
+        this.investigationCount.set(investigations.length);
         this.resumable.set(investigations.filter((row) => !row.verdict));
         if (investigations.length) {
           void this.missingTools.list().then(
