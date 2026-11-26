@@ -113,6 +113,7 @@ export class PlaybookOrchestrator {
   private concludeNow = false;
   private emergencyTask: Promise<EmergencyStopEvent> | null = null;
   private emergencyEvent: EmergencyStopEvent | null = null;
+  private stopRelease: Promise<void> | null = null;
   private observationCounter = 0;
   private requestCounter = 0;
   private readonly observationKeys = new Set<string>();
@@ -300,8 +301,10 @@ export class PlaybookOrchestrator {
     if (this.statusSignal() !== 'running' || this.stopReason === 'emergencyStop') return;
     this.stopReason = reason;
     this.concludeNow = true;
+    if (reason === 'personStop') this.approvalLedger.lock();
     this.abort.abort();
     this.prompts.cancel();
+    if (reason === 'personStop') this.stopRelease ??= this.ble.disconnect();
     if (reason === 'emergencyStop') {
       const event = { tappedAt: this.clock.now(), mode: this.mode(), stage: this.stage() };
       this.emergencyTask = this.emergencyStop.trigger(
@@ -685,7 +688,7 @@ export class PlaybookOrchestrator {
       this.statusSignal.set('concluding');
       this.approvalLedger.lock();
       this.releaseModel();
-      await this.ble.disconnect();
+      await (this.stopRelease ?? this.ble.disconnect());
       rawLog.push(...this.log.takePending());
       const referenced = [
         ...new Set(newState.readableMetrics.flatMap((metric) => metric.evidence)),

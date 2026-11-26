@@ -48,6 +48,7 @@ type AdvertisementScanner = Bluetooth & {
 
 const MAX_ADVERTISING_FIELDS = 8;
 const MAX_ADVERTISING_BYTES = 64;
+const NOTIFICATION_STOP_TIMEOUT_MS = 1_000;
 
 // The BLE layer on Web Bluetooth (scan-for-the-device, connect-to-the-device,
 // enumerate-the-gatt-layout and release-the-connection designs).
@@ -483,7 +484,20 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = this.device;
     if (!device) return;
     this.state.update((s) => ({ ...s, status: 'releasing' }));
-    await Promise.all([...this.subscriptions.values()].map(({ stop }) => stop()));
+    const stops = [...this.subscriptions.values()].map(({ stop }) => stop());
+    if (stops.length) {
+      let cancel = (): void => undefined;
+      try {
+        await Promise.race([
+          Promise.allSettled(stops),
+          new Promise<void>((resolve) => {
+            cancel = this.clock.setTimeout(resolve, NOTIFICATION_STOP_TIMEOUT_MS);
+          }),
+        ]);
+      } finally {
+        cancel();
+      }
+    }
     device.gatt?.disconnect();
     // Chrome fires `gattserverdisconnected`; the fake does too. Make sure the state settles.
     if (this.device === device) {
@@ -498,7 +512,8 @@ export class WebBluetoothBleLayer extends BleLayer {
 
   private requireConnected(): BluetoothRemoteGATTServer {
     const gatt = this.device?.gatt;
-    if (!gatt?.connected) throw new ToolError('NOT_CONNECTED', 'The device is not connected.');
+    if (!gatt?.connected || this.state().status !== 'connected')
+      throw new ToolError('NOT_CONNECTED', 'The device is not connected.');
     return gatt;
   }
 

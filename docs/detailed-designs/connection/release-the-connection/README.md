@@ -58,8 +58,9 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 1. Order: mark releasing, stop each notification, remove each listener, disconnect, log. A failed
    `stopNotifications()` is logged and does not block the disconnect.
-2. A stop disconnects within 2 seconds (FR-009). The per-call time limit for `stopNotifications()`
-   inside that budget is `<TO SUPPLY>`; when it is spent, the layer disconnects anyway.
+2. A stop initiates disconnect within 2 seconds (FR-009). Notification stops run concurrently
+   with a shared 1-second deadline. The layer detaches handlers before waiting and disconnects
+   when the deadline expires.
 3. When the Verdict page appears, the device is disconnected and no notification listener remains
    (FR-018).
 4. Navigating away from a connected investigation, by link, back button or menu, goes through the

@@ -31,6 +31,7 @@ import { LiveMetrics } from '../../live/live-metrics';
 import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
 import { ConnectionBannerComponent } from '../../notifications/connection-banner/connection-banner.component';
 import { ConnectionSupervisor } from '../../agent/connection-supervisor';
+import { StopInvestigationDialog } from '../../dialogs/stop-investigation/stop-investigation.dialog';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { ControlPointExchange } from '../../tools/control/control-point-exchange';
 import { InvestigationStore } from '../../store/investigation-store';
@@ -67,6 +68,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     InvestigationMenuDialog,
     ModeBannerComponent,
     ConnectionBannerComponent,
+    StopInvestigationDialog,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -361,9 +363,20 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
       @if (optionsOpen()) {
         <g-investigation-menu-dialog
           [connected]="connected()"
+          [running]="orchestrator.status() === 'running'"
           (closed)="optionsOpen.set(false)"
           (noteRequested)="openNote()"
           (emergencyStop)="orchestrator.stop('emergencyStop')"
+          (stopRequested)="stopOpen.set(true)"
+        />
+      }
+      @if (stopOpen()) {
+        <g-stop-investigation-dialog
+          [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
+          [busy]="stopping()"
+          (closed)="stopOpen.set(false)"
+          (confirmed)="confirmStop()"
+          (emergencyStop)="stopInEmergency()"
         />
       }
       @if (noteOpen()) {
@@ -418,6 +431,8 @@ export class InvestigationPage implements OnInit, OnDestroy {
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
   private readonly noteDialog = viewChild(AddNoteDialog);
   protected readonly optionsOpen = signal(false);
+  protected readonly stopOpen = signal(false);
+  protected readonly stopping = signal(false);
   protected readonly unexpectedEffect = computed(() => {
     const prompt = this.prompts.current();
     return prompt?.kind === 'control-warning' ? prompt : null;
@@ -490,6 +505,16 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     void this.orchestrator.leave();
+  }
+
+  protected confirmStop(): void {
+    this.stopping.set(true);
+    this.orchestrator.stop('personStop');
+  }
+
+  protected stopInEmergency(): void {
+    this.stopOpen.set(false);
+    this.orchestrator.stop('emergencyStop');
   }
 
   protected respond(response: PromptCardResponse): void {
