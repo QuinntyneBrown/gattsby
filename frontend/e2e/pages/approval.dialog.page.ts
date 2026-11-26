@@ -20,6 +20,10 @@ export class ApprovalDialogPage {
     return this.dialog.getByRole('checkbox', { name: 'I am clear and know where the stop is' });
   }
 
+  get emergencyStop() {
+    return this.dialog.getByRole('button', { name: 'Emergency stop' });
+  }
+
   async approve(approvals: Approvals, characteristic: string, bytes: readonly number[]) {
     await expect(this.send).toBeEnabled();
     approvals.record(characteristic, bytes);

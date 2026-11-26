@@ -73,19 +73,14 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 2. A value lies inside the device's own supported range and on its increment grid, as read by
    `read_supported_ranges` (TOOL-031). For Supported Speed Range `64 00 B0 04 0A 00` that is 1.00 to
    12.00 km/h in steps of 0.10.
-3. **Target speed.** From standstill, the value is at most the first safe speed: 2.0 km/h or the
-   device's minimum, whichever is higher (A-06). With the belt moving, the only value offered is the
-   current decoded speed minus one increment (6.0 → 5.9 km/h in the mocks). A raise above the first
-   safe speed is always refused. Whether one increment up from a moving belt is acceptable is open
-   (OQ-07); the design refuses it.
-4. **Target incline.** One increment from the current incline, never above 2 % (A-06).
-5. **Resistance.** One increment from the current level, up or down: with an increment of 1, the only
-   change offered is ±1 (FR-036 AC2).
-6. **Power target.** At most 100 W (A-06).
-7. **Start.** A motion command whose speed the device chooses. The limit entry's `allowStart` flag
-   says whether it may be offered for the device type; its value per type is `<TO SUPPLY>` (OQ-07).
-8. **Stop and pause.** Always allowed while connected: they carry no value and reduce risk. They
-   still need approval (FR-034).
+3. **Target speed.** One downward increment of at most 0.1 km/h while moving. The target must
+   remain between the supported minimum and 6 km/h. The investigation offers no starting speed.
+4. **Target incline.** Report the capability, encoding and advertised range in the profile.
+5. **Resistance.** One upward increment of at most one level, with a target at or below level 10.
+6. **Power target.** Report the capability, encoding and advertised range in the profile.
+7. **Start.** Report the FTMS command definition. The test does not send it.
+8. **Stop.** After the test, request approval for Stop. A tap on Emergency stop supplies its own
+   approval (FR-034).
 9. **One command at a time.** A second motion command is refused with `UNSAFE_VALUE` while the effect
    of the previous one is unconfirmed (A-06). Stop is exempt.
 10. **No limit, no motion.** When the device type is unknown or has no limit entry, every motion

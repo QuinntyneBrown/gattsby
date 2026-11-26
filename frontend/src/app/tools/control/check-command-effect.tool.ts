@@ -48,6 +48,31 @@ export const checkCommandEffectTool = entry<Record<string, never>, unknown>({
       tag: status === 'notSeen' ? 'likely' : 'confirmed',
       evidence,
     });
+    if (opposite) {
+      ctx.lockControl();
+      const title =
+        test.metric === 'speed'
+          ? `Speed moved to ${opposite.value} km/h.`
+          : `Resistance moved to ${opposite.value}.`;
+      await ctx.prompts.post(
+        {
+          kind: 'control-warning',
+          title,
+          detail:
+            'The machine moved in the opposite direction. Gattsby has blocked further test commands.',
+          why: null,
+          sequence: null,
+          answers: ['Finish read-only'],
+          primary: null,
+          steps: [],
+          allowFreeText: false,
+          needsReady: false,
+          skippable: false,
+          stoppable: false,
+        },
+        ctx.signal,
+      );
+    }
     return ok(summary, { status, from: test.from, to: test.to }, [...evidence, id]);
   },
 });

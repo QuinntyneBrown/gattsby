@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { FTMS_CONTROL_POINT, FTMS_SERVICE } from '../knowledge-base/ftms-control-point';
 import type { ApprovalDecision } from '../store/model/approval-decision';
 import type { ApprovalRequest } from '../store/model/approval-request';
 import { ToolError } from '../tools/tool-error';
@@ -6,11 +7,13 @@ import { ToolError } from '../tools/tool-error';
 @Injectable({ providedIn: 'root' })
 export class ApprovalLedger {
   private readonly unused = new Map<string, ApprovalRequest>();
+  private readonly emergency = new Map<string, ApprovalRequest>();
   private locked = false;
 
   begin(): void {
     this.locked = false;
     this.unused.clear();
+    this.emergency.clear();
   }
 
   ensureOpen(): void {
@@ -36,8 +39,9 @@ export class ApprovalLedger {
     characteristic: string,
     bytes: Uint8Array,
   ): void {
-    this.ensureOpen();
-    const token = this.unused.get(id);
+    const tokens = this.locked ? this.emergency : this.unused;
+    const token = tokens.get(id);
+    if (this.locked && !token) this.ensureOpen();
     if (
       !token ||
       token.deviceId !== deviceId ||
@@ -49,15 +53,38 @@ export class ApprovalLedger {
     ) {
       throw new ToolError('APPROVAL_REQUIRED', 'This write has no matching approval.');
     }
-    this.unused.delete(id);
+    tokens.delete(id);
   }
 
   revoke(id: string): void {
     this.unused.delete(id);
+    this.emergency.delete(id);
   }
 
   lock(): void {
     this.locked = true;
     this.unused.clear();
+    this.emergency.clear();
+  }
+
+  issueEmergency(approval: ApprovalDecision): void {
+    const request = approval.request;
+    const bytes = request.bytes;
+    const stop = bytes.length === 2 && bytes[0] === 0x08 && bytes[1] === 0x01;
+    const reset = bytes.length === 1 && bytes[0] === 0x01;
+    if (
+      !this.locked ||
+      approval.decision !== 'send' ||
+      request.tool !== 'emergency_stop' ||
+      request.service !== FTMS_SERVICE ||
+      request.characteristic !== FTMS_CONTROL_POINT ||
+      (!stop && !reset)
+    ) {
+      throw new ToolError(
+        'APPROVAL_REQUIRED',
+        'Only an approved emergency stop can use this write.',
+      );
+    }
+    this.emergency.set(approval.id, { ...request, bytes: [...bytes] });
   }
 }

@@ -55,7 +55,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 - **`askUserTool`** (`tools/person/ask-user.tool.ts`) — asks "Did the speed change?" or "Did the
   resistance change?" with "Yes", "No" and "Don't know" (see the ask-the-person design).
 - **`UnexpectedEffectDialog`** (`dialogs/unexpected-effect/unexpected-effect.dialog.ts`) —
-  presentation component shown when `CommandEffectChecker` returns `opposite`.
+  presentation component shown when `CommandEffectChecker` returns `opposite`. Further test
+  commands are blocked. The person can use the physical stop or tap Emergency stop.
 - **`ControllableFeatureResolver`** (`outcome/controllable-feature-resolver.ts`) — builds the
   `ControllableFeature` list for `ProfileBuilder` from the FTMS Fitness Machine Feature bits
   (`0x2ACC`), the supported ranges (TOOL-031), the knowledge-base command definitions and the
@@ -106,14 +107,9 @@ Control, every controllable feature is *refused*. Stop is *confirmed* when the d
 
 ### Unexpected effect
 
-When the decoded data moves against the command (the mock: target 5.9 km/h, speed jumped to 9.2
-km/h), the orchestrator marks control as abandoned for this device, refuses every later control call,
-and opens the Unexpected response dialog. The mock's copy says "I sent Stop" before the dialog opens,
-which is a write with neither an approval nor the person's emergency stop tap. FR-034 allows neither,
-so the design sends nothing by itself: the dialog shows the `EmergencyStopButton` as its first action
-and tells the person to tap it or use the machine's own stop. Reconciling the mock with FR-034
-(redraw the mock, or amend FR-034 and TOOL-024 to allow an automatic stop on an opposite effect) is
-open for the owner, `<TO SUPPLY>`.
+When the decoded data moves against the command, the orchestrator blocks further test commands and
+opens the Unexpected response dialog. The dialog shows the actual reading and points to the machine's
+own physical stop. It also offers Emergency stop, whose tap authorizes its stop sequence (FR-034).
 
 ### Data shapes
 
@@ -132,7 +128,7 @@ advertised, not tested, *claimed only*" (FR-040 AC1).
 
 | Code | Raised by | Meaning to the person |
 |---|---|---|
-| `DEVICE_REJECTED` | `sendCommandTool` | "The treadmill refused the command." The failed dialog names the result and offers "Finish read-only". |
+| `DEVICE_REJECTED` | `sendCommandTool` | The activity feed names the device's refusal. The playbook finishes read-only. |
 | `UNSAFE_VALUE` | `SafetyLimits` | No prompt; see the keep-commands-conservative design. |
 | `PRECONDITION_FAILED` | `ActionValidator` | Control not granted, or control abandoned after a refusal or an unexpected effect. |
 | `APPROVAL_DENIED`, `EMERGENCY_STOPPED`, `TIMEOUT` | as in the approve-a-command and request-control designs | |

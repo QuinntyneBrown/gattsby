@@ -18,7 +18,13 @@ export interface VerdictView {
   readonly undetermined: readonly VerdictItem[];
 }
 
-const OBSERVED = new Set(['service', 'device-info', 'decoded-value', 'held-by-other']);
+const OBSERVED = new Set([
+  'service',
+  'device-info',
+  'decoded-value',
+  'held-by-other',
+  'connection-quirk',
+]);
 
 export function verdictView(
   record: InvestigationRecord,

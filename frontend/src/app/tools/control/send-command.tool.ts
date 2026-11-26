@@ -54,18 +54,27 @@ export const sendCommandTool = entry<SendCommandInput, unknown>({
   async run(input, ctx) {
     if (!ctx.approval) return fail('APPROVAL_REQUIRED', 'This command needs its own approval.');
     const request = ctx.approval.request;
-    if (request.effect) {
+    const check = () => {
+      assertPermission(ctx, request.connectedAt);
+      if (!request.effect) return;
       // A device can change while the approval is open. Send only if the same one-step
       // command still matches a fresh sample.
       const fresh = prepareCommand({ ...input, value: request.effect.to }, ctx);
       if (fresh.effect?.from !== request.effect.from) {
-        return fail('UNSAFE_VALUE', 'The live value changed before this approval was used.');
+        throw new ToolError(
+          'UNSAFE_VALUE',
+          'The live value changed before this approval was used.',
+        );
       }
-    }
-    const sentAt = ctx.controlTelemetry.now();
+    };
+    let sentAt = 0;
     const { evidence, label, result, raw, sent } = await ctx.controlPoint.send(
       ctx.approval,
       ctx.signal,
+      () => {
+        check();
+        sentAt = ctx.controlTelemetry.now();
+      },
     );
     const observation = ctx.observe({
       kind: 'control-command',
@@ -97,6 +106,7 @@ function prepareCommand(input: SendCommandInput, ctx: ToolContext): ApprovalRequ
   const connection = ctx.ble.connection();
   if (!command || !connection.deviceId || connection.connectedAt === null)
     throw new ToolError('PRECONDITION_FAILED', 'This command needs a known connected device.');
+  assertPermission(ctx, connection.connectedAt);
   const request = {
     tool: 'send_command',
     deviceId: connection.deviceId,
@@ -165,4 +175,18 @@ function prepareCommand(input: SendCommandInput, ctx: ToolContext): ApprovalRequ
     sequence: 'Command 2 of 3',
     bytes: [...target.bytes],
   };
+}
+
+function assertPermission(ctx: ToolContext, connectedAt: number): void {
+  const evidence = ctx.controlPoint.permissionLoss(connectedAt);
+  if (!evidence) return;
+  ctx.observe({
+    kind: 'connection-quirk',
+    subject: 'control',
+    value: 'controlPermissionLost',
+    text: 'The device withdrew control permission.',
+    tag: 'confirmed',
+    evidence: [evidence],
+  });
+  throw new ToolError('PRECONDITION_FAILED', 'The device withdrew control permission.');
 }

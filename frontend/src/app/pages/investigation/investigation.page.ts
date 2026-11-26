@@ -18,12 +18,15 @@ import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { ApprovalGate } from '../../agent/approval-gate';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { ControlTelemetry } from '../../agent/control-telemetry';
+import { EmergencyStopController } from '../../agent/emergency-stop-controller';
 import { ChecklistDecider } from '../../agent/checklist-decider';
 import { PromptChannel } from '../../agent/prompt-channel';
 import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
 import { ApprovalDialog } from '../../dialogs/approval/approval.dialog';
+import { EmergencyStopDialog } from '../../dialogs/emergency-stop/emergency-stop.dialog';
 import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
 import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
+import { UnexpectedEffectDialog } from '../../dialogs/unexpected-effect/unexpected-effect.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
 import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
@@ -57,6 +60,8 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     StillThereDialog,
     AddNoteDialog,
     ApprovalDialog,
+    EmergencyStopDialog,
+    UnexpectedEffectDialog,
     InvestigationMenuDialog,
     ModeBannerComponent,
   ],
@@ -69,6 +74,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     ApprovalGate,
     ControlPointExchange,
     ControlTelemetry,
+    EmergencyStopController,
     ChecklistDecider,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -217,7 +223,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
                 </div>
               }
               <g-prompt-card
-                [prompt]="prompts.current()"
+                [prompt]="unexpectedEffect() ? null : prompts.current()"
                 [running]="orchestrator.running()"
                 (respond)="respond($event)"
                 (stop)="orchestrator.stop('personStop')"
@@ -314,7 +320,24 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </section>
         </aside>
       </main>
-      @if (orchestrator.approvalGate.request(); as approval) {
+      @if (orchestrator.emergencyStop.view(); as emergency) {
+        <g-emergency-stop-dialog
+          [state]="emergency"
+          [treadmill]="
+            hypothesis()?.deviceType === 'treadmill' ||
+            orchestrator.state().machineType === 'treadmill'
+          "
+          (reported)="orchestrator.emergencyStop.report($event)"
+        />
+      } @else if (unexpectedEffect(); as effect) {
+        <g-unexpected-effect-dialog
+          [title]="effect.title"
+          [detail]="effect.detail"
+          [connected]="connected()"
+          (finish)="finishReadOnly(effect.id)"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      } @else if (orchestrator.approvalGate.request(); as approval) {
         <g-approval-dialog
           [request]="approval"
           [busy]="orchestrator.approvalGate.busy()"
@@ -383,6 +406,10 @@ export class InvestigationPage implements OnInit, OnDestroy {
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
   private readonly noteDialog = viewChild(AddNoteDialog);
   protected readonly optionsOpen = signal(false);
+  protected readonly unexpectedEffect = computed(() => {
+    const prompt = this.prompts.current();
+    return prompt?.kind === 'control-warning' ? prompt : null;
+  });
   protected readonly modeBannerDismissed = signal(false);
   protected readonly noteOpen = signal(false);
   protected readonly savingNote = signal(false);
@@ -462,6 +489,17 @@ export class InvestigationPage implements OnInit, OnDestroy {
     this.noteSaved.set(false);
     this.optionsOpen.set(false);
     this.noteOpen.set(true);
+  }
+
+  protected finishReadOnly(promptId: string): void {
+    this.prompts.respond({
+      promptId,
+      answer: 'Finish read-only',
+      freeText: null,
+      skipped: false,
+      readyAt: null,
+      doneAt: null,
+    });
   }
 
   protected async saveNote(note: InvestigationNote): Promise<void> {

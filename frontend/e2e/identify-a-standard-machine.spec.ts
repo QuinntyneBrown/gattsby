@@ -142,6 +142,7 @@ test.describe('Identify a standard machine', () => {
         devices: [devices.treadmill.id],
         chooser: [{ pick: devices.treadmill.id }],
         readDelays: { [uuids.manufacturerName]: 4000 },
+        omitCharacteristics: [0x2ad9],
       },
     });
 

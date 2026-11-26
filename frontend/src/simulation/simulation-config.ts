@@ -21,6 +21,12 @@ export interface BluetoothScript {
   readonly readDelays?: Readonly<Record<string, number>>;
   /** Notification periods keyed by canonical characteristic UUID. */
   readonly notificationPeriods?: Readonly<Record<string, number>>;
+  /** Override one FTMS Control Point result code, or suppress its indication with null. */
+  readonly controlReplies?: Readonly<Record<number, number | null>>;
+  /** Simulate a treadmill that reports a different speed after accepting a speed command. */
+  readonly controlEffectSpeedKmh?: number;
+  /** The FTMS machine revokes control after granting it. */
+  readonly loseControlAfterGrant?: boolean;
 }
 
 export type ModelAvailability =

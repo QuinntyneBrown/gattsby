@@ -6,6 +6,7 @@ import { RawTrafficLog } from '../ble/raw-traffic-log';
 import type { Capabilities } from '../environment/capabilities';
 import { CapabilityDetector } from '../environment/capability-detector';
 import { KnowledgeBase } from '../knowledge-base/knowledge-base';
+import { hasFtmsControlPoint } from '../knowledge-base/ftms-control-point';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
 import type { ModelSession } from '../model/model-session';
 import { ModelSessions } from '../model/model-sessions';
@@ -17,6 +18,7 @@ import { InvestigationStore } from '../store/investigation-store';
 import { PendingVerdict } from '../store/pending-verdict';
 import { StoreError } from '../store/store-error';
 import type { ApprovalDecision } from '../store/model/approval-decision';
+import type { EmergencyStopEvent } from '../store/model/emergency-stop-event';
 import type { Hypothesis } from '../store/model/hypothesis';
 import type { Investigation } from '../store/model/investigation';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
@@ -41,6 +43,7 @@ import { applyStep, stateFrom, type DecisionState } from './decision-state';
 import { ApprovalGate } from './approval-gate';
 import { ConfirmationCheck } from './confirmation-check';
 import { ControlTelemetry } from './control-telemetry';
+import { EmergencyStopController } from './emergency-stop-controller';
 import { ChecklistDecider } from './checklist-decider';
 import { buildFeed } from './feed-builder';
 import type { FeedEntry } from './feed-entry';
@@ -85,6 +88,7 @@ export class PlaybookOrchestrator {
   readonly approvalGate = inject(ApprovalGate);
   private readonly controlPoint = inject(ControlPointExchange);
   private readonly controlTelemetry = inject(ControlTelemetry);
+  readonly emergencyStop = inject(EmergencyStopController);
   private readonly notificationRecorder = inject(NotificationRecorder);
   private readonly confirmationCheck = inject(ConfirmationCheck);
   private readonly log = inject(RawTrafficLog);
@@ -105,6 +109,8 @@ export class PlaybookOrchestrator {
   private leaving = false;
   private stopReason: StopReason | null = null;
   private concludeNow = false;
+  private emergencyTask: Promise<EmergencyStopEvent> | null = null;
+  private emergencyEvent: EmergencyStopEvent | null = null;
   private observationCounter = 0;
   private requestCounter = 0;
   private readonly observationKeys = new Set<string>();
@@ -258,6 +264,7 @@ export class PlaybookOrchestrator {
     }
     this.modelSession = this.modelSessions.take(id);
     this.approvalLedger.begin();
+    if (record.investigation.emergencyStoppedAt !== undefined) this.approvalLedger.lock();
     this.statusSignal.set('running');
     this.log.begin(id, 0);
     await this.loop();
@@ -265,22 +272,27 @@ export class PlaybookOrchestrator {
 
   /** Stops the loop at once (personStop or emergencyStop) and concludes with what is known. */
   stop(reason: 'personStop' | 'emergencyStop'): void {
-    if (this.statusSignal() !== 'running') return;
+    if (this.statusSignal() !== 'running' || this.stopReason === 'emergencyStop') return;
     this.stopReason = reason;
     this.concludeNow = true;
     this.abort.abort();
     this.prompts.cancel();
-    // Journey 2 sends no command, so no stop sequence is known: the emergency stop disconnects
-    // at once and tells the person to use the machine's own stop (emergency-stop design, rule 5).
     if (reason === 'emergencyStop') {
-      this.approvalLedger.lock();
-      void this.ble.disconnect();
+      const event = { tappedAt: this.clock.now(), mode: this.mode(), stage: this.stage() };
+      this.emergencyTask = this.emergencyStop.trigger(
+        event,
+        this.kbSignal()!,
+        hasFtmsControlPoint(this.state().layout),
+      );
+      const id = this.investigationSignal()!.id;
+      void this.store.latchEmergencyStop(id, event.tappedAt).catch(() => undefined);
     }
   }
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
   async leave(): Promise<void> {
     this.leaving = true;
+    this.emergencyStop.leave();
     this.approvalLedger.lock();
     this.abort.abort();
     this.prompts.cancel();
@@ -292,6 +304,12 @@ export class PlaybookOrchestrator {
   private async loop(): Promise<void> {
     const id = this.investigationSignal()!.id;
     while (!this.leaving && this.statusSignal() === 'running') {
+      if (this.emergencyTask) {
+        this.emergencyEvent = await this.emergencyTask;
+        this.emergencyTask = null;
+        if (this.leaving) return;
+        this.resetSignalAfterStop();
+      }
       const context = this.ruleContext();
       const outcome = nextOutcome(context, this.concludeNow);
       if (!outcome) break;
@@ -442,6 +460,7 @@ export class PlaybookOrchestrator {
       confirmationCheck: this.confirmationCheck,
       controlPoint: this.controlPoint,
       controlTelemetry: this.controlTelemetry,
+      lockControl: () => this.approvalLedger.lock(),
       kb,
       prompts: this.prompts,
       capabilities: { detect: () => this.capabilities.detect({ model: this.mode() === 'agent' }) },
@@ -617,6 +636,10 @@ export class PlaybookOrchestrator {
           endedAt: Date.now(),
           stage: 'conclude',
           modelConsultations: this.modelConsultations,
+          ...(this.emergencyEvent && {
+            emergencyStoppedAt: this.emergencyEvent.tappedAt,
+            emergencyStop: this.emergencyEvent,
+          }),
         },
       };
       try {
@@ -708,6 +731,7 @@ export class PlaybookOrchestrator {
       missingToolRequests: requests,
       everConnected: this.state().everConnected,
       stopReason: this.stopReason ?? 'finish',
+      emergencyAcknowledged: this.emergencyEvent?.outcome === 'acknowledged',
       protocolKnown:
         !!hypothesis &&
         !!this.kbSignal()?.services.some((s) => s.shortName === hypothesis.protocol),

@@ -21,9 +21,31 @@ export function profileFeatures(
   const grantRefused = request?.result.ok && state.controlGrantedAt === null;
   const commandTest = steps.find((step) => step.ruleId === 'control.test');
   const effectCheck = steps.find((step) => step.tool === 'check_command_effect');
+  const closingStop = steps.find((step) => step.ruleId === 'control.stop');
+  const layoutRead = steps.find((step) => step.tool === 'enumerate_gatt');
   return kb.data.commands.flatMap((definition): DeviceProfile['features'] => {
     const { id, claim, metric, parameter, characteristic, opCode, rangeCharacteristic } =
       definition;
+    const opcode = `0x${opCode.toString(16).toUpperCase().padStart(2, '0')}`;
+    if (id === 'start' || id === 'stop') {
+      return [
+        {
+          feature: id,
+          command: { characteristic, opCode: opcode, parameter: null },
+          range: null,
+          test: null,
+          status:
+            grantRefused || (id === 'stop' && closingStop?.result.error?.code === 'DEVICE_REJECTED')
+              ? 'refused'
+              : 'claimedOnly',
+          evidence: [
+            layoutRead?.id ?? read.id,
+            ...(grantRefused && request ? [request.id] : []),
+            ...(id === 'stop' && closingStop ? [closingStop.id] : []),
+          ],
+        },
+      ];
+    }
     if (!claim || !metric || !parameter || !state.targetSettingFeatures.includes(claim)) return [];
     const range = state.supportedRanges[metric];
     const evidence = observations
@@ -45,7 +67,7 @@ export function profileFeatures(
         feature: id,
         command: {
           characteristic,
-          opCode: `0x${opCode.toString(16).toUpperCase().padStart(2, '0')}`,
+          opCode: opcode,
           parameter,
         },
         range: range && rangeCharacteristic ? { ...range, source: rangeCharacteristic } : null,

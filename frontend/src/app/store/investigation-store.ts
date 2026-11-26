@@ -12,6 +12,7 @@ export abstract class InvestigationStore {
   abstract create(init: NewInvestigation): Promise<Investigation>;
   /** Writes one step with everything it produced in one transaction (FR-060). */
   abstract commitStep(commit: StepCommit): Promise<void>;
+  abstract latchEmergencyStop(id: string, at: number): Promise<void>;
   /** Writes raw log entries of a step still running; they stay provisional until it commits. */
   abstract flushRawLog(entries: readonly RawLogEntry[]): Promise<void>;
   /** Writes the verdict and the final step together; refuses a second verdict. */

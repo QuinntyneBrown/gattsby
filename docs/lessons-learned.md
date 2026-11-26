@@ -285,3 +285,19 @@ None; this is the first entry.
   together, and keep feed entries attributed to the mode in which they ran.
 - Keep the explicit Ready response as the trigger for a timed recording. Asking for another
   checklist choice after Ready would let the device's activity change before recording starts.
+
+## Journey 8 — Test one control command
+
+- The guard rejected the first write after a simulated device withdrew permission. Bind every
+  approval to the connection as well as the exact characteristic and bytes, and check the
+  current grant and live reading immediately before writing.
+- The live-metrics and export specs now explicitly skip the optional Control stage. They still
+  check the same read evidence and confirm that skipping sends nothing.
+- Enable Control Point indications before writing. This captures a response arriving before
+  the write promise resolves. The initiating approval and packet evidence are stored together.
+- An unexpected effect now blocks future test commands and puts Emergency stop beside the
+  physical-stop instruction. The earlier mock implied that Stop had already been sent.
+- The emergency action locks itself before attempting Stop. Its one-tap approval covers only
+  the known stop sequence. The simulator checks both the acknowledged path and the timeout.
+- The command results are committed to the feed and the verdict. The approval dialog currently
+  closes after the result, so separate confirmed and failed dialog states remain outstanding.

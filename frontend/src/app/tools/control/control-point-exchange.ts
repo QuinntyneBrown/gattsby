@@ -1,7 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { BleLayer } from '../../ble/ble-layer';
 import { toHex } from '../../ble/hex-codec';
-import { FTMS_CONTROL_POINT, FTMS_SERVICE } from '../../knowledge-base/ftms-control-point';
+import {
+  FTMS_CONTROL_POINT,
+  FTMS_SERVICE,
+  FTMS_STATUS,
+} from '../../knowledge-base/ftms-control-point';
+import type { GattServiceInfo } from '../../ble/gatt-layout';
 import { Clock } from '../../shared/clock';
 import type { ApprovalDecision } from '../../store/model/approval-decision';
 import { ToolError } from '../tool-error';
@@ -21,8 +26,28 @@ const TIMEOUT_MS = 5_000;
 export class ControlPointExchange {
   private readonly ble = inject(BleLayer);
   private readonly clock = inject(Clock);
+  private loss: { connectedAt: number; evidence: string } | null = null;
 
-  async send(approval: ApprovalDecision, signal: AbortSignal) {
+  async watchPermission(
+    layout: readonly GattServiceInfo[] | null,
+    connectedAt: number,
+  ): Promise<void> {
+    this.loss = null;
+    const status = layout
+      ?.find((service) => service.uuid === FTMS_SERVICE)
+      ?.characteristics.find((entry) => entry.uuid === FTMS_STATUS);
+    if (!status?.properties.includes('notify')) return;
+    await this.ble.subscribe(FTMS_SERVICE, FTMS_STATUS, ({ bytes, entryId }) => {
+      if (bytes.length === 1 && bytes[0] === 0xff) this.loss ??= { connectedAt, evidence: entryId };
+      return undefined;
+    });
+  }
+
+  permissionLoss(connectedAt: number): string | null {
+    return this.loss?.connectedAt === connectedAt ? this.loss.evidence : null;
+  }
+
+  async send(approval: ApprovalDecision, signal: AbortSignal, checkBeforeWrite?: () => void) {
     signal.throwIfAborted();
     const cleanup = new AbortController();
     const bytes = Uint8Array.from(approval.request.bytes);
@@ -63,6 +88,7 @@ export class ControlPointExchange {
         await stop();
         throw new ToolError('ABORTED', 'The command was stopped.');
       }
+      checkBeforeWrite?.();
       awaitingResponse = true;
       const write = await this.ble.write(FTMS_SERVICE, FTMS_CONTROL_POINT, bytes, approval.id);
       const reply = await indication;

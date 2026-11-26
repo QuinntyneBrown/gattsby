@@ -38,6 +38,7 @@ export interface ToolContext {
   readonly hypotheses: HypothesisProposer;
   readonly controlPoint: ControlPointExchange;
   readonly controlTelemetry: ControlTelemetry;
+  lockControl(): void;
   readonly approval?: ApprovalDecision;
   /** What the verdict is checked against, as of now. */
   verdictFacts(): VerdictFacts;

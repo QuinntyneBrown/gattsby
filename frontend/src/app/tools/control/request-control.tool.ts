@@ -55,6 +55,10 @@ export const requestControlTool = entry<Record<string, never>, unknown>({
   async run(_input, ctx) {
     if (!ctx.approval) return fail('APPROVAL_REQUIRED', 'Request Control needs its own approval.');
     const { evidence, label, result, raw } = await ctx.controlPoint.send(ctx.approval, ctx.signal);
+    if (result === 'success') {
+      ctx.signal.throwIfAborted();
+      await ctx.controlPoint.watchPermission(ctx.state.layout, ctx.approval.request.connectedAt);
+    }
     const id = ctx.observe({
       kind: result === 'success' ? 'control' : 'connection-quirk',
       subject: 'request_control',

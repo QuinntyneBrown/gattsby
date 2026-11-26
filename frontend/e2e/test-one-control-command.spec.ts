@@ -8,8 +8,10 @@ import { expect, test } from './fixtures/gattsby-test';
 import { devices, treadmill } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { ApprovalDialogPage } from './pages/approval.dialog.page';
+import { EmergencyStopDialogPage } from './pages/emergency-stop.dialog.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { UnexpectedEffectDialogPage } from './pages/unexpected-effect.dialog.page';
 import { VerdictPage } from './pages/verdict.page';
 
 test.use({
@@ -168,6 +170,167 @@ test('refuses the approved value if the live speed changes while the dialog is o
       result: expect.objectContaining({ error: expect.objectContaining({ code: 'UNSAFE_VALUE' }) }),
     }),
   );
+});
+
+test('stops from an open motion approval, abandons that command and records the stop', async ({
+  page,
+  fakeBluetooth,
+  approvals,
+}) => {
+  const investigation = await reachControl(page, fakeBluetooth);
+  const approval = new ApprovalDialogPage(page);
+  const emergency = new EmergencyStopDialogPage(page);
+  await investigation.choose('Test control');
+  await approval.approve(approvals, treadmill.controlPoint, [0x00]);
+  await expect(approval.dialog).toContainText('Lower the target speed to 5.9 km/h?');
+  const tappedAt = await page.evaluate(() => performance.timeOrigin + performance.now());
+  approvals.record(treadmill.controlPoint, [0x08, 0x01]);
+  approvals.record(treadmill.controlPoint, [0x01]);
+  await approval.emergencyStop.click();
+  await expect(emergency.dialog).toContainText('All commands stopped.');
+  await expect(approval.dialog).toHaveCount(0);
+  expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([
+    [0x00],
+    [0x08, 0x01],
+    [0x01],
+  ]);
+  await emergency.stopped.click();
+  const verdict = new VerdictPage(page);
+  await expect(verdict.summary).toContainText('Emergency stop used');
+  await expect(verdict.summary).toContainText('use its own stop');
+  const records = new StoredRecords(page);
+  const row = await records.investigation(investigation.id());
+  expect(row).toMatchObject({
+    verdict: { stopReason: 'emergencyStop' },
+    emergencyStop: { outcome: 'acknowledged', reported: 'stopped' },
+  });
+  const write = (await records.rawLog(investigation.id())).find(
+    (entry) => entry.kind === 'write' && entry.hex === '08 01',
+  );
+  expect(write?.t).toBeGreaterThanOrEqual(tappedAt);
+  expect((write?.t ?? Infinity) - tappedAt).toBeLessThan(500);
+});
+
+test.describe('The treadmill moves against the approved command', () => {
+  test.use({
+    bluetooth: {
+      devices: [devices.treadmill.id],
+      chooser: [{ pick: devices.treadmill.id }],
+      controlEffectSpeedKmh: 9.2,
+    },
+  });
+
+  test('keeps emergency stop reachable and sends no further command without a tap', async ({
+    page,
+    fakeBluetooth,
+    approvals,
+  }) => {
+    const investigation = await reachControl(page, fakeBluetooth);
+    const approval = new ApprovalDialogPage(page);
+    const unexpected = new UnexpectedEffectDialogPage(page);
+    await investigation.choose('Test control');
+    await approval.approve(approvals, treadmill.controlPoint, [0]);
+    await expect(approval.dialog).toContainText('Lower the target speed to 5.9 km/h?');
+    await approval.standClear.check();
+    await approval.approve(approvals, treadmill.controlPoint, [0x02, 0x4e, 0x02]);
+    await investigation.waitForPrompt('Does the console show 5.9 km/h?');
+    await page.clock.runFor(1_100);
+    await investigation.choose('No change');
+    await expect(unexpected.dialog).toContainText('Speed moved to 9.2 km/h.');
+    await expect(unexpected.emergencyStop).toBeVisible();
+    expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([[0], [0x02, 0x4e, 0x02]]);
+    await unexpected.finishReadOnly.click();
+    await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
+    expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([[0], [0x02, 0x4e, 0x02]]);
+  });
+});
+
+test.describe('The FTMS Stop operation gets no indication', () => {
+  test.use({
+    bluetooth: {
+      devices: [devices.treadmill.id],
+      chooser: [{ pick: devices.treadmill.id }],
+      controlReplies: { 8: null },
+    },
+  });
+
+  test('times out, disconnects and shows the machine’s own stop instruction', async ({
+    page,
+    fakeBluetooth,
+    approvals,
+  }) => {
+    const investigation = await reachControl(page, fakeBluetooth);
+    const emergency = new EmergencyStopDialogPage(page);
+    approvals.record(treadmill.controlPoint, [0x08, 0x01]);
+    await investigation.emergencyStop.click();
+    await expect(emergency.dialog).toContainText('Sending Stop');
+    await expect.poll(() => fakeBluetooth.writes().length).toBe(1);
+    await page.clock.runFor(5_100);
+    await expect(emergency.dialog).toContainText('No answer to Stop.');
+    await expect(emergency.dialog).toContainText('use its own physical stop');
+    expect(fakeBluetooth.calls()).toContain('disconnect');
+    expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([[0x08, 0x01]]);
+    await emergency.stopped.click();
+    await expect(new VerdictPage(page).summary).toContainText('Emergency stop used');
+  });
+});
+
+test.describe('The device revokes the control grant', () => {
+  test.use({
+    bluetooth: {
+      devices: [devices.treadmill.id],
+      chooser: [{ pick: devices.treadmill.id }],
+      loseControlAfterGrant: true,
+    },
+  });
+
+  test('refuses a command when permission is lost during approval', async ({
+    page,
+    fakeBluetooth,
+    approvals,
+  }) => {
+    const investigation = await reachControl(page, fakeBluetooth);
+    const approval = new ApprovalDialogPage(page);
+    await investigation.choose('Test control');
+    await approval.approve(approvals, treadmill.controlPoint, [0x00]);
+    await expect(approval.dialog).toContainText('Lower the target speed to 5.9 km/h?');
+    await page.clock.runFor(1_100);
+    await approval.standClear.check();
+    await approval.send.click();
+    await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
+    expect(fakeBluetooth.writes().map((entry) => entry.bytes)).toEqual([[0x00]]);
+    const records = new StoredRecords(page);
+    expect(await records.observations(investigation.id())).toContainEqual(
+      expect.objectContaining({ kind: 'connection-quirk', value: 'controlPermissionLost' }),
+    );
+  });
+});
+
+test.describe('The device refuses Request Control', () => {
+  test.use({
+    bluetooth: {
+      devices: [devices.treadmill.id],
+      chooser: [{ pick: devices.treadmill.id }],
+      controlReplies: { 0: 0x05 },
+    },
+  });
+
+  test('reports the refusal in the verdict and offers no test command', async ({
+    page,
+    fakeBluetooth,
+    approvals,
+  }) => {
+    const investigation = await reachControl(page, fakeBluetooth);
+    await investigation.choose('Test control');
+    await new ApprovalDialogPage(page).approve(approvals, treadmill.controlPoint, [0]);
+    const verdict = new VerdictPage(page);
+    await expect(verdict.title).toHaveText('Connected — FTMS');
+    await expect(verdict.item('Observed', 'Request Control')).toContainText(
+      'Control not permitted',
+    );
+    await expect(verdict.item('Can control', 'Target speed')).toContainText('refused');
+    expect(fakeBluetooth.writes().map((entry) => entry.bytes)).toEqual([[0x00]]);
+  });
 });
 
 test.describe('The FTMS bike reports resistance and its range', () => {

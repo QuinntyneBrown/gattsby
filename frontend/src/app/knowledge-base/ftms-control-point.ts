@@ -3,6 +3,7 @@ import { canonicalUuid } from './uuid';
 
 export const FTMS_SERVICE = canonicalUuid(0x1826);
 export const FTMS_CONTROL_POINT = canonicalUuid(0x2ad9);
+export const FTMS_STATUS = canonicalUuid(0x2ada);
 
 export function hasFtmsControlPoint(layout: readonly GattServiceInfo[] | null): boolean {
   return (

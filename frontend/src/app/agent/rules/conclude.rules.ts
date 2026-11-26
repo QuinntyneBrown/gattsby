@@ -36,7 +36,7 @@ export const CONCLUDE_RULES: readonly StageRule[] = [
         verdict: kind,
         summary:
           facts.stopReason === 'emergencyStop'
-            ? `Emergency stop used: Gattsby disconnected and sent nothing. If the machine is still moving, use its own stop. ${summary}`.slice(
+            ? `Emergency stop used. ${facts.emergencyAcknowledged ? 'The device acknowledged Stop.' : 'Gattsby disconnected.'} If the machine is still moving, use its own stop. ${summary}`.slice(
                 0,
                 280,
               )
