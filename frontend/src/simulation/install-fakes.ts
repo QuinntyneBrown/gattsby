@@ -18,6 +18,7 @@ interface SimulationGlobals {
     setIncline(percent: number): void;
     setBluetoothAvailable(available: boolean): void;
     setAdvertising(deviceId: string, on: boolean): void;
+    dropConnection(failures: number): void;
   };
   LanguageModel?: unknown;
 }
@@ -108,6 +109,7 @@ function install(config: SimulationConfig): void {
     setIncline: (percent) => bluetooth.setIncline(percent),
     setBluetoothAvailable: (available) => bluetooth.setAvailable(available),
     setAdvertising: (deviceId, on) => bluetooth.setAdvertising(deviceId, on),
+    dropConnection: (failures) => bluetooth.dropConnection(failures),
   };
 
   delete globals.LanguageModel;

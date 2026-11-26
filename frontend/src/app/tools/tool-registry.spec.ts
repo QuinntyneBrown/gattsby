@@ -10,6 +10,7 @@ const MVP_TOOLS = [
   'report_candidate_names',
   'power_cycle_match',
   'connect',
+  'reconnect',
   'disconnect',
   'enumerate_gatt',
   'read_device_info',

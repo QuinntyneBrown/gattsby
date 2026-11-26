@@ -78,6 +78,10 @@ export class InvestigationPage {
     await this.answer(name).click();
   }
 
+  async chooseRecovery(name: 'Try again' | 'Stop'): Promise<void> {
+    await this.connectionBanner.getByRole('button', { name, exact: true }).click();
+  }
+
   async typeAnswer(text: string): Promise<void> {
     await this.freeText.fill(text);
     await this.dock.getByRole('button', { name: 'Send answer' }).click();

@@ -39,6 +39,16 @@ export class FakeBluetooth {
     private readonly recorder: SimulationRecorder,
   ) {}
 
+  async dropConnection(failures: number): Promise<void> {
+    await this.page.evaluate(
+      (value) =>
+        (
+          globalThis as unknown as { __gattsbyFakes: { dropConnection(failures: number): void } }
+        ).__gattsbyFakes.dropConnection(value),
+      failures,
+    );
+  }
+
   async setAvailable(available: boolean): Promise<void> {
     await this.page.evaluate((value) => {
       const globals = globalThis as unknown as {

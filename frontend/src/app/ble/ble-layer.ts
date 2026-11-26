@@ -29,7 +29,12 @@ export abstract class BleLayer {
     receive: (sample: AdvertisementSample) => void,
     signal: AbortSignal,
   ): Promise<void>;
-  abstract connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }>;
+  abstract connect(
+    deviceId: string,
+    timeoutMs: number,
+    signal?: AbortSignal,
+  ): Promise<{ at: number; entryId: string }>;
+  abstract restoreSubscriptions(deviceId: string, signal: AbortSignal): Promise<string[]>;
   abstract primaryServices(): Promise<GattServiceInfo[]>;
   abstract read(service: string, characteristic: string): Promise<ReadResult>;
   abstract write(

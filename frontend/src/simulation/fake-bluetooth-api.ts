@@ -53,6 +53,10 @@ export class FakeBluetoothApi extends EventTarget {
     if (device) device.state.values['advertisingOff'] = on ? 0 : 1;
   }
 
+  dropConnection(failures: number): void {
+    this.devices.find(({ gatt }) => gatt.connected)?.gatt.drop(failures);
+  }
+
   async getAvailability(): Promise<boolean> {
     this.report({ kind: 'bluetooth-call', method: 'getAvailability', detail: '' });
     return this.available;

@@ -15,6 +15,7 @@ import type { BluetoothAdvertisingEvent } from './bluetooth-advertising-event';
 import type { ChosenDevice } from './chosen-device';
 import type { ConnectionState, DisconnectEvent } from './connection-state';
 import type { GattServiceInfo } from './gatt-layout';
+import type { GattSubscription } from './gatt-subscription';
 import { bytesOf, toHex } from './hex-codec';
 import { RawTrafficLog } from './raw-traffic-log';
 import type { ScanRequest } from './scan-request';
@@ -58,7 +59,8 @@ export class WebBluetoothBleLayer extends BleLayer {
   private readonly approvals = inject(ApprovalLedger);
   private readonly devices = new Map<string, BluetoothDevice>();
   private readonly services = new Map<string, BluetoothRemoteGATTService>();
-  private readonly subscriptions = new Map<string, () => Promise<void>>();
+  private readonly subscriptions = new Map<string, GattSubscription>();
+  private droppedSubscriptions: { deviceId: string; entries: GattSubscription[] } | null = null;
   private device: BluetoothDevice | null = null;
   private readonly state = signal<ConnectionState>(DISCONNECTED);
   private readonly disconnects = new Subject<DisconnectEvent>();
@@ -69,7 +71,15 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = event.target as BluetoothDevice;
     const intentional = this.state().status === 'releasing';
     this.log.append({ kind: 'disconnect', direction: 'in', hex: '', detail: device.id });
-    for (const stop of this.subscriptions.values()) void stop();
+    if (!intentional) {
+      this.droppedSubscriptions = {
+        deviceId: device.id,
+        entries: [...this.subscriptions.values()].filter(
+          ({ characteristic }) => characteristic !== FTMS_CONTROL_POINT,
+        ),
+      };
+    }
+    for (const subscription of this.subscriptions.values()) void subscription.stop();
     device.removeEventListener('gattserverdisconnected', this.onDisconnected);
     this.services.clear();
     if (this.device === device) {
@@ -219,7 +229,8 @@ export class WebBluetoothBleLayer extends BleLayer {
     }
   }
 
-  async connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }> {
+  async connect(deviceId: string, timeoutMs: number, signal?: AbortSignal) {
+    signal?.throwIfAborted();
     const device = this.devices.get(deviceId);
     if (!device?.gatt) throw new ToolError('PRECONDITION_FAILED', 'No device was chosen.');
     this.state.set({
@@ -229,15 +240,23 @@ export class WebBluetoothBleLayer extends BleLayer {
       connectedAt: null,
     });
     let cancel = (): void => undefined;
+    let abort = (): void => undefined;
+    let abandoned = false;
     const timeout = new Promise<never>((_, reject) => {
       cancel = this.clock.setTimeout(
         () => reject(new ToolError('TIMEOUT', 'The device did not answer in time.')),
         timeoutMs,
       );
+      abort = () => reject(new ToolError('ABORTED', 'The connection attempt was stopped.'));
+      signal?.addEventListener('abort', abort, { once: true });
     });
     try {
-      await Promise.race([device.gatt.connect(), timeout]);
+      const attempt = device.gatt.connect().then((server) => {
+        if (abandoned && this.device !== device) server.disconnect();
+      });
+      await Promise.race([attempt, timeout]);
     } catch (error) {
+      abandoned = true;
       this.state.set(DISCONNECTED);
       if (error instanceof ToolError) {
         device.gatt.disconnect();
@@ -250,6 +269,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       );
     } finally {
       cancel();
+      signal?.removeEventListener('abort', abort);
     }
     device.addEventListener('gattserverdisconnected', this.onDisconnected);
     this.device = device;
@@ -267,6 +287,35 @@ export class WebBluetoothBleLayer extends BleLayer {
       connectedAt: at,
     });
     return { at, entryId };
+  }
+
+  async restoreSubscriptions(deviceId: string, signal: AbortSignal): Promise<string[]> {
+    const gatt = this.requireConnected();
+    if (this.device?.id !== deviceId)
+      throw new ToolError('PRECONDITION_FAILED', 'This connection belongs to another device.');
+    const snapshot = this.droppedSubscriptions;
+    const restored: string[] = [];
+    try {
+      const services = await gatt.getPrimaryServices().catch((error) => {
+        if (errorName(error) === 'NotFoundError') return [];
+        throw this.gattError(error);
+      });
+      signal.throwIfAborted();
+      for (const service of services) this.services.set(canonicalUuid(service.uuid), service);
+      if (snapshot?.deviceId === deviceId) {
+        for (const { service, characteristic, receive } of snapshot.entries) {
+          await this.subscribe(service, characteristic, receive);
+          signal.throwIfAborted();
+          restored.push(characteristic);
+        }
+      }
+    } catch (error) {
+      await this.releaseConnection();
+      if (!signal.aborted) this.droppedSubscriptions = snapshot;
+      throw error;
+    }
+    this.droppedSubscriptions = null;
+    return restored;
   }
 
   async primaryServices(): Promise<GattServiceInfo[]> {
@@ -342,7 +391,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       if (!c.properties.notify && !c.properties.indicate) {
         throw new ToolError('PROPERTY_MISSING', 'This characteristic does not send updates.');
       }
-      await this.subscriptions.get(subscriptionKey)?.();
+      await this.subscriptions.get(subscriptionKey)?.stop();
       const listener = (): void => {
         if (!c.value) return;
         const bytes = bytesOf(c.value);
@@ -358,12 +407,17 @@ export class WebBluetoothBleLayer extends BleLayer {
         );
       };
       const stop = async (): Promise<void> => {
-        if (this.subscriptions.get(subscriptionKey) !== stop) return;
+        if (this.subscriptions.get(subscriptionKey)?.stop !== stop) return;
         this.subscriptions.delete(subscriptionKey);
         c.removeEventListener('characteristicvaluechanged', listener);
         if (this.device?.gatt?.connected) await c.stopNotifications().catch(() => undefined);
       };
-      this.subscriptions.set(subscriptionKey, stop);
+      this.subscriptions.set(subscriptionKey, {
+        service: serviceUuid,
+        characteristic: uuid,
+        receive,
+        stop,
+      });
       c.addEventListener('characteristicvaluechanged', listener);
       try {
         await c.startNotifications();
@@ -421,10 +475,15 @@ export class WebBluetoothBleLayer extends BleLayer {
   }
 
   async disconnect(): Promise<void> {
+    this.droppedSubscriptions = null;
+    await this.releaseConnection();
+  }
+
+  private async releaseConnection(): Promise<void> {
     const device = this.device;
     if (!device) return;
     this.state.update((s) => ({ ...s, status: 'releasing' }));
-    await Promise.all([...this.subscriptions.values()].map((stop) => stop()));
+    await Promise.all([...this.subscriptions.values()].map(({ stop }) => stop()));
     device.gatt?.disconnect();
     // Chrome fires `gattserverdisconnected`; the fake does too. Make sure the state settles.
     if (this.device === device) {

@@ -68,6 +68,7 @@ export class NotificationRecorder {
       deadline = startedAt + seconds * 1000;
       recording = true;
       const interrupted = await this.wait(seconds, ble, signal);
+      if (interrupted) this.confirmation.discardBaseline();
       if (signal.aborted) await Promise.all(stops.map((stop) => stop()));
       return {
         count,

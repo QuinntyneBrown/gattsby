@@ -29,6 +29,8 @@ import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
 import { UnexpectedEffectDialog } from '../../dialogs/unexpected-effect/unexpected-effect.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
 import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
+import { ConnectionBannerComponent } from '../../notifications/connection-banner/connection-banner.component';
+import { ConnectionSupervisor } from '../../agent/connection-supervisor';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { ControlPointExchange } from '../../tools/control/control-point-exchange';
 import { InvestigationStore } from '../../store/investigation-store';
@@ -64,6 +66,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     UnexpectedEffectDialog,
     InvestigationMenuDialog,
     ModeBannerComponent,
+    ConnectionBannerComponent,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -76,6 +79,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     ControlTelemetry,
     EmergencyStopController,
     ChecklistDecider,
+    ConnectionSupervisor,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -106,7 +110,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           <p class="appbar__subtitle">{{ subtitle() }}</p>
         </div>
         <div class="appbar__actions">
-          @if (connected()) {
+          @if (connected() || orchestrator.recovery.state()?.kind === 'warning') {
             <g-emergency-stop-button (pressed)="orchestrator.stop('emergencyStop')" />
           }
           <button
@@ -149,6 +153,12 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           aria-label="Activity"
           [attr.aria-busy]="loading() ? 'true' : null"
         >
+          @if (orchestrator.recovery.state(); as recovery) {
+            <g-connection-banner
+              [state]="recovery"
+              (answered)="orchestrator.recovery.choose($event)"
+            />
+          }
           @if (orchestrator.mode() === 'checklist' && !modeBannerDismissed()) {
             <g-mode-banner
               [reason]="orchestrator.modeChange()?.reason ?? null"
@@ -224,7 +234,9 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
               }
               <g-prompt-card
                 [prompt]="unexpectedEffect() ? null : prompts.current()"
-                [running]="orchestrator.running()"
+                [running]="
+                  orchestrator.recovery.state()?.kind === 'warning' ? null : orchestrator.running()
+                "
                 (respond)="respond($event)"
                 (stop)="orchestrator.stop('personStop')"
               />

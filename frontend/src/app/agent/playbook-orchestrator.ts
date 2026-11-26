@@ -42,6 +42,7 @@ import { fail, type ToolResult } from '../tools/tool-result';
 import { applyStep, stateFrom, type DecisionState } from './decision-state';
 import { ApprovalGate } from './approval-gate';
 import { ConfirmationCheck } from './confirmation-check';
+import { ConnectionSupervisor } from './connection-supervisor';
 import { ControlTelemetry } from './control-telemetry';
 import { EmergencyStopController } from './emergency-stop-controller';
 import { ChecklistDecider } from './checklist-decider';
@@ -91,6 +92,7 @@ export class PlaybookOrchestrator {
   readonly emergencyStop = inject(EmergencyStopController);
   private readonly notificationRecorder = inject(NotificationRecorder);
   private readonly confirmationCheck = inject(ConfirmationCheck);
+  readonly recovery = inject(ConnectionSupervisor);
   private readonly log = inject(RawTrafficLog);
   private readonly capabilities = inject(CapabilityDetector);
   private readonly clock = inject(Clock);
@@ -118,6 +120,8 @@ export class PlaybookOrchestrator {
   private modelConsultations = 0;
   private readonly modelFailures = new ModelFailureRun();
   private refusedFinishes = 0;
+  private stepStartedAt: number | null = null;
+  private repeatStep: (() => Promise<boolean>) | null = null;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -267,7 +271,28 @@ export class PlaybookOrchestrator {
     if (record.investigation.emergencyStoppedAt !== undefined) this.approvalLedger.lock();
     this.statusSignal.set('running');
     this.log.begin(id, 0);
-    await this.loop();
+    const watcher = this.ble.disconnected.subscribe((event) => {
+      if (
+        event.intentional ||
+        this.leaving ||
+        this.concludeNow ||
+        this.recovery.drop ||
+        this.status() !== 'running' ||
+        !this.state().everConnected
+      )
+        return;
+      const recordingSeconds =
+        this.pending()?.action.tool === 'subscribe_and_record' && this.stepStartedAt !== null
+          ? Math.floor((event.at - this.stepStartedAt) / 1_000)
+          : null;
+      this.recovery.dropped(event, recordingSeconds);
+      this.abort.abort();
+    });
+    try {
+      await this.loop();
+    } finally {
+      watcher.unsubscribe();
+    }
   }
 
   /** Stops the loop at once (personStop or emergencyStop) and concludes with what is known. */
@@ -310,6 +335,16 @@ export class PlaybookOrchestrator {
         if (this.leaving) return;
         this.resetSignalAfterStop();
       }
+      if (this.recovery.drop && !this.concludeNow) {
+        await this.reconnect(id, this.recovery.drop.deviceId);
+        continue;
+      }
+      if (this.repeatStep && !this.concludeNow) {
+        const repeat = this.repeatStep;
+        this.repeatStep = null;
+        if (await repeat()) return;
+        continue;
+      }
       const context = this.ruleContext();
       const outcome = nextOutcome(context, this.concludeNow);
       if (!outcome) break;
@@ -339,6 +374,7 @@ export class PlaybookOrchestrator {
         );
         this.choosingStage.set(null);
         if (this.leaving) return;
+        if (this.recovery.drop && !this.concludeNow) continue;
         if (!chosen) {
           this.concludeNow = true;
           this.resetSignalAfterStop();
@@ -373,6 +409,7 @@ export class PlaybookOrchestrator {
           );
           this.modelThinkingSignal.set(false);
           if (this.leaving) return;
+          if (this.recovery.drop && !this.concludeNow) continue;
           modelDecision = reply.decision;
           if ('error' in reply) {
             refusal = reply.error;
@@ -404,6 +441,7 @@ export class PlaybookOrchestrator {
       }
       const done = await this.runStep(id, action, modelDecision, refusal, chosenByPerson);
       if (done) return;
+      if (this.recovery.drop && !this.concludeNow) continue;
       if (action.tool === 'finish' && ++this.refusedFinishes >= MAX_REFUSED_FINISHES) {
         throw new Error('The verdict was refused twice; no verdict is supported.');
       }
@@ -411,7 +449,12 @@ export class PlaybookOrchestrator {
         const next = nextOutcome(this.ruleContext());
         const checksDone = next?.kind === 'decided' && next.action.tool === 'finish';
         const reason = checkStop(
-          { steps: this.steps().length, noProgressRun: this.noProgressRun },
+          {
+            steps: this.steps().filter(
+              (step) => step.status !== 'interrupted' && step.tool !== 'reconnect',
+            ).length,
+            noProgressRun: this.noProgressRun,
+          },
           this.hypothesis()?.confidence ?? 0,
           checksDone,
           this.config,
@@ -421,6 +464,23 @@ export class PlaybookOrchestrator {
           this.concludeNow = true;
         }
       }
+    }
+  }
+
+  private async reconnect(id: string, deviceId: string): Promise<void> {
+    this.abort = new AbortController();
+    await this.runStep(id, {
+      tool: 'reconnect',
+      input: { deviceId },
+      stage: this.stage(),
+      ruleId: 'connection.reconnect',
+    });
+    if (this.leaving || this.concludeNow) return;
+    const connected = !!this.steps().at(-1)?.result.ok;
+    this.recovery.complete(connected);
+    if (!connected) {
+      const retry = await this.recovery.waitForRetry(this.abort.signal);
+      if (!retry && !this.leaving && !this.concludeNow) this.stop('personStop');
     }
   }
 
@@ -445,6 +505,7 @@ export class PlaybookOrchestrator {
     });
     this.log.setStep(n);
     const startedAt = this.clock.now();
+    this.stepStartedAt = startedAt;
     const observations: Observation[] = [];
     const recordings: Recording[] = [];
     const requests: MissingToolRequest[] = [];
@@ -460,6 +521,7 @@ export class PlaybookOrchestrator {
       confirmationCheck: this.confirmationCheck,
       controlPoint: this.controlPoint,
       controlTelemetry: this.controlTelemetry,
+      connectionAttempt: (attempt) => this.recovery.attempting(attempt),
       lockControl: () => this.approvalLedger.lock(),
       kb,
       prompts: this.prompts,
@@ -530,7 +592,24 @@ export class PlaybookOrchestrator {
         },
       );
     }
+    this.stepStartedAt = null;
     if (this.leaving) return true;
+    const dropped =
+      !!this.recovery.drop && signal.aborted && action.tool !== 'reconnect' && !this.concludeNow;
+    if (dropped) {
+      const discarded = new Set([...observations, ...requests].map(({ id }) => id));
+      result = fail(
+        'ABORTED',
+        'The connection dropped during this step.',
+        undefined,
+        result.evidence.filter((id) => !discarded.has(id)),
+      );
+      observations.length = 0;
+      requests.length = 0;
+      if (tool?.safetyClass !== 'write' && tool?.safetyClass !== 'control') {
+        this.repeatStep = () => this.runStep(id, action, modelDecision, refusal, chosenByPerson);
+      }
+    }
     const step: Step = {
       investigationId: id,
       n,
@@ -575,7 +654,8 @@ export class PlaybookOrchestrator {
     const allObservations = [...this.observations(), ...observations];
     const fresh = observations.filter((o) => !this.observationKeys.has(keyOf(o)));
     fresh.forEach((o) => this.observationKeys.add(keyOf(o)));
-    this.noProgressRun = fresh.length > 0 ? 0 : this.noProgressRun + 1;
+    if (action.tool !== 'reconnect' && !dropped)
+      this.noProgressRun = fresh.length > 0 ? 0 : this.noProgressRun + 1;
     const hypothesis = this.tracker!.rescore(
       n,
       newState,
@@ -656,7 +736,7 @@ export class PlaybookOrchestrator {
       return true;
     }
 
-    const modeChange = this.fallbackAfter(step, refusal);
+    const modeChange = dropped ? null : this.fallbackAfter(step, refusal);
     const modePatch = modeChange && {
       mode: modeChange.to,
       modeChanges: [...(this.investigationSignal()?.modeChanges ?? []), modeChange],

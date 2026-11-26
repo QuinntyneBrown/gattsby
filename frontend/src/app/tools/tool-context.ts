@@ -40,6 +40,7 @@ export interface ToolContext {
   readonly hypotheses: HypothesisProposer;
   readonly controlPoint: ControlPointExchange;
   readonly controlTelemetry: ControlTelemetry;
+  connectionAttempt?(attempt: number): void;
   lockControl(): void;
   readonly approval?: ApprovalDecision;
   /** What the verdict is checked against, as of now. */

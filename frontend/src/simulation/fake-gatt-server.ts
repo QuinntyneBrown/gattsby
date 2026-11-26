@@ -49,6 +49,11 @@ export class FakeGattServer {
     return this;
   }
 
+  drop(failures: number): void {
+    this.refusals = failures;
+    this.disconnect();
+  }
+
   disconnect(): void {
     this.report({ kind: 'bluetooth-call', method: 'disconnect', detail: '' });
     if (!this.connected) {
