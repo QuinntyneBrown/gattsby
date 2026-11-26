@@ -30,6 +30,7 @@ export abstract class InvestigationStore {
   abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
   abstract list(): Promise<Investigation[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
+  abstract rawLogCount(id: string): Promise<number>;
   abstract rawLogPages(id: string): AsyncIterable<RawLogEntry[]>;
   abstract rawLogSizeEstimate(id: string): Promise<number>;
   abstract recordings(id: string): Promise<import('./model/recording').Recording[]>;

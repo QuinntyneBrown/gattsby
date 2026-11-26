@@ -42,3 +42,24 @@ test('opens the timestamped notifications that confirmed speed @critical', async
   }
   expect(fakeBluetooth.writes()).toEqual([]);
 });
+
+// Given a selected set of received packets, the Sent filter shows no matches.
+// Switching to the full timeline lets the person open their answers and hypothesis changes.
+test('filters the evidence by direction and author', async ({ page, fakeBluetooth }) => {
+  await finishTreadmill(page, fakeBluetooth);
+  await new VerdictPage(page).evidenceFor('Can read', 'Speed').click();
+  const evidence = new EvidencePage(page);
+  await evidence.filter('Sent').click({ timeout: 4_000 });
+  await expect(evidence.filter('Sent')).toHaveAttribute('aria-pressed', 'true');
+  await expect(evidence.noMatches).toBeVisible();
+  await expect(evidence.entries).toHaveCount(0);
+  await evidence.showEverything.first().click();
+  await evidence.filter('You').click();
+  await expect(evidence.entries).toContainText('Treadmill');
+  await expect(evidence.entries).not.toContainText('0x2ACD');
+  await evidence.filter('Agent').click();
+  await expect(evidence.entries).toContainText('Hypothesis');
+  await evidence.filter('Received').click();
+  await expect(evidence.entries).toContainText('0x2ACD');
+  await expect(evidence.entries).not.toContainText('Hypothesis');
+});

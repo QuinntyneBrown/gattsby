@@ -15,6 +15,7 @@ export interface VerdictItem {
 export interface VerdictView {
   readonly meta: string;
   readonly protocol: string;
+  readonly hypothesisId?: string;
   readonly readable: readonly VerdictItem[];
   readonly observed: readonly VerdictItem[];
   readonly undetermined: readonly VerdictItem[];
@@ -94,7 +95,15 @@ export function verdictView(
     ? (assessment.data as ReachabilityAssessment | null)?.likelyCauses
     : null;
   const heldByOther = Array.isArray(causes) && causes.includes('held by another central');
-  return { meta, protocol, readable, observed, undetermined, heldByOther };
+  return {
+    meta,
+    protocol,
+    hypothesisId: hypothesis?.id,
+    readable,
+    observed,
+    undetermined,
+    heldByOther,
+  };
 }
 
 function verdictItem(observation: { id: string; text: string; tag: ObservationTag }): VerdictItem {

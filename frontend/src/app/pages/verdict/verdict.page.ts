@@ -30,6 +30,12 @@ import { verdictView, type VerdictView } from './verdict-view';
     :host {
       display: contents;
     }
+    .group__items--observed li > a {
+      grid-column: 1 / -1;
+      grid-row: 3;
+      justify-self: start;
+      margin-block: 0;
+    }
   `,
   template: `
     <div class="app app--fixed">
@@ -104,6 +110,14 @@ import { verdictView, type VerdictView } from './verdict-view';
                   <dt>Protocol</dt>
                   <dd>{{ view()?.protocol }}</dd>
                 </dl>
+                @if (view()?.hypothesisId; as hypothesisId) {
+                  <a
+                    class="btn btn--ghost"
+                    [routerLink]="['/investigations', id(), 'evidence']"
+                    [queryParams]="{ ref: hypothesisId }"
+                    >Hypothesis evidence</a
+                  >
+                }
               }
               @if (verdict.kind === 'notConnectable') {
                 <section class="group">
@@ -160,6 +174,11 @@ import { verdictView, type VerdictView } from './verdict-view';
                         <span class="conf">{{
                           feature.status === 'claimedOnly' ? 'claimed only' : feature.status
                         }}</span>
+                        <a
+                          [routerLink]="['/investigations', id(), 'evidence']"
+                          [queryParams]="{ ref: feature.evidence }"
+                          >Evidence</a
+                        >
                       </li>
                     }
                   </ul>
@@ -177,6 +196,13 @@ import { verdictView, type VerdictView } from './verdict-view';
                         >
                         @if (item.tag) {
                           <g-confidence-badge [word]="item.tag" />
+                        }
+                        @if (item.evidenceId) {
+                          <a
+                            [routerLink]="['/investigations', id(), 'evidence']"
+                            [queryParams]="{ ref: item.evidenceId }"
+                            >Evidence</a
+                          >
                         }
                       </li>
                     }

@@ -14,4 +14,20 @@ export class EvidencePage {
   timestamp(id: string): Locator {
     return this.entry(id).locator('time');
   }
+
+  filter(label: 'All' | 'Sent' | 'Received' | 'You' | 'Agent'): Locator {
+    return this.page.getByRole('button', { name: label, exact: true });
+  }
+
+  get entries(): Locator {
+    return this.page.getByRole('list', { name: 'Evidence entries' });
+  }
+
+  get showEverything(): Locator {
+    return this.page.getByText('Show everything', { exact: true });
+  }
+
+  get noMatches(): Locator {
+    return this.page.getByText('No matching entries', { exact: true });
+  }
 }

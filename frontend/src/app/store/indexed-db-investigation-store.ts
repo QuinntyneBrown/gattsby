@@ -298,6 +298,12 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     )) as RawLogEntry[];
   }
 
+  async rawLogCount(id: string): Promise<number> {
+    const db = await this.open();
+    const log = db.transaction('rawLog').objectStore('rawLog');
+    return request(log.count(investigationRange(id)));
+  }
+
   async rawEvidence(id: string, ids: readonly string[]): Promise<RawLogEntry[]> {
     const db = await this.open();
     const store = db.transaction('rawLog').objectStore('rawLog');
