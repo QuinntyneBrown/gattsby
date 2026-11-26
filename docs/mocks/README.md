@@ -192,10 +192,10 @@ Legend: ✅ mock exists · ➖ not applicable (reason in manifest) · ❌ missin
 
 ### Notifications
 
-| Screen | info | success | warning | danger | stacked | Requirements |
-|---|---|---|---|---|---|---|
-| Connection banner (`connection-banner`) | [✅](notifications/connection-banner/info.html) | [✅](notifications/connection-banner/success.html) | [✅](notifications/connection-banner/warning.html) | [✅](notifications/connection-banner/danger.html) |  | `FR-015`, `FR-016`, `NFR-007` |
-| Mode banner (`mode-banner`) | [✅](notifications/mode-banner/info.html) | ➖ | [✅](notifications/mode-banner/warning.html) | ➖ |  | `FR-005`, `FR-006` |
-| Toast (`toast`) | [✅](notifications/toast/info.html) | [✅](notifications/toast/success.html) | [✅](notifications/toast/warning.html) | [✅](notifications/toast/danger.html) | [✅](notifications/toast/stacked.html) | `FR-062`, `NFR-008` |
+| Screen | info | success | warning | danger | update | stacked | Requirements |
+|---|---|---|---|---|---|---|---|
+| Connection banner (`connection-banner`) | [✅](notifications/connection-banner/info.html) | [✅](notifications/connection-banner/success.html) | [✅](notifications/connection-banner/warning.html) | [✅](notifications/connection-banner/danger.html) |  |  | `FR-015`, `FR-016`, `NFR-007` |
+| Mode banner (`mode-banner`) | [✅](notifications/mode-banner/info.html) | ➖ | [✅](notifications/mode-banner/warning.html) | ➖ |  |  | `FR-005`, `FR-006` |
+| Toast (`toast`) | [✅](notifications/toast/info.html) | [✅](notifications/toast/success.html) | [✅](notifications/toast/warning.html) | [✅](notifications/toast/danger.html) | [✅](notifications/toast/update.html) | [✅](notifications/toast/stacked.html) | `FR-062`, `NFR-008`, `NFR-006` |
 
 <!-- coverage:end -->

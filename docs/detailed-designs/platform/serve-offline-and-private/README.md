@@ -24,7 +24,7 @@ The feature has no screen of its own. Its promise is printed on the Home page ("
 this device. Nothing is sent to a server.", `docs/mocks/pages/home/default.html`) and the Settings
 page ("Nothing leaves this device: no accounts, no analytics, no server. Exporting is the only way
 data leaves, and only when you start it.", `docs/mocks/pages/settings/default.html`). A new version
-is offered through a toast (`docs/mocks/notifications/toast/info.html`).
+is offered through a toast (`docs/mocks/notifications/toast/update.html`).
 
 The feature exists because Gattsby is used in stores and gyms, often with weak or no signal, and
 because the machines it examines and the person's notes and photos are nobody else's business. It
@@ -48,12 +48,14 @@ The design introduces these building blocks in the Angular workspace under `fron
   `prefetch` for the app shell, every lazy chunk, the knowledge-base JSON, fonts and icons, so every
   route works offline after the first load (NFR-006). No data group caches anything off-origin. The
   model is cached by Chrome, not by the service worker.
-- **`WebManifest`** (`public/manifest.webmanifest`) — name, icons, `display` `standalone` and
-  `start_url` `/`, so Chrome offers to install Gattsby.
-- **`AppShell`** (`src/app/app-shell.ts`) — registers the service worker and listens to
-  `SwUpdate.versionUpdates`. When a new version is ready and no investigation is running, it raises
-  the toast "A new version is ready" with "Reload" through `ToastService`; while an investigation
-  runs, it waits for the verdict, so an update never reloads a live investigation.
+- **Web manifest** (`public/manifest.webmanifest`) — name, 192 px and 512 px PNG icons,
+  `display` `standalone` and `start_url` `/`, so Chrome can offer to install Gattsby.
+- **Bootstrap and `AppShell`** (`src/main.ts`, `src/app/app-shell.ts`) — bootstrap registers the
+  worker in production through the Trusted Types policy (see render-untrusted-text). The shell
+  listens to `SwUpdate.versionUpdates` and renders a persistent "A new version is ready" toast
+  with Reload. It holds the toast back on the investigation route, including while paused, and
+  checks the route again before reloading on request. A normal reload selects the cached new
+  version without mixing JavaScript chunks from separate builds.
 - **Headers file** (`public/_headers`) — the headers below, for every path, in the `_headers`
   format that Cloudflare Pages and Netlify read (A-04, [ADR 0003](../../../adr/0003-static-host-and-headers-file.md)).
   A host that reads another format gets the same headers translated at deployment.
@@ -111,7 +113,7 @@ The design introduces these building blocks in the Angular workspace under `fron
 | Limit | Value | Proven by |
 |---|---|---|
 | Initial bundle | At most 250 KB compressed (A-08) | `InitialBundleCheck` in CI |
-| Home interactive | Within 2 s on a mid-range phone over fast 4G (NFR-004) | A person's measurement; the device and tool are `<TO SUPPLY>` |
+| Home interactive | Within 2 s on a mid-range phone over fast 4G (NFR-004) | A person opens a cold tab on a mid-range Android phone on 4G and records the time from navigation until Identify a device responds, using Chrome DevTools Performance over USB |
 | Offline | Full investigation of the simulated FTMS treadmill with the network off | Behaviour spec with Playwright's offline mode after a first online load |
 
 ### Tests that prove it

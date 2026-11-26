@@ -49,10 +49,12 @@ The design introduces these building blocks in the Angular workspace under `fron
   allowlist (the service worker script `/ngsw-worker.js`, and any worker a later design adds). It
   defines no `createHTML` and no `createScript`, so no Gattsby code can produce HTML or script from a
   string. The allowlist check is a pure function, `isAllowedScriptUrl`
-  (`security/script-url-allowlist.ts`), with unit tests. Whether
-  Angular's service worker registration passes through this policy or through Angular's own is
-  settled by the work-offline journey, which adds the service worker; until then the allowlist
-  holds `/ngsw-worker.js` only.
+  (`security/script-url-allowlist.ts`), with unit tests. Bootstrap creates a `TrustedScriptURL`
+  for `/ngsw-worker.js` with the `gattsby` policy and passes it to Angular's
+  [service worker provider](https://github.com/angular/angular/blob/22.3.0/packages/service-worker/src/provider.ts).
+  Angular forwards the same value to `navigator.serviceWorker.register`. The provider's string
+  annotation needs a type assertion at that boundary. The assertion preserves the trusted value
+  at runtime. Browsers without Trusted Types receive the same fixed path as a string.
 - **`SchemaValidator`** (`tools/schema-validator.ts`) — validates model actions, tool inputs and
   outputs, and imported files against JSON Schemas compiled to standalone code at build time, so no
   validator uses `eval` or `new Function` at run time. Schemas limit every string's length.
