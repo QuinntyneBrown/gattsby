@@ -19,24 +19,41 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
       #dialog
       class="dialog"
       aria-labelledby="leave-investigation-title"
+      aria-describedby="leave-investigation-description"
       (cancel)="stay($event)"
     >
       <div class="dialog__panel">
+        <div class="dialog__grabber" aria-hidden="true"></div>
         <div class="dialog__toolbar">
           <g-emergency-stop-button (pressed)="emergencyStop.emit()" />
+          <button
+            class="btn btn--ghost btn--icon"
+            type="button"
+            aria-label="Close"
+            [disabled]="busy()"
+            (click)="stay()"
+          >
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m18 6-12 12M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div class="dialog__header">
-          <h2 class="dialog__title" id="leave-investigation-title">Leave the investigation?</h2>
-          @if (busy()) {
-            <p class="dialog__lead" role="status">
-              Disconnecting from <bdi>{{ device() }}</bdi>…
+          <div>
+            <h2 class="dialog__title" id="leave-investigation-title">Leave the investigation?</h2>
+            <p
+              class="dialog__lead"
+              id="leave-investigation-description"
+              [attr.role]="busy() ? 'status' : null"
+            >
+              @if (busy()) {
+                Disconnecting from <bdi>{{ device() }}</bdi>…
+              } @else {
+                It’s saved. Leaving disconnects from <bdi>{{ device() }}</bdi>. Resume it from the
+                home screen later.
+              }
             </p>
-          } @else {
-            <p class="dialog__lead">
-              It’s saved. Leaving disconnects from <bdi>{{ device() }}</bdi>. Resume it from the
-              home screen later.
-            </p>
-          }
+          </div>
         </div>
         <div class="dialog__footer">
           <button

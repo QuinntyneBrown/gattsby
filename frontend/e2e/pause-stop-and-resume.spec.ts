@@ -4,6 +4,7 @@
 
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/gattsby-test';
+import { setPageVisibility } from './fixtures/page-visibility';
 import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { HomePage } from './pages/home.page';
@@ -125,6 +126,34 @@ test('saves a pause when Still there appears and continues from the same prompt'
   await expect(investigation.answer('Ready')).toBeVisible();
   expect((await records.investigation(id))?.status).toBe('running');
   expect(fakeBluetooth.calls()).not.toContain('startNotifications');
+});
+
+// Given a connected investigation, when the page is hidden for 60 seconds without
+// an active recording, Gattsby saves and disconnects. Returning sooner cancels the wait.
+test('releases a hidden connection and reconnects on Resume', async ({ page, fakeBluetooth }) => {
+  await page.clock.install();
+  const { investigation } = await identify(page);
+  const id = investigation.id();
+  const records = new StoredRecords(page);
+  await setPageVisibility(page, 'hidden');
+  await page.clock.runFor(30_000);
+  await setPageVisibility(page, 'visible');
+  await page.clock.runFor(31_000);
+  expect(fakeBluetooth.calls()).not.toContain('disconnect');
+  await setPageVisibility(page, 'hidden');
+  await page.clock.runFor(60_100);
+  await expect.poll(() => fakeBluetooth.calls()).toContain('disconnect');
+  const dialog = new StillThereDialogPage(page);
+  await expect(dialog.paused()).toContainText('The page was hidden');
+  await expect.poll(async () => (await records.investigation(id))?.status).toBe('paused');
+  await setPageVisibility(page, 'visible');
+  await dialog.choosePaused('Resume');
+  await expect(investigation.connectionBanner).toContainText('Reconnecting to');
+  await page.clock.runFor(1_200);
+  await expect(investigation.answer('Ready')).toBeVisible();
+  expect(fakeBluetooth.calls().filter((name) => name === 'connect')).toHaveLength(2);
+  expect(fakeBluetooth.requestDeviceOptions()).toHaveLength(1);
+  expect(fakeBluetooth.writes()).toEqual([]);
 });
 
 for (const getDevices of [true, false]) {

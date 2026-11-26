@@ -1,7 +1,4 @@
-import type { Stage } from '../store/model/stage';
-
 export interface PausedInvestigation {
-  readonly reason: 'person' | 'idle';
-  readonly stage: Stage;
+  readonly reason: 'person' | 'idle' | 'hidden';
   readonly instruction: string;
 }

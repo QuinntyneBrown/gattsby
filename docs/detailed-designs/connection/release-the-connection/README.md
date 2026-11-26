@@ -70,7 +70,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    it pauses the loop and releases (FR-018). Chrome throttles timers in hidden tabs, so the release
    may come later than 60 seconds, never earlier.
 6. A released investigation is paused, not ended. Resuming it starts with a reconnect (FR-009; see
-   the connect-to-the-device design).
+   the connect-to-the-device design). The `released` state of the Paused dialog explains that the
+   page was hidden and that Resume reconnects.
 7. On `pagehide` the releaser calls `disconnect` without waiting; Chrome also closes the connection
    when the tab closes.
 8. Leaving the screen also frees the investigation's memory: the raw-log window, subscriptions and
@@ -84,9 +85,12 @@ listener left, that navigating to Past investigations during an investigation sh
 disconnects on "Leave and disconnect", and that "Stay" keeps the connection. A unit test drives the
 hidden-page timer with a fake clock and a fake visibility source.
 
-### Built in journey 2
+### Implementation
 
-The orchestrator disconnects after committing the verdict and before opening the Verdict page, and the Investigation page releases the connection and the raw log's memory when it is destroyed, so leaving by the back link or the brand disconnects. Not built yet: `leaveInvestigationGuard` and the leave and stop dialogs, and the hidden-page timer (journey 11). Until then leaving disconnects without asking.
+The orchestrator disconnects before opening the Verdict page. The Investigation page confirms
+connected navigation through the leave guard and releases the raw log's memory when it is
+destroyed. The visibility timer releases an idle connection and opens the released state of
+the Paused dialog.
 
 ## Requirements
 

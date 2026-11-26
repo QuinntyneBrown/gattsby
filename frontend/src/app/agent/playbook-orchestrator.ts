@@ -131,8 +131,7 @@ export class PlaybookOrchestrator {
   private pauseTask: Promise<void> | null = null;
   private readonly pauseSignal = signal<PausedInvestigation | null>(null);
   readonly pauseDetails = this.pauseSignal.asReadonly();
-  private readonly resumingPause = signal(false);
-  readonly resuming = this.resumingPause.asReadonly();
+  private resumingPause = false;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -161,6 +160,9 @@ export class PlaybookOrchestrator {
   readonly state = computed<DecisionState>(() => stateFrom(this.steps()));
   readonly stage = computed<Stage>(
     () => this.pending()?.action.stage ?? this.choosingStage() ?? this.state().stage,
+  );
+  readonly recording = computed(
+    () => this.status() === 'running' && this.pending()?.action.tool === 'subscribe_and_record',
   );
   readonly mode = computed(() => this.investigationSignal()?.mode ?? 'agent');
   readonly modeChange = computed(() => this.investigationSignal()?.modeChanges?.at(-1) ?? null);
@@ -387,20 +389,34 @@ export class PlaybookOrchestrator {
     const stage = this.stage();
     this.pauseSignal.set({
       reason,
-      stage,
       instruction: this.prompts.current()?.title ?? this.pending()?.label ?? STAGE_NAMES[stage],
     });
     this.statusSignal.set('paused');
     this.abort.abort();
     this.prompts.cancel();
     this.approvalLedger.revokeAll();
-    this.pauseTask = this.savePause(stage).catch((error: unknown) => this.fault(error));
+    const releasing = reason === 'hidden' ? this.ble.disconnect() : undefined;
+    this.pauseTask = this.savePause(stage, releasing).catch((error: unknown) => this.fault(error));
   }
 
-  private async savePause(stage: Stage): Promise<void> {
+  releaseForHiddenPage(): void {
+    const pause = this.pauseDetails();
+    if (!pause) {
+      this.pause('hidden');
+      return;
+    }
+    if (pause.reason === 'hidden' || this.leaving) return;
+    this.pauseSignal.update((details) => details && { ...details, reason: 'hidden' });
+    this.pauseTask = Promise.all([this.pauseTask, this.ble.disconnect()])
+      .then(() => undefined)
+      .catch((error: unknown) => this.fault(error));
+  }
+
+  private async savePause(stage: Stage, releasing?: Promise<void>): Promise<void> {
     await this.runTask;
     if (this.leaving) return;
-    await this.ble.suspendSubscriptions();
+    if (releasing) await releasing;
+    else await this.ble.suspendSubscriptions();
     this.log.takePending();
     if (this.leaving) return;
     const record = await this.store.recover(this.investigation()!.id, stage);
@@ -408,8 +424,8 @@ export class PlaybookOrchestrator {
   }
 
   async resumePaused(): Promise<void> {
-    if (!this.pauseDetails() || this.resuming()) return;
-    this.resumingPause.set(true);
+    if (!this.pauseDetails() || this.resumingPause) return;
+    this.resumingPause = true;
     try {
       await this.pauseTask;
       if (this.leaving || this.status() !== 'paused') return;
@@ -423,6 +439,8 @@ export class PlaybookOrchestrator {
           if (this.ble.connection().status === 'connected') {
             await this.ble.restoreSubscriptions(device.deviceId, this.abort.signal);
           } else {
+            this.restoreBaselineOnReconnect ||=
+              this.pauseDetails()?.reason === 'hidden' && !!this.state().standardRecordingId;
             this.recovery.resuming(device.deviceId, device.name, this.clock.now());
           }
         }
@@ -434,7 +452,7 @@ export class PlaybookOrchestrator {
     } catch (error) {
       this.fault(error);
     } finally {
-      this.resumingPause.set(false);
+      this.resumingPause = false;
     }
   }
 
@@ -478,7 +496,8 @@ export class PlaybookOrchestrator {
     const record = this.investigation();
     const stage = this.stage();
     await this.leave();
-    if (record && !record.verdict) await this.store.recover(record.id, stage);
+    if (record && !record.verdict)
+      await this.store.recover(record.id, stage).catch((error: unknown) => this.fault(error));
   }
 
   private async loop(): Promise<void> {
@@ -1022,6 +1041,11 @@ export class PlaybookOrchestrator {
   }
 
   private fault(error: unknown): void {
+    this.abort.abort();
+    this.prompts.cancel();
+    this.approvalLedger.lock();
+    this.pauseSignal.set(null);
+    void this.ble.disconnect().catch(() => undefined);
     this.modelThinkingSignal.set(false);
     this.releaseModel();
     this.pending.set(null);

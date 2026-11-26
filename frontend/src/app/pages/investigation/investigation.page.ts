@@ -31,6 +31,7 @@ import { LiveMetrics } from '../../live/live-metrics';
 import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
 import { ConnectionBannerComponent } from '../../notifications/connection-banner/connection-banner.component';
 import { ConnectionSupervisor } from '../../agent/connection-supervisor';
+import { ConnectionReleaser } from '../../agent/connection-releaser';
 import { StopInvestigationDialog } from '../../dialogs/stop-investigation/stop-investigation.dialog';
 import { LeaveInvestigationDialog } from '../../dialogs/leave-investigation/leave-investigation.dialog';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
@@ -84,6 +85,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     EmergencyStopController,
     ChecklistDecider,
     ConnectionSupervisor,
+    ConnectionReleaser,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -414,16 +416,19 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </button>
         </div>
       }
-      @if (orchestrator.pauseDetails(); as pause) {
-        <g-still-there-dialog
-          [instruction]="pause.instruction"
-          [paused]="pause.reason !== 'idle'"
-          [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
-          (continued)="orchestrator.resumePaused()"
-          (saveAndExit)="savePausedExit()"
-          (stop)="orchestrator.stop('personStop')"
-          (emergencyStop)="orchestrator.stop('emergencyStop')"
-        />
+      @if (!orchestrator.emergencyStop.view()) {
+        @if (orchestrator.pauseDetails(); as pause) {
+          <g-still-there-dialog
+            [instruction]="pause.instruction"
+            [paused]="pause.reason !== 'idle'"
+            [released]="pause.reason === 'hidden'"
+            [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
+            (continued)="orchestrator.resumePaused()"
+            (saveAndExit)="savePausedExit()"
+            (stop)="orchestrator.stop('personStop')"
+            (emergencyStop)="orchestrator.stop('emergencyStop')"
+          />
+        }
       }
     </div>
   `,
@@ -494,6 +499,10 @@ export class InvestigationPage implements OnInit, OnDestroy {
   );
 
   constructor() {
+    inject(ConnectionReleaser).watch(
+      () => this.connected() && !this.orchestrator.recording(),
+      () => this.orchestrator.releaseForHiddenPage(),
+    );
     effect(() => {
       if (this.prompts.idle()) this.orchestrator.pause('idle');
     });

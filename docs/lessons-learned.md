@@ -320,3 +320,16 @@ None; this is the first entry.
   subscriptions after the drop. The previous Control Point session and approvals are invalidated.
 - Apply the fake-clock lesson from journeys 6 and 9 to reconnect delays. Check the same device
   is retried, notifications return, and the Stop choice produces one verdict after a failed retry.
+
+## Journey 11 — Pause, stop and resume
+
+- A Leave confirmation now guards navigation from the connected Investigation page. Save the
+  pending stage for the Home card because the last committed step can belong to an earlier stage.
+- A paused recording is discarded while a connection drop retains its partial packets as evidence.
+  Both resume from committed steps. Read the highest raw sequence on reopening so new traffic
+  cannot overwrite saved evidence.
+- Apply the device identity lesson from journey 9. The fallback chooser requires a person’s tap
+  and the exact saved browser device ID. Restoring a standard baseline reconnects the live
+  subscription without saving a duplicate recording.
+- Fake-clock specs cover manual pause, the two-minute Still there pause and the hidden-page
+  deadline. Returning before the deadline clears the timer.

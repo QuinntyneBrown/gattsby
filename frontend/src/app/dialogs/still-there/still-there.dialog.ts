@@ -61,8 +61,10 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
               {{ paused() ? 'Paused' : 'Still there?' }}
             </h2>
             <p class="dialog__lead" id="still-there-description">
-              @if (paused()) {
-                Everything so far is saved. Resume when you’re ready.
+              @if (released()) {
+                The page was hidden, so Gattsby disconnected. Resume reconnects to this device.
+              } @else if (paused()) {
+                Nothing is sent or recorded while paused. Everything so far is saved.
               } @else {
                 Nothing has happened for 2 minutes. Everything so far is saved.
               }
@@ -106,6 +108,7 @@ export class StillThereDialog {
   readonly instruction = input.required<string>();
   readonly device = input<string | null>(null);
   readonly paused = input(false);
+  readonly released = input(false);
   readonly continued = output<void>();
   readonly stop = output<void>();
   readonly saveAndExit = output<void>();

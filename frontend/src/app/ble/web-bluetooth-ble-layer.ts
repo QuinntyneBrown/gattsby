@@ -328,13 +328,16 @@ export class WebBluetoothBleLayer extends BleLayer {
 
   async primaryServices(): Promise<GattServiceInfo[]> {
     const gatt = this.requireConnected();
+    const connection = this.state();
     let services: BluetoothRemoteGATTService[];
     try {
       services = await gatt.getPrimaryServices();
     } catch (error) {
+      this.requireSameConnection(connection);
       if (errorName(error) === 'NotFoundError') return [];
       throw this.gattError(error);
     }
+    this.requireSameConnection(connection);
     const layout: GattServiceInfo[] = [];
     for (const service of services) {
       const uuid = canonicalUuid(service.uuid);
@@ -351,17 +354,21 @@ export class WebBluetoothBleLayer extends BleLayer {
       } catch (error) {
         layout.push({ uuid, characteristics: [], error: errorName(error) });
       }
+      this.requireSameConnection(connection);
     }
     return layout;
   }
 
   async read(service: string, characteristic: string): Promise<ReadResult> {
     this.requireConnected();
+    const connection = this.state();
     const handle = this.services.get(canonicalUuid(service));
     if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
     try {
       const c = await handle.getCharacteristic(canonicalUuid(characteristic));
+      this.requireSameConnection(connection);
       const bytes = bytesOf(await c.readValue());
+      this.requireSameConnection(connection);
       const entryId = this.log.append({
         kind: 'read',
         direction: 'in',
@@ -371,6 +378,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       });
       return { bytes, entryId };
     } catch (error) {
+      this.requireSameConnection(connection);
       this.log.append({
         kind: 'read',
         direction: 'in',
@@ -389,6 +397,7 @@ export class WebBluetoothBleLayer extends BleLayer {
     receive: (value: ReadResult & { t: number }) => NotificationDecoding | undefined,
   ): Promise<() => Promise<void>> {
     this.requireConnected();
+    const connection = this.state();
     const serviceUuid = canonicalUuid(service);
     const uuid = canonicalUuid(characteristic);
     const subscriptionKey = `${serviceUuid}/${uuid}`;
@@ -396,10 +405,12 @@ export class WebBluetoothBleLayer extends BleLayer {
     if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
     try {
       const c = await handle.getCharacteristic(uuid);
+      this.requireSameConnection(connection);
       if (!c.properties.notify && !c.properties.indicate) {
         throw new ToolError('PROPERTY_MISSING', 'This characteristic does not send updates.');
       }
       await this.subscriptions.get(subscriptionKey)?.stop();
+      this.requireSameConnection(connection);
       const listener = (): void => {
         if (!c.value) return;
         const bytes = bytesOf(c.value);
@@ -429,6 +440,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       c.addEventListener('characteristicvaluechanged', listener);
       try {
         await c.startNotifications();
+        this.requireSameConnection(connection);
       } catch (error) {
         await stop();
         throw error;
@@ -526,6 +538,11 @@ export class WebBluetoothBleLayer extends BleLayer {
     if (!gatt?.connected || this.state().status !== 'connected')
       throw new ToolError('NOT_CONNECTED', 'The device is not connected.');
     return gatt;
+  }
+
+  private requireSameConnection(connection: ConnectionState): void {
+    if (connection !== this.state())
+      throw new ToolError('NOT_CONNECTED', 'The Bluetooth connection changed.');
   }
 
   private gattError(error: unknown): ToolError {
