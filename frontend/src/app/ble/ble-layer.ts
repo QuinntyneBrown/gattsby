@@ -35,6 +35,7 @@ export abstract class BleLayer {
     signal?: AbortSignal,
   ): Promise<{ at: number; entryId: string }>;
   abstract restoreSubscriptions(deviceId: string, signal: AbortSignal): Promise<string[]>;
+  abstract suspendSubscriptions(): Promise<void>;
   abstract primaryServices(): Promise<GattServiceInfo[]>;
   abstract read(service: string, characteristic: string): Promise<ReadResult>;
   abstract write(

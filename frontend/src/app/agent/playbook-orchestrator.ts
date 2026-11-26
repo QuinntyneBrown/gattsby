@@ -54,6 +54,7 @@ import type { ModelDecider } from './model-decider';
 import { ModelFailureRun } from './model-failure-run';
 import { checklistOptions, isBuiltStage, nextOutcome } from './playbook-rules';
 import { PromptChannel } from './prompt-channel';
+import type { PausedInvestigation } from './paused-investigation';
 import type { RuleAction } from './rule-outcome';
 import { STAGE_NAMES } from './stage-names';
 import { checkStop } from './stop-conditions';
@@ -126,6 +127,12 @@ export class PlaybookOrchestrator {
   private stepStartedAt: number | null = null;
   private repeatStep: (() => Promise<boolean>) | null = null;
   private restoreBaselineOnReconnect = false;
+  private runTask: Promise<void> | null = null;
+  private pauseTask: Promise<void> | null = null;
+  private readonly pauseSignal = signal<PausedInvestigation | null>(null);
+  readonly pauseDetails = this.pauseSignal.asReadonly();
+  private readonly resumingPause = signal(false);
+  readonly resuming = this.resumingPause.asReadonly();
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -282,8 +289,21 @@ export class PlaybookOrchestrator {
     this.modelSession ??= this.modelSessions.take(id);
     this.approvalLedger.begin();
     if (record.investigation.emergencyStoppedAt !== undefined) this.approvalLedger.lock();
+    const sequence = resume ? await this.store.nextRawSequence(id) : 0;
+    if (this.leaving) return;
+    this.log.begin(id, sequence);
     this.statusSignal.set('running');
-    this.log.begin(id, resume ? await this.store.nextRawSequence(id) : 0);
+    await this.beginLoop(id, resume);
+  }
+
+  private beginLoop(id: string, restorePermission = false): Promise<void> {
+    this.runTask = this.watchLoop(id, restorePermission).catch((error: unknown) =>
+      this.fault(error),
+    );
+    return this.runTask;
+  }
+
+  private async watchLoop(id: string, restorePermission: boolean): Promise<void> {
     const watcher = this.ble.disconnected.subscribe((event) => {
       if (
         event.intentional ||
@@ -302,7 +322,7 @@ export class PlaybookOrchestrator {
       this.abort.abort();
     });
     try {
-      if (resume && this.state().everConnected) {
+      if (restorePermission && this.state().everConnected) {
         this.restoreBaselineOnReconnect = !!this.state().standardRecordingId;
         await this.restoreDeviceAccess(id);
       }
@@ -348,7 +368,7 @@ export class PlaybookOrchestrator {
         ({ deviceId }) => deviceId === device.deviceId,
       );
     let retry = false;
-    while (!permitted && !this.leaving && !this.concludeNow) {
+    while (!permitted && !this.leaving && !this.concludeNow && this.status() === 'running') {
       await this.runStep(id, {
         tool: 'pick_resume_device',
         input: { retry },
@@ -358,13 +378,70 @@ export class PlaybookOrchestrator {
       permitted = !!this.steps().at(-1)?.result.ok;
       retry = true;
     }
-    if (permitted && !this.leaving && !this.concludeNow)
+    if (permitted && !this.leaving && !this.concludeNow && this.status() === 'running')
       this.recovery.resuming(device.deviceId, device.name, this.clock.now());
+  }
+
+  pause(reason: PausedInvestigation['reason']): void {
+    if (this.status() !== 'running' || this.concludeNow || this.leaving) return;
+    const stage = this.stage();
+    this.pauseSignal.set({
+      reason,
+      stage,
+      instruction: this.prompts.current()?.title ?? this.pending()?.label ?? STAGE_NAMES[stage],
+    });
+    this.statusSignal.set('paused');
+    this.abort.abort();
+    this.prompts.cancel();
+    this.approvalLedger.revokeAll();
+    this.pauseTask = this.savePause(stage).catch((error: unknown) => this.fault(error));
+  }
+
+  private async savePause(stage: Stage): Promise<void> {
+    await this.runTask;
+    if (this.leaving) return;
+    await this.ble.suspendSubscriptions();
+    this.log.takePending();
+    if (this.leaving) return;
+    const record = await this.store.recover(this.investigation()!.id, stage);
+    this.investigationSignal.set(record);
+  }
+
+  async resumePaused(): Promise<void> {
+    if (!this.pauseDetails() || this.resuming()) return;
+    this.resumingPause.set(true);
+    try {
+      await this.pauseTask;
+      if (this.leaving || this.status() !== 'paused') return;
+      const id = this.investigation()!.id;
+      this.investigationSignal.set(await this.store.reactivate(id));
+      if (this.leaving) return;
+      this.abort = new AbortController();
+      if (!this.concludeNow) {
+        const device = this.state().device;
+        if (device && this.state().everConnected) {
+          if (this.ble.connection().status === 'connected') {
+            await this.ble.restoreSubscriptions(device.deviceId, this.abort.signal);
+          } else {
+            this.recovery.resuming(device.deviceId, device.name, this.clock.now());
+          }
+        }
+      }
+      if (this.leaving) return;
+      this.pauseSignal.set(null);
+      this.statusSignal.set('running');
+      void this.beginLoop(id);
+    } catch (error) {
+      this.fault(error);
+    } finally {
+      this.resumingPause.set(false);
+    }
   }
 
   /** Stops the loop at once (personStop or emergencyStop) and concludes with what is known. */
   stop(reason: 'personStop' | 'emergencyStop'): void {
-    if (this.statusSignal() !== 'running' || this.stopReason === 'emergencyStop') return;
+    const paused = this.status() === 'paused' && !!this.pauseDetails();
+    if ((!paused && this.status() !== 'running') || this.stopReason === 'emergencyStop') return;
     this.stopReason = reason;
     this.concludeNow = true;
     if (reason === 'personStop') this.approvalLedger.lock();
@@ -381,6 +458,7 @@ export class PlaybookOrchestrator {
       const id = this.investigationSignal()!.id;
       void this.store.latchEmergencyStop(id, event.tappedAt).catch(() => undefined);
     }
+    if (paused) void this.resumePaused();
   }
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
@@ -450,7 +528,7 @@ export class PlaybookOrchestrator {
           this.abort.signal,
         );
         this.choosingStage.set(null);
-        if (this.leaving) return;
+        if (this.leaving || this.status() === 'paused') return;
         if (this.recovery.drop && !this.concludeNow) continue;
         if (!chosen) {
           this.concludeNow = true;
@@ -485,7 +563,7 @@ export class PlaybookOrchestrator {
             this.config.modelTimeoutMs ?? 10_000,
           );
           this.modelThinkingSignal.set(false);
-          if (this.leaving) return;
+          if (this.leaving || this.status() === 'paused') return;
           if (this.recovery.drop && !this.concludeNow) continue;
           modelDecision = reply.decision;
           if ('error' in reply) {
@@ -552,7 +630,7 @@ export class PlaybookOrchestrator {
       stage: this.stage(),
       ruleId: 'connection.reconnect',
     });
-    if (this.leaving || this.concludeNow) return;
+    if (this.leaving || this.concludeNow || this.status() === 'paused') return;
     const connected = !!this.steps().at(-1)?.result.ok;
     if (connected && this.restoreBaselineOnReconnect) {
       this.restoreBaselineOnReconnect = false;
@@ -701,6 +779,10 @@ export class PlaybookOrchestrator {
     }
     this.stepStartedAt = null;
     if (this.leaving) return true;
+    if (this.pauseDetails() && signal.aborted && approval?.decision !== 'send') {
+      this.pending.set(null);
+      return true;
+    }
     const dropped =
       !!this.recovery.drop && signal.aborted && action.tool !== 'reconnect' && !this.concludeNow;
     if (dropped) {

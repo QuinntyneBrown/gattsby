@@ -10,6 +10,7 @@ import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { LeaveInvestigationDialogPage } from './pages/leave-investigation.dialog.page';
 import { StopInvestigationDialogPage } from './pages/stop-investigation.dialog.page';
+import { StillThereDialogPage } from './pages/still-there.dialog.page';
 import { VerdictPage } from './pages/verdict.page';
 
 test.use({
@@ -71,6 +72,59 @@ test('keeps the investigation when the person stays and saves it when they leave
   await expect(home.resumeInvestigation('HZN-T202-4F1A')).toContainText('Paused at Standard path');
   expect(fakeBluetooth.calls()).toContain('disconnect');
   expect(await stored.investigation(id)).toMatchObject({ status: 'paused', verdict: null });
+});
+
+// Given a baseline recording in progress, when the person pauses, the recorder stops
+// without a partial commit and the existing connection can repeat the step on Resume.
+test('pauses an active recording and resumes it without reconnecting', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  await page.clock.install();
+  const { investigation } = await identify(page);
+  const id = investigation.id();
+  const records = new StoredRecords(page);
+  await fakeBluetooth.setEffort(1);
+  await investigation.choose('Ready');
+  await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+  await page.clock.runFor(3_100);
+  await investigation.chooseOption('Pause');
+  const dialog = new StillThereDialogPage(page);
+  await expect(dialog.paused()).toBeVisible();
+  await expect.poll(async () => (await records.investigation(id))?.status).toBe('paused');
+  const raw = await records.rawLog(id);
+  await page.clock.runFor(15_000);
+  expect(fakeBluetooth.calls()).not.toContain('disconnect');
+  expect(fakeBluetooth.calls()).toContain('stopNotifications');
+  expect(await records.rawLog(id)).toEqual(raw);
+  expect(await records.recordings(id)).toEqual([]);
+  await dialog.choosePaused('Resume');
+  await expect
+    .poll(() => fakeBluetooth.calls().filter((name) => name === 'startNotifications').length)
+    .toBe(2);
+  await page.clock.runFor(10_200);
+  await expect(investigation.answer('Done')).toBeVisible();
+  expect(await records.recordings(id)).toEqual([expect.objectContaining({ interrupted: false })]);
+  expect(fakeBluetooth.calls().filter((name) => name === 'connect')).toHaveLength(1);
+  expect(fakeBluetooth.writes()).toEqual([]);
+});
+
+test('saves a pause when Still there appears and continues from the same prompt', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  await page.clock.install();
+  const { investigation } = await identify(page);
+  const id = investigation.id();
+  const records = new StoredRecords(page);
+  await page.clock.runFor(120_100);
+  const dialog = new StillThereDialogPage(page);
+  await expect(dialog.dialog()).toBeVisible();
+  await expect.poll(async () => (await records.investigation(id))?.status).toBe('paused');
+  await dialog.continue();
+  await expect(investigation.answer('Ready')).toBeVisible();
+  expect((await records.investigation(id))?.status).toBe('running');
+  expect(fakeBluetooth.calls()).not.toContain('startNotifications');
 });
 
 for (const getDevices of [true, false]) {

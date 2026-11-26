@@ -72,14 +72,7 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = event.target as BluetoothDevice;
     const intentional = this.state().status === 'releasing';
     this.log.append({ kind: 'disconnect', direction: 'in', hex: '', detail: device.id });
-    if (!intentional) {
-      this.droppedSubscriptions = {
-        deviceId: device.id,
-        entries: [...this.subscriptions.values()].filter(
-          ({ characteristic }) => characteristic !== FTMS_CONTROL_POINT,
-        ),
-      };
-    }
+    if (!intentional) this.rememberSubscriptions(device.id);
     for (const subscription of this.subscriptions.values()) void subscription.stop();
     device.removeEventListener('gattserverdisconnected', this.onDisconnected);
     this.services.clear();
@@ -89,6 +82,20 @@ export class WebBluetoothBleLayer extends BleLayer {
     }
     this.disconnects.next({ deviceId: device.id, at: this.clock.now(), intentional });
   };
+
+  private rememberSubscriptions(deviceId: string): void {
+    const entries = [...this.subscriptions.values()].filter(
+      ({ characteristic }) => characteristic !== FTMS_CONTROL_POINT,
+    );
+    if (entries.length || this.droppedSubscriptions?.deviceId !== deviceId)
+      this.droppedSubscriptions = { deviceId, entries };
+  }
+
+  async suspendSubscriptions(): Promise<void> {
+    if (!this.device) return;
+    this.rememberSubscriptions(this.device.id);
+    await this.stopSubscriptions();
+  }
 
   async availability(): Promise<BleAvailability> {
     const bluetooth = this.bluetooth;
@@ -484,6 +491,20 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = this.device;
     if (!device) return;
     this.state.update((s) => ({ ...s, status: 'releasing' }));
+    await this.stopSubscriptions();
+    device.gatt?.disconnect();
+    // Chrome fires `gattserverdisconnected`; the fake does too. Make sure the state settles.
+    if (this.device === device) {
+      device.removeEventListener('gattserverdisconnected', this.onDisconnected);
+      this.log.append({ kind: 'disconnect', direction: 'out', hex: '', detail: device.id });
+      this.device = null;
+      this.services.clear();
+      this.state.set(DISCONNECTED);
+      this.disconnects.next({ deviceId: device.id, at: this.clock.now(), intentional: true });
+    }
+  }
+
+  private async stopSubscriptions(): Promise<void> {
     const stops = [...this.subscriptions.values()].map(({ stop }) => stop());
     if (stops.length) {
       let cancel = (): void => undefined;
@@ -497,16 +518,6 @@ export class WebBluetoothBleLayer extends BleLayer {
       } finally {
         cancel();
       }
-    }
-    device.gatt?.disconnect();
-    // Chrome fires `gattserverdisconnected`; the fake does too. Make sure the state settles.
-    if (this.device === device) {
-      device.removeEventListener('gattserverdisconnected', this.onDisconnected);
-      this.log.append({ kind: 'disconnect', direction: 'out', hex: '', detail: device.id });
-      this.device = null;
-      this.services.clear();
-      this.state.set(DISCONNECTED);
-      this.disconnects.next({ deviceId: device.id, at: this.clock.now(), intentional: true });
     }
   }
 

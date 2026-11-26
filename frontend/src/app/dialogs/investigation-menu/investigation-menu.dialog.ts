@@ -45,6 +45,11 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
           <ul class="sheet-menu">
             @if (running()) {
               <li>
+                <button class="sheet-menu__item" type="button" (click)="pause()">
+                  <span class="sheet-menu__title">Pause</span>
+                </button>
+              </li>
+              <li>
                 <button class="sheet-menu__item" type="button" (click)="confirmStop()">
                   <span class="sheet-menu__title">Stop and get a verdict now</span>
                 </button>
@@ -68,6 +73,7 @@ export class InvestigationMenuDialog {
   readonly noteRequested = output<void>();
   readonly emergencyStop = output<void>();
   readonly stopRequested = output<void>();
+  readonly pauseRequested = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly note = viewChild.required<ElementRef<HTMLButtonElement>>('note');
 
@@ -97,5 +103,10 @@ export class InvestigationMenuDialog {
   protected confirmStop(): void {
     this.close();
     this.stopRequested.emit();
+  }
+
+  protected pause(): void {
+    this.close();
+    this.pauseRequested.emit();
   }
 }

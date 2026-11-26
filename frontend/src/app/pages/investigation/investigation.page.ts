@@ -370,6 +370,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           (noteRequested)="openNote()"
           (emergencyStop)="orchestrator.stop('emergencyStop')"
           (stopRequested)="stopOpen.set(true)"
+          (pauseRequested)="orchestrator.pause('person')"
         />
       }
       @if (stopOpen()) {
@@ -413,11 +414,13 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </button>
         </div>
       }
-      @if (prompts.idle()) {
+      @if (orchestrator.pauseDetails(); as pause) {
         <g-still-there-dialog
-          [instruction]="prompts.current()?.title ?? ''"
+          [instruction]="pause.instruction"
+          [paused]="pause.reason !== 'idle'"
           [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
-          (continued)="prompts.continueAfterIdle()"
+          (continued)="orchestrator.resumePaused()"
+          (saveAndExit)="savePausedExit()"
           (stop)="orchestrator.stop('personStop')"
           (emergencyStop)="orchestrator.stop('emergencyStop')"
         />
@@ -492,6 +495,9 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
+      if (this.prompts.idle()) this.orchestrator.pause('idle');
+    });
+    effect(() => {
       this.orchestrator.feed();
       const scroll = this.feedScroll()?.nativeElement;
       if (scroll) queueMicrotask(() => scroll.scrollTo({ top: scroll.scrollHeight }));
@@ -523,7 +529,8 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   async canLeave(): Promise<boolean> {
     const status = this.orchestrator.status();
-    if (status === 'concluded' || status === 'concluding' || status === 'loading') return true;
+    if (status === 'concluded' || status === 'concluding' || status === 'loading' || this.leaving())
+      return true;
     if (!this.connected()) {
       await this.orchestrator.saveExit();
       return true;
@@ -533,6 +540,12 @@ export class InvestigationPage implements OnInit, OnDestroy {
       this.leaveAnswer = resolve;
       this.leaveOpen.set(true);
     });
+  }
+
+  protected async savePausedExit(): Promise<void> {
+    this.leaving.set(true);
+    await this.orchestrator.saveExit();
+    await this.router.navigate(['/']);
   }
 
   protected async answerLeave(leave: boolean): Promise<void> {
