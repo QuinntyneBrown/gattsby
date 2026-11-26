@@ -21,6 +21,7 @@ import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
+import { sameDeviceProfile } from './same-device-profile';
 import { validateNote } from './validate-note';
 
 const RECORD_FORMAT = 1;
@@ -495,6 +496,39 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return row as DeviceProfile;
   }
 
+  async importProfile(profile: DeviceProfile, signal: AbortSignal): Promise<boolean> {
+    let alreadyStored = false;
+    await this.write(
+      ['profiles'],
+      'strict',
+      (tx) => {
+        const profiles = tx.objectStore('profiles');
+        const match = profiles.get(profile.id);
+        match.onsuccess = () => {
+          if (match.result) {
+            alreadyStored = sameDeviceProfile(match.result as DeviceProfile, profile);
+            if (!alreadyStored)
+              refuse(tx, new StoreError('ALREADY_EXISTS', 'This profile already exists.'));
+            return;
+          }
+          const related = profiles.index('byInvestigation').getKey(profile.investigationId);
+          related.onsuccess = () => {
+            if (related.result !== undefined) {
+              refuse(
+                tx,
+                new StoreError('ALREADY_EXISTS', 'This investigation already has a profile.'),
+              );
+            } else {
+              profiles.add(profile);
+            }
+          };
+        };
+      },
+      signal,
+    );
+    return alreadyStored;
+  }
+
   async recordedPackets(
     investigationId: string,
     recordingId: string,
@@ -615,13 +649,36 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     stores: string[],
     durability: IDBTransactionDurability,
     work: (tx: IDBTransaction) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     const db = await this.open();
+    signal?.throwIfAborted();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(stores, 'readwrite', { durability });
-      tx.oncomplete = () => resolve();
-      tx.onabort = () => reject(toStoreError(tx));
-      work(tx);
+      const abort = () => {
+        try {
+          tx.abort();
+        } catch {
+          /* The transaction already finished. */
+        }
+      };
+      const release = () => signal?.removeEventListener('abort', abort);
+      signal?.addEventListener('abort', abort, { once: true });
+      tx.oncomplete = () => {
+        release();
+        resolve();
+      };
+      tx.onabort = () => {
+        release();
+        reject(signal?.aborted ? signal.reason : toStoreError(tx));
+      };
+      try {
+        work(tx);
+      } catch (error) {
+        abort();
+        release();
+        reject(error);
+      }
     });
   }
 

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DeleteAllDataDialog } from '../../dialogs/delete-all-data/delete-all-data.dialog';
+import { ImportDialog } from '../../dialogs/import/import.dialog';
 import { ReadinessSession } from '../../environment/readiness-session';
 import { formatStorage } from '../../shared/format-storage';
 import { InvestigationStore } from '../../store/investigation-store';
@@ -10,7 +11,7 @@ import { PendingVerdict } from '../../store/pending-verdict';
 
 @Component({
   selector: 'g-settings-page',
-  imports: [DeleteAllDataDialog, RouterLink],
+  imports: [DeleteAllDataDialog, ImportDialog, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="appbar">
@@ -82,12 +83,16 @@ import { PendingVerdict } from '../../store/pending-verdict';
           <p role="status">{{ storageMessage() }}</p>
         }
         <a class="btn btn--lg" routerLink="/investigations">Past investigations</a>
+        <button class="btn btn--lg" type="button" (click)="showImport.set(true)">Import</button>
         @if (counts()) {
           <p class="text-muted">Delete every investigation, device profile, photo and setting.</p>
           <button class="btn btn--lg" type="button" (click)="openDelete()">Delete all data</button>
         }
       </section>
     </main>
+    @if (showImport()) {
+      <g-import-dialog (closed)="showImport.set(false)" (imported)="loadStorage()" />
+    }
     @if (showDelete() && counts(); as total) {
       <g-delete-all-data-dialog
         [counts]="total"
@@ -115,6 +120,7 @@ export class SettingsPage implements OnInit {
   protected readonly requestingPersistence = signal(false);
   protected readonly storageMessage = signal<string | null>(null);
   protected readonly showDelete = signal(false);
+  protected readonly showImport = signal(false);
   protected readonly deleting = signal(false);
   protected readonly blocked = signal(false);
   protected readonly deleteError = signal<string | null>(null);
@@ -124,7 +130,7 @@ export class SettingsPage implements OnInit {
     void this.loadStorage();
   }
 
-  private async loadStorage(): Promise<void> {
+  protected async loadStorage(): Promise<void> {
     try {
       const [usage, counts] = await Promise.all([this.store.usage(), this.store.localDataCounts()]);
       this.usage.set(usage);

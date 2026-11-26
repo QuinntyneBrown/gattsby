@@ -1,3 +1,5 @@
+import type { CapabilityDiagnostic } from '../environment/capability-diagnostic';
+import type { DeviceProfile } from './model/device-profile';
 import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationNote } from './model/investigation-note';
 import type { InvestigationRecord } from './model/investigation-record';
@@ -45,7 +47,9 @@ export abstract class InvestigationStore {
   abstract photos(id: string): Promise<import('./model/investigation-photo').InvestigationPhoto[]>;
   abstract photoCount(id: string): Promise<number>;
   abstract rawEvidence(id: string, ids: readonly string[]): Promise<RawLogEntry[]>;
-  abstract getProfile(id: string): Promise<import('./model/device-profile').DeviceProfile>;
+  abstract getProfile(id: string): Promise<DeviceProfile>;
+  /** Returns true when the same profile was already stored. */
+  abstract importProfile(profile: DeviceProfile, signal: AbortSignal): Promise<boolean>;
   /** Returns the packets linked to one recording, or null if the recording does not exist. */
   abstract recordedPackets(
     investigationId: string,
@@ -60,4 +64,3 @@ export abstract class InvestigationStore {
   abstract setUseAgentWhenAvailable(enabled: boolean): Promise<void>;
   abstract recordCapabilityDiagnostics(rows: readonly CapabilityDiagnostic[]): Promise<void>;
 }
-import type { CapabilityDiagnostic } from '../environment/capability-diagnostic';

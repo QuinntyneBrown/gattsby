@@ -14,4 +14,8 @@ export class SettingsPage {
   get deleteAll() {
     return this.page.getByRole('button', { name: 'Delete all data', exact: true });
   }
+
+  get importFile() {
+    return this.page.getByRole('button', { name: 'Import', exact: true });
+  }
 }
