@@ -11,6 +11,7 @@ import type {
 import { canonicalUuid } from './uuid';
 import type { CommandDefinition } from './command-definition';
 import type { ControlLimits } from './control-limits';
+import type { ExpectedRange } from '../analysis/expected-range';
 
 const BRAND_SUGGESTIONS = 5;
 
@@ -56,6 +57,11 @@ export class KnowledgeBaseIndex {
     return Object.hasOwn(this.data.controlLimits, deviceType)
       ? this.data.controlLimits[deviceType]
       : undefined;
+  }
+
+  encodingRange(deviceType: string): ExpectedRange | undefined {
+    const ranges = this.data.encodingRanges;
+    return ranges && Object.hasOwn(ranges, deviceType) ? ranges[deviceType] : undefined;
   }
 
   /** Every standard and vendor service UUID, blocklisted ones included. */

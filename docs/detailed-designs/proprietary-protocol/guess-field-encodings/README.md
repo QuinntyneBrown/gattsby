@@ -123,21 +123,21 @@ the expected range is 0–20 km/h.
 | `uint16` BE, ×0.001 | 11.3, 62.5, 48.1 | 0.33 | — | No fit |
 
 When two scales both fit, the expected range decides. A narrow range taken from the speed the person
-was asked to hold ("walk slowly — around 3 km/h") separates them better than a wide one. The default
-plausible range per metric is knowledge-base data, `<TO SUPPLY>`. So is the margin put around an
-instructed value.
+was asked to hold ("walk slowly — around 3 km/h") separates them better than a wide one. The
+knowledge base supplies plausible screening ranges for treadmill speed, bike cadence and rower
+stroke rate. These ranges rank possible encodings from recorded data.
 
 ### How the rules use the tools
 
 1. After `find_varying_bytes`, `correlate_with_action` runs over the idle, slow and fast recordings
    with `order: ["idle", "slow", "fast"]`.
-2. `guess_field_encoding` runs on the top-ranked candidate, once on the lowest active level's
-   recording and once on the highest. The rules keep the encodings that fit both, in the order of the
-   highest-level call. A right encoding fits at every level.
+2. `guess_field_encoding` tests the top-ranked candidate in the highest active recording. The
+   optional `compareWithRecordingId` asks it to retain only encodings that also fit the lower active
+   recording. The result stays in the highest recording’s order.
 3. The top fit becomes an observation: a candidate decoding rule, status *likely*, with the
    recordings, the ranking step and the fit step as evidence. `ConfidenceScorer` treats it as weaker
    evidence than a confirmed metric (see the track-the-hypothesis design).
-4. An empty `fits`, or no candidate with |ρ| above `<TO SUPPLY>`, leaves the field as varying but
+4. An empty `fits`, or no candidate with |ρ| at least 0.9, leaves the field as varying but
    undecoded. That is evidence for *Partially decoded* or *Needs a missing tool* (FR-029; see the
    issue-the-verdict design).
 

@@ -24,6 +24,7 @@ const KINDS = [
   'brand-suggestions',
   'command-set',
   'control-limits',
+  'encoding-ranges',
 ];
 const FTMS_COMMANDS = new Map([
   ['requestControl', 0],
@@ -110,6 +111,12 @@ export function buildKnowledgeBase(dir: string): { errors: string[]; output: Jso
           errors.push(`${name}: /namePatterns/${i}/pattern: does not compile`);
         }
       });
+    }
+    if (kind === 'encoding-ranges') {
+      const ranges = data['byMachineType'] as Record<string, { min: number; max: number }>;
+      for (const [deviceType, { min, max }] of Object.entries(ranges)) {
+        if (min >= max) errors.push(`${name}: /byMachineType/${deviceType}: min must be below max`);
+      }
     }
     byKind.set(kind, [...(byKind.get(kind) ?? []), { path: name, data }]);
   }
@@ -242,6 +249,7 @@ export function buildKnowledgeBase(dir: string): { errors: string[]; output: Jso
     controlLimits,
     blocklist,
     brandSuggestions: (byKind.get('brand-suggestions') ?? [])[0]?.data['byMachineType'] ?? {},
+    encodingRanges: (byKind.get('encoding-ranges') ?? [])[0]?.data['byMachineType'] ?? {},
     knownServiceUuids,
   };
   const contentHash = createHash('sha256').update(JSON.stringify(body)).digest('hex');

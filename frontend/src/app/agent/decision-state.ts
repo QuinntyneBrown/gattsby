@@ -1,5 +1,6 @@
 import type { ChosenDevice } from '../ble/chosen-device';
 import type { ReachabilityAssessment } from '../analysis/reachability-assessment';
+import type { FieldCandidate } from '../analysis/field-candidate';
 import {
   REACHABILITY_CHECKS,
   type ReachabilityCheck,
@@ -63,6 +64,8 @@ export interface DecisionState {
   readonly standardRecordingId: string | null;
   readonly proprietaryRecordings: Readonly<Partial<Record<ProprietaryLevel, ProprietaryRecording>>>;
   readonly proprietaryCompared: boolean;
+  readonly proprietaryRanking: readonly FieldCandidate[] | null;
+  readonly proprietaryEncodingAttempted: boolean;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly readableMetrics: readonly ReadableMetric[];
@@ -117,6 +120,8 @@ export const INITIAL_STATE: DecisionState = {
   standardRecordingId: null,
   proprietaryRecordings: {},
   proprietaryCompared: false,
+  proprietaryRanking: null,
+  proprietaryEncodingAttempted: false,
   speedAction: null,
   speedConfirmation: null,
   readableMetrics: [],
@@ -181,6 +186,13 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return { ...next, reachability: data as unknown as ReachabilityAssessment | null };
     case 'find_varying_bytes':
       return { ...next, proprietaryCompared: true };
+    case 'correlate_with_action':
+      return {
+        ...next,
+        proprietaryRanking: (data?.['ranked'] as FieldCandidate[] | undefined) ?? [],
+      };
+    case 'guess_field_encoding':
+      return { ...next, proprietaryEncodingAttempted: true };
     case 'check_capabilities':
       return {
         ...next,

@@ -2,6 +2,7 @@
 // written by scripts/validate-knowledge-base.ts. Every UUID is lowercase 128-bit.
 import type { CommandDefinition } from './command-definition';
 import type { ControlLimits } from './control-limits';
+import type { ExpectedRange } from '../analysis/expected-range';
 
 export type GattProperty = 'read' | 'write' | 'writeWithoutResponse' | 'notify' | 'indicate';
 
@@ -62,5 +63,6 @@ export interface KnowledgeBaseData {
   readonly controlLimits: Readonly<Record<string, ControlLimits>>;
   readonly blocklist: readonly KbBlocklistEntry[];
   readonly brandSuggestions: Readonly<Record<string, readonly string[]>>;
+  readonly encodingRanges?: Readonly<Record<string, ExpectedRange>>;
   readonly knownServiceUuids: readonly string[];
 }

@@ -1,0 +1,8 @@
+{
+  "kind": "encoding-ranges",
+  "byMachineType": {
+    "treadmill": { "metric": "speed", "unit": "km/h", "min": 0, "max": 20 },
+    "bike": { "metric": "cadence", "unit": "rpm", "min": 0, "max": 140 },
+    "rower": { "metric": "stroke rate", "unit": "spm", "min": 0, "max": 45 }
+  }
+}

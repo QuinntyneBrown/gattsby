@@ -30,6 +30,7 @@ const OBSERVED = new Set([
   'varying-field',
   'silent',
   'not-recorded',
+  'candidate-encoding',
 ]);
 
 export function verdictView(

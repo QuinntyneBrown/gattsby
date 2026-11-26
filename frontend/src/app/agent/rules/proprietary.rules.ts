@@ -35,6 +35,24 @@ function recordingIds(ctx: RuleContext): string[] {
   });
 }
 
+function encodingInput({ state, kb, facts }: RuleContext) {
+  const expected = kb.encodingRange(facts.hypothesis?.deviceType ?? state.machineType ?? '');
+  const best = state.proprietaryRanking?.find(
+    ({ correlation, accumulating }) => !accumulating && Math.abs(correlation) >= 0.9,
+  );
+  const slow = state.proprietaryRecordings.slow?.id;
+  const fast = state.proprietaryRecordings.fast?.id;
+  if (!best || !expected || !slow || !fast) return null;
+  return {
+    recordingId: fast,
+    compareWithRecordingId: slow,
+    uuid: best.uuid,
+    offset: best.offset,
+    width: best.width,
+    expected,
+  };
+}
+
 export const PROPRIETARY_RULES: readonly StageRule[] = [
   {
     id: 'proprietary.record-level',
@@ -77,5 +95,26 @@ export const PROPRIETARY_RULES: readonly StageRule[] = [
       decided('proprietary.compare', 'proprietary', 'find_varying_bytes', {
         recordingIds: recordingIds(ctx),
       }),
+  },
+  {
+    id: 'proprietary.rank',
+    stage: 'proprietary',
+    when: (ctx) =>
+      ctx.state.proprietaryCompared &&
+      ctx.state.proprietaryRanking === null &&
+      recordingIds(ctx).length >= 3 &&
+      ctx.facts.observations.some(({ kind }) => kind === 'varying-field'),
+    then: (ctx) =>
+      decided('proprietary.rank', 'proprietary', 'correlate_with_action', {
+        recordingIds: recordingIds(ctx),
+        order: [...PROPRIETARY_LEVELS],
+      }),
+  },
+  {
+    id: 'proprietary.guess',
+    stage: 'proprietary',
+    when: (ctx) => !ctx.state.proprietaryEncodingAttempted && !!encodingInput(ctx),
+    then: (ctx) =>
+      decided('proprietary.guess', 'proprietary', 'guess_field_encoding', encodingInput(ctx)!),
   },
 ];

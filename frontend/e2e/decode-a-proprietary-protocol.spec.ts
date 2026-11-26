@@ -131,3 +131,37 @@ test.describe('The browser has no on-device model', () => {
     expect(fakeBluetooth.writes()).toEqual([]);
   });
 });
+
+// Given three recordings with an effort-dependent field, the tool ranks the field and
+// reports an encoding only if it fits the two active levels.
+test('ranks the effort field and records a supported candidate encoding', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const investigation = await connectToRower(page);
+  const id = investigation.id();
+  await captureLevels(page, investigation, fakeBluetooth);
+  const verdict = new VerdictPage(page);
+  await expect(verdict.title).toHaveText('Partially decoded');
+  const records = new StoredRecords(page);
+  const steps = await records.steps(id);
+  const ranking = steps.find(({ tool }) => tool === 'correlate_with_action')?.result.data as
+    { ranked: { correlation: number }[] } | undefined;
+  expect(ranking?.ranked[0]).toMatchObject({
+    uuid: dataUuid,
+    offset: 5,
+    width: 2,
+    byteOrder: 'LE',
+  });
+  expect(ranking!.ranked[0].correlation).toBeGreaterThan(0.9);
+  const encodings = steps.find(({ tool }) => tool === 'guess_field_encoding')?.result.data as
+    { fits: { type: string; byteOrder: string; scale: number; unit: string }[] } | undefined;
+  expect(encodings?.fits[0]).toMatchObject({
+    type: 'uint16',
+    byteOrder: 'LE',
+    scale: 0.1,
+    unit: 'spm',
+  });
+  await expect(verdict.group('Observed')).toContainText('Candidate encoding');
+  expect(fakeBluetooth.writes()).toEqual([]);
+});
