@@ -392,3 +392,16 @@ None; this is the first entry.
   records omitted. Imported investigations show evidence without resuming the playbook.
 - Treat the presence of an attachment in stored data and the choice to include it in a new
   export as two separate decisions. Check the privacy default when exporting a restored profile.
+
+## Journey 17 — Work offline
+
+- Apply the production-header lesson from journey 1. Test service worker registration with the
+  real CSP and Trusted Types policy. Pass Angular the trusted URL object unchanged and
+  prefetch all lazy chunks, fonts, icons and schemas before relying on the offline cache.
+- Let Chromium use the worker in the offline specs. Wait for a controlled cache response before
+  going offline, then prove that the next document came from the worker and the investigation
+  reached a verdict using the fake device. Use an isolated server port when running multiple
+  local suites so one runner cannot close another runner's server.
+- Apply the no-interruption lesson from journey 11. Hold the Reload action during the
+  investigation and recheck the current route on a tap. Reload after the verdict only when
+  the person requests it.

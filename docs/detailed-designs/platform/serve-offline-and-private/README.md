@@ -67,7 +67,8 @@ The design introduces these building blocks in the Angular workspace under `fron
   Node's built-in modules (ADR 0003). The behaviour specs and `HeaderCheck` run against it, so they
   see the same Content Security Policy as the deployed app.
 - **Network guard** (the shared Playwright fixture, `e2e/fixtures/gattsby-test.ts`) — aborts and
-  records any request to a host other than localhost, and fails the spec (see the
+  records requests outside the configured local origin, including requests made by the
+  service worker, and fails the spec (see the
   simulate-devices-and-model design).
 
 ### Response headers

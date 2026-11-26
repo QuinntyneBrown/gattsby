@@ -18,4 +18,8 @@ export class SettingsPage {
   get importFile() {
     return this.page.getByRole('button', { name: 'Import', exact: true });
   }
+
+  get about() {
+    return this.page.getByRole('region', { name: 'About', exact: true });
+  }
 }
