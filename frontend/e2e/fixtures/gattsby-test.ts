@@ -21,8 +21,6 @@ interface GattsbyFixtures {
   guards: Guards;
 }
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
-
 // Playwright's `test` with both fakes, a fake clock and the guards (simulate-devices-and-model
 // design). Every behaviour spec imports `test` and `expect` from here.
 export const test = base.extend<GattsbyOptions & GattsbyFixtures>({
@@ -34,10 +32,11 @@ export const test = base.extend<GattsbyOptions & GattsbyFixtures>({
     await use(new SimulationRecorder());
   },
 
-  page: async ({ page, context, bluetooth, model, recorder }, use) => {
+  page: async ({ page, context, baseURL, bluetooth, model, recorder }, use) => {
+    const origin = new URL(baseURL!).origin;
     await context.route('**/*', async (route) => {
       const url = new URL(route.request().url());
-      if (url.protocol === 'data:' || url.protocol === 'blob:' || LOCAL_HOSTS.has(url.hostname)) {
+      if (url.protocol === 'data:' || url.protocol === 'blob:' || url.origin === origin) {
         await route.continue();
         return;
       }

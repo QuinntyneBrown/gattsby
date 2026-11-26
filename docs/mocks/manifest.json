@@ -586,10 +586,12 @@
       "opens_from": "device-profile",
       "requirements": [
         "FR-062",
-        "NFR-008"
+        "NFR-008",
+        "NFR-006"
       ],
       "states": [
         "info",
+        "update",
         "success",
         "warning",
         "danger",

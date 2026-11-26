@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { APP_VERSION } from '../../app-version';
 import { DeleteAllDataDialog } from '../../dialogs/delete-all-data/delete-all-data.dialog';
 import { ImportDialog } from '../../dialogs/import/import.dialog';
 import { ReadinessSession } from '../../environment/readiness-session';
@@ -89,6 +90,17 @@ import { PendingVerdict } from '../../store/pending-verdict';
           <button class="btn btn--lg" type="button" (click)="openDelete()">Delete all data</button>
         }
       </section>
+      <section class="settings-group" aria-labelledby="about-heading">
+        <h2 id="about-heading" class="section-title">About</h2>
+        <dl class="kv">
+          <dt>App</dt>
+          <dd>Gattsby {{ appVersion }}</dd>
+        </dl>
+        <p class="text-sm text-muted" style="margin-top: var(--space-4)">
+          Nothing leaves this device: no accounts, no analytics, no server. Exporting is the only
+          way data leaves, and only when you start it.
+        </p>
+      </section>
     </main>
     @if (showImport()) {
       <g-import-dialog (closed)="showImport.set(false)" (imported)="loadStorage()" />
@@ -106,6 +118,7 @@ import { PendingVerdict } from '../../store/pending-verdict';
   `,
 })
 export class SettingsPage implements OnInit {
+  protected readonly appVersion = inject(APP_VERSION);
   private readonly store = inject(InvestigationStore);
   private readonly session = inject(ReadinessSession);
   private readonly router = inject(Router);

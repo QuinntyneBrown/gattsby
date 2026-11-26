@@ -21,8 +21,8 @@ the shared core (BLE layer, knowledge base, store).
 | 14 | Review evidence and missing tools | Open the packets that support a reading, filter the evidence timeline and export missing-tool requests grouped across investigations. | 4 | 100 |
 | 15 | Browse and delete history | Browse past investigations and saved devices, see storage use and delete one investigation or all local data with confirmation. | 3 | 100 |
 | 16 | Import profiles and records | Validate and reopen exported profiles and supported full records with their evidence and selected attachments. | 3 | 100 |
-| 17 | Work offline | Run fully offline once loaded, with no network requests. | 3 | 0 |
+| 17 | Work offline | Cache the app and its assets, run a full offline investigation, and defer Reload until the investigation ends. Cold-start timing on a mid-range phone remains to be measured. | 3 | 95 |
 | 18 | Unlock vendor data safely | Send a known vendor unlock, never bypassing encryption or pairing. | 4 | 0 |
 | 19 | Read a model plate photo | Photograph the model plate to identify maker and model. | 5 | 0 |
 | 20 | Use the agent on a phone | Run full agent mode once phones offer an on-device model. | 5 | 0 |
-| | **Total** | | **101** | **81** |
+| | **Total** | | **101** | **84** |

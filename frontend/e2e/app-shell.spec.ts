@@ -67,15 +67,15 @@ test.describe('App shell', () => {
   test('Given the production build, when the person opens /, then Geist is loaded from the app itself', async ({
     page,
   }) => {
-    const fontHosts = new Set<string>();
+    const fontOrigins = new Set<string>();
     page.on('request', (request) => {
-      if (request.resourceType() === 'font') fontHosts.add(new URL(request.url()).host);
+      if (request.resourceType() === 'font') fontOrigins.add(new URL(request.url()).origin);
     });
     const home = new HomePage(page);
 
     await home.goto();
 
     expect(await new Theme(page).loadedFontFamilies()).toContain('Geist');
-    expect([...fontHosts]).toEqual(['localhost:4300']);
+    expect([...fontOrigins]).toEqual([new URL(page.url()).origin]);
   });
 });

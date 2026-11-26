@@ -1,4 +1,4 @@
-import { isAllowedScriptUrl } from './script-url-allowlist';
+import { ALLOWED_SCRIPT_PATHS, isAllowedScriptUrl } from './script-url-allowlist';
 
 // Gattsby's one Trusted Types policy, `gattsby` (render-untrusted-text design). It creates script
 // URLs on the allowlist only, and no HTML or script, so no Gattsby code can turn a string into
@@ -14,9 +14,9 @@ interface TrustedTypesFactory {
 
 export function installTrustedTypesPolicy(
   scope: { trustedTypes?: TrustedTypesFactory; location: { origin: string } } = globalThis as never,
-): void {
-  // A browser without Trusted Types gets no policy; the rest of the app still runs (NFR-021).
-  scope.trustedTypes?.createPolicy('gattsby', {
+): string {
+  const [workerPath] = ALLOWED_SCRIPT_PATHS;
+  const policy = scope.trustedTypes?.createPolicy('gattsby', {
     createScriptURL: (input) => {
       if (!isAllowedScriptUrl(input, scope.location.origin)) {
         throw new TypeError(`Gattsby does not load scripts from ${input}.`);
@@ -24,4 +24,7 @@ export function installTrustedTypesPolicy(
       return input;
     },
   });
+  // Angular forwards this argument to ServiceWorkerContainer.register. The type assertion
+  // preserves the TrustedScriptURL object across Angular's string-typed provider boundary.
+  return (policy?.createScriptURL(workerPath) ?? workerPath) as string;
 }
