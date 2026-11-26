@@ -30,6 +30,7 @@ export const routes: Routes = [
     canMatch: [investigationExists],
     canActivate: [keepImportsReadOnly],
     canDeactivate: [leaveInvestigation],
+    data: { holdAppUpdate: true },
     title: 'Investigation · Gattsby',
     loadComponent: () =>
       import('./pages/investigation/investigation.page').then((m) => m.InvestigationPage),
