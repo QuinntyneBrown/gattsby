@@ -7,6 +7,7 @@ export interface VerdictItem {
   readonly key: string;
   readonly value: string;
   readonly tag: ObservationTag | null;
+  readonly evidenceId?: string;
 }
 
 // What the Verdict page shows, from the stored record (issue-the-verdict design, "What the Verdict
@@ -96,9 +97,9 @@ export function verdictView(
   return { meta, protocol, readable, observed, undetermined, heldByOther };
 }
 
-function verdictItem(observation: { text: string; tag: ObservationTag }): VerdictItem {
+function verdictItem(observation: { id: string; text: string; tag: ObservationTag }): VerdictItem {
   const [key, ...rest] = observation.text.split(': ');
-  return { key, value: rest.join(': '), tag: observation.tag };
+  return { key, value: rest.join(': '), tag: observation.tag, evidenceId: observation.id };
 }
 
 function capitalise(text: string): string {

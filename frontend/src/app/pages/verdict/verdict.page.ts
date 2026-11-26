@@ -40,6 +40,11 @@ import { verdictView, type VerdictView } from './verdict-view';
           </svg>
         </a>
         <span class="appbar__titles"></span>
+        @if (record()) {
+          <a class="btn btn--ghost" [routerLink]="['/investigations', id(), 'evidence']">
+            Evidence
+          </a>
+        }
         @if (record()?.investigation?.profileId; as profileId) {
           <a
             class="btn btn--ghost"
@@ -134,6 +139,11 @@ import { verdictView, type VerdictView } from './verdict-view';
                           ><bdi>{{ item.value }}</bdi></span
                         >
                         <g-confidence-badge word="confirmed" />
+                        <a
+                          [routerLink]="['/investigations', id(), 'evidence']"
+                          [queryParams]="{ ref: item.evidenceId }"
+                          >Evidence</a
+                        >
                       </li>
                     }
                   </ul>

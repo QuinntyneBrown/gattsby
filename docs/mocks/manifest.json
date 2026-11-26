@@ -211,6 +211,7 @@
         "empty",
         "error",
         "filtered",
+        "focused",
         "no-results"
       ]
     },

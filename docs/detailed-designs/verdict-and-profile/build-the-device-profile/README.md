@@ -180,7 +180,10 @@ Evidence IDs follow the prefix scheme of the track-the-hypothesis design (`r-`, 
 `rec-`, `ph-`). Observations take their evidence from the tool envelope that created them (see the
 return-a-result-envelope design), so every observation, hypothesis version and profile entry cites
 the tool calls and raw log entries behind it (FR-056). An "Evidence" link carries the entry's IDs
-plus, for an observation, the IDs that observation cites, resolved one level deep.
+plus, for an observation, the IDs that observation cites. The Evidence page resolves these against
+that investigation and opens on the cited entries. "Show everything" opens the full timeline.
+The page shows the time to the millisecond and spells out the traffic direction for assistive
+technology.
 
 ### States of the Device profile page
 

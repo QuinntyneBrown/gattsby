@@ -33,6 +33,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/verdict/verdict.page').then((m) => m.VerdictPage),
   },
   {
+    path: 'investigations/:id/evidence',
+    title: 'Evidence · Gattsby',
+    loadComponent: () => import('./pages/evidence/evidence.page').then((m) => m.EvidencePage),
+  },
+  {
     path: 'profiles/:id',
     title: 'Device profile · Gattsby',
     loadComponent: () =>
