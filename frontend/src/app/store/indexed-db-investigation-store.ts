@@ -84,6 +84,23 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     });
   }
 
+  async discardProvisionalPackets(id: string, stepN: number): Promise<void> {
+    await this.write(['investigations', 'rawLog'], 'strict', (tx) => {
+      const request = tx.objectStore('investigations').get(id);
+      request.onsuccess = () => {
+        const current = request.result as Investigation | undefined;
+        if (!current || current.lastCommittedStep >= stepN) return;
+        const log = tx.objectStore('rawLog');
+        log.index('byStep').openKeyCursor(IDBKeyRange.only([id, stepN])).onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursor | null>).result;
+          if (!cursor) return;
+          log.delete(cursor.primaryKey);
+          cursor.continue();
+        };
+      };
+    });
+  }
+
   async latchEmergencyStop(id: string, at: number): Promise<void> {
     await this.write(['investigations'], 'strict', (tx) => {
       this.patch(tx, id, { emergencyStoppedAt: at });

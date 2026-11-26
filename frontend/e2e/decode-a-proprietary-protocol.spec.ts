@@ -7,6 +7,7 @@ import { expect, test } from './fixtures/gattsby-test';
 import type { FakeBluetooth } from './fixtures/fake-bluetooth';
 import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
+import { refuseNextRecordingCommit } from './fixtures/verdict-quota';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { VerdictPage } from './pages/verdict.page';
@@ -185,4 +186,59 @@ test('records the packet framing and fit', async ({ page, fakeBluetooth }) => {
   });
   await expect(verdict.group('Observed')).toContainText('Framing');
   expect(fakeBluetooth.writes()).toEqual([]);
+});
+
+// Given a saved baseline, when IndexedDB refuses a later recording, then the baseline
+// remains readable and recording restarts only when the person chooses Record again.
+test('keeps saved evidence and waits for an explicit recording retry when storage is full', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const investigation = await connectToRower(page);
+  const id = investigation.id();
+  const records = new StoredRecords(page);
+  await investigation.waitForPrompt('Keep the rower idle, then tap Ready');
+  await investigation.choose('Ready');
+  await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+  await page.clock.runFor(10_300);
+  await investigation.waitForPrompt('Row at an easy pace, then tap Ready');
+  const calls = () => fakeBluetooth.calls().filter((call) => call === 'startNotifications').length;
+  const first = calls();
+  await refuseNextRecordingCommit(page);
+  await fakeBluetooth.setEffort(1);
+  await investigation.choose('Ready');
+  await expect.poll(calls).toBeGreaterThan(first);
+  await page.clock.runFor(10_300);
+  await investigation.waitForPrompt('Storage is full');
+  const beforeRetry = calls();
+  const saved = await records.recordings(id);
+  expect(saved.map(({ label }) => label)).toEqual(['idle']);
+  expect(
+    (await records.rawLog(id))
+      .filter(({ recordingId }) => recordingId)
+      .every(({ recordingId }) => recordingId === saved[0].id),
+  ).toBe(true);
+  await page.clock.runFor(2_000);
+  expect(calls()).toBe(beforeRetry);
+  await investigation.choose('Record again');
+  await expect.poll(calls).toBeGreaterThan(beforeRetry);
+  await page.clock.runFor(10_300);
+  await investigation.waitForPrompt('Row a little faster, then tap Ready');
+  expect((await records.recordings(id)).map(({ label }) => label)).toEqual(['idle', 'slow']);
+  expect(fakeBluetooth.writes()).toEqual([]);
+});
+
+test('stops listening before the recording window ends when a packet flush exhausts storage', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const investigation = await connectToRower(page);
+  await investigation.waitForPrompt('Keep the rower idle, then tap Ready');
+  await refuseNextRecordingCommit(page, 'rawLog');
+  await investigation.choose('Ready');
+  await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+  await page.clock.runFor(1_500);
+  await investigation.waitForPrompt('Storage is full');
+  expect(fakeBluetooth.calls()).toContain('stopNotifications');
+  expect(await new StoredRecords(page).recordings(investigation.id())).toEqual([]);
 });

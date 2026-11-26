@@ -180,6 +180,27 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
         </section>
         <section class="inv__prompt dock" aria-labelledby="prompt-title" aria-live="polite">
           @switch (orchestrator.status()) {
+            @case ('storage-full') {
+              <div class="dock__inner" role="alert">
+                <h2 class="prompt__title" id="prompt-title">Storage is full</h2>
+                <p class="prompt__detail">
+                  Recording stopped. Everything before it is saved and readable. Export and delete
+                  old investigations to make room, then record again.
+                </p>
+                <div class="prompt__actions">
+                  <button
+                    class="btn btn--primary btn--lg"
+                    type="button"
+                    (click)="orchestrator.recordAgain()"
+                  >
+                    Record again
+                  </button>
+                  <button class="btn btn--lg" type="button" (click)="stopOpen.set(true)">
+                    Stop
+                  </button>
+                </div>
+              </div>
+            }
             @case ('paused') {
               <div class="dock__inner">
                 <p class="prompt__eyebrow">Interrupted</p>

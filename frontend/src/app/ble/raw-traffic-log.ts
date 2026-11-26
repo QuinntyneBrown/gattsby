@@ -3,6 +3,7 @@ import { Clock } from '../shared/clock';
 import type { RawLogEntry } from '../store/model/raw-log-entry';
 import type { NotificationDecoding } from '../store/model/notification-decoding';
 import { InvestigationStore } from '../store/investigation-store';
+import { StoreError } from '../store/store-error';
 
 export const WINDOW = 2000;
 export const FLUSH_BATCH = 200;
@@ -24,6 +25,8 @@ export class RawTrafficLog {
   private stepN = 0;
   private seq = 0;
   private cancelFlush: (() => void) | null = null;
+  private writing: Promise<void> | null = null;
+  private quotaListener: (() => void) | null = null;
   readonly count = signal(0);
 
   /** Starts logging for an investigation, numbering after the entries it already has. */
@@ -77,22 +80,44 @@ export class RawTrafficLog {
     return taken;
   }
 
+  async settle(): Promise<void> {
+    await this.writing;
+  }
+
+  onQuotaFailure(listener: (() => void) | null): void {
+    this.quotaListener = listener;
+  }
+
   /** Forgets the window and the queue, after a final flush, when the screen is left (NFR-005). */
   clear(): void {
     if (this.pending.length > 0) void this.flush();
     this.cancelFlush?.();
     this.cancelFlush = null;
+    this.pending = [];
     this.window.length = 0;
     this.investigationId = null;
   }
 
-  private async flush(): Promise<void> {
+  private flush(): void {
     this.cancelFlush?.();
     this.cancelFlush = null;
+    if (this.writing) return;
     const batch = this.pending.splice(0, Math.min(this.pending.length, QUEUE_LIMIT));
-    await this.store.flushRawLog(batch).catch(() => {
-      // Kept for the step commit, which reports STORAGE_FULL to the person.
-      this.pending = [...batch, ...this.pending];
-    });
+    if (!batch.length) return;
+    const investigationId = this.investigationId;
+    this.writing = this.store
+      .flushRawLog(batch)
+      .then(() => {
+        if (this.investigationId === investigationId && this.pending.length > 0)
+          this.cancelFlush ??= this.clock.setTimeout(() => this.flush(), FLUSH_INTERVAL_MS);
+      })
+      .catch((error: unknown) => {
+        if (this.investigationId !== investigationId) return;
+        this.pending = [...batch, ...this.pending];
+        if (error instanceof StoreError && error.code === 'STORAGE_FULL') this.quotaListener?.();
+      })
+      .finally(() => {
+        this.writing = null;
+      });
   }
 }
