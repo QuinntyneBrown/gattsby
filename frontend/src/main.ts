@@ -3,9 +3,11 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideServiceWorker } from '@angular/service-worker';
 import { appConfig } from './app/app.config';
 import { AppShell } from './app/app-shell';
-import { installTrustedTypesPolicy } from './app/security/trusted-types-policy';
+import { SERVICE_WORKER_SCRIPT } from './app/security/script-url-allowlist';
+import { installTrustedTypesPolicy, trustedScriptUrl } from './app/security/trusted-types-policy';
 
-const workerUrl = installTrustedTypesPolicy();
+installTrustedTypesPolicy();
+const workerUrl = trustedScriptUrl(SERVICE_WORKER_SCRIPT);
 bootstrapApplication(AppShell, {
   providers: [
     ...appConfig.providers,

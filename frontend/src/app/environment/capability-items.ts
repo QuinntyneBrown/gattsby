@@ -1,5 +1,6 @@
 import type { Capabilities } from './capabilities';
 import type { CapabilityItem } from './capability-item';
+import { formatStorage } from '../shared/format-storage';
 import { readinessIssue } from './readiness-issue';
 
 export function toCapabilityItems(
@@ -18,6 +19,7 @@ export function toCapabilityItems(
     ].map((label) => ({ label, detail: 'Checking…', status: 'pending' }));
   }
   const issue = readinessIssue(c);
+  const phoneModel = c.model.source === 'phone';
   const browser = [
     c.platform.browser === 'unknown' ? 'Chrome' : c.platform.browser,
     c.platform.version !== 'unknown' ? c.platform.version : '',
@@ -58,11 +60,18 @@ export function toCapabilityItems(
     {
       label: 'On-device model',
       detail: {
-        available: 'Gemini Nano ready · runs offline',
-        downloadable: 'Download needed',
-        downloading: 'Downloading Gemini Nano',
+        available: phoneModel
+          ? 'Phone model ready · runs offline'
+          : 'Gemini Nano ready · runs offline',
+        downloadable: c.model.downloadBytes
+          ? `Download needed · ${formatStorage(c.model.downloadBytes)}`
+          : 'Download needed',
+        downloading: phoneModel ? 'Downloading the phone model' : 'Downloading Gemini Nano',
         failed: `Download failed at ${progress}%`,
-        unavailable: 'Not available on this device · use checklist mode',
+        unavailable:
+          c.model.reason === 'webgpu'
+            ? 'WebGPU unavailable · use checklist mode'
+            : 'Not available on this device · use checklist mode',
         idle: 'Not available on this device · use checklist mode',
       }[model],
       status:

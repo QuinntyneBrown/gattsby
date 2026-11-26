@@ -14,6 +14,7 @@ import type { Capabilities } from '../../environment/capabilities';
 import { ReadinessSession } from '../../environment/readiness-session';
 import { canStartInvestigation, readinessIssue } from '../../environment/readiness-issue';
 import { ModelDownloadController } from '../../model/model-download-controller';
+import { formatStorage } from '../../shared/format-storage';
 import { BrandComponent } from '../../ui/brand/brand.component';
 import { CapabilityListComponent } from '../../ui/capability-list/capability-list.component';
 
@@ -39,6 +40,12 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
     >
       <g-brand [standalone]="true" />
       <h1 style="margin-top: var(--space-10)">{{ heading() }}</h1>
+      @if (!issue() && phoneModel() && modelState() === 'downloadable') {
+        <p class="readiness__body">
+          The phone model is a one-time {{ downloadSize() }} download. Mobile data charges may
+          apply. Use Wi-Fi if you can.
+        </p>
+      }
       <g-capability-list [items]="items()" />
       @if (capabilities()) {
         @if (issue(); as issue) {
@@ -112,8 +119,13 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
                 <div>
                   <p class="mode-note__title">Full agent mode</p>
                   <p class="mode-note__text">
-                    The agent runs on Gemini Nano inside Chrome. It plans each step, explains it,
-                    and works offline from here on.
+                    @if (phoneModel()) {
+                      The agent runs on the phone model. It plans each step, explains it, and works
+                      offline from here on.
+                    } @else {
+                      The agent runs on Gemini Nano inside Chrome. It plans each step, explains it,
+                      and works offline from here on.
+                    }
                   </p>
                 </div>
               </div>
@@ -133,10 +145,12 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
             @case ('downloadable') {
               <div class="readiness__body">
                 <div>
-                  <p class="mode-note__text">
-                    Chrome downloads the model once. It’s a large download, so check that you have
-                    free disk space and use Wi-Fi.
-                  </p>
+                  @if (!phoneModel()) {
+                    <p class="mode-note__text">
+                      Chrome downloads the model once. It’s a large download, so check that you have
+                      free disk space and use Wi-Fi.
+                    </p>
+                  }
                   <p class="mode-note__text">
                     You can start right away as a checklist. A later investigation can use the agent
                     when the model is ready.
@@ -172,6 +186,11 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
                 </div>
               </div>
               <div class="readiness__actions">
+                @if (phoneModel()) {
+                  <button class="btn btn--lg" type="button" (click)="download.cancel()">
+                    Cancel download
+                  </button>
+                }
                 @if (download.status() === 'idle') {
                   <button
                     class="btn btn--lg"
@@ -212,6 +231,9 @@ import { CapabilityListComponent } from '../../ui/capability-list/capability-lis
                 <div>
                   <p class="mode-note__title">Checklist mode</p>
                   <p class="mode-note__text">
+                    @if (capabilities()?.model?.reason === 'webgpu') {
+                      The phone model needs WebGPU.
+                    }
                     The same playbook guides you through the investigation one step at a time.
                   </p>
                 </div>
@@ -245,6 +267,10 @@ export class ReadinessPage implements OnInit {
   protected readonly capabilities = signal<Capabilities | null>(null);
   protected readonly download = inject(ModelDownloadController);
   protected readonly downloadReady = signal(false);
+  protected readonly phoneModel = computed(() => this.capabilities()?.model.source === 'phone');
+  protected readonly downloadSize = computed(() =>
+    formatStorage(this.capabilities()?.model.downloadBytes ?? 0),
+  );
   protected readonly modelState = computed(() =>
     this.download.status() === 'idle'
       ? (this.capabilities()?.model.availability ?? 'unavailable')
@@ -253,7 +279,7 @@ export class ReadinessPage implements OnInit {
   protected readonly modelReady = computed(() => this.modelState() === 'available');
   protected readonly progressText = computed(() =>
     this.download.status() === 'downloading'
-      ? `Downloading Gemini Nano · ${this.download.progress()}% · ${this.download.elapsed()} s`
+      ? `Downloading ${this.phoneModel() ? 'the phone model' : 'Gemini Nano'} · ${this.download.progress()}% · ${this.download.elapsed()} s`
       : 'Chrome is downloading Gemini Nano.',
   );
   protected readonly items = computed(() =>
@@ -310,12 +336,7 @@ export class ReadinessPage implements OnInit {
     const capabilities = await this.detector.detect();
     this.capabilities.set(capabilities);
     if (['downloadable', 'downloading'].includes(capabilities.model.availability)) {
-      this.downloadReady.set(
-        await this.download.prepare().then(
-          () => true,
-          () => false,
-        ),
-      );
+      this.downloadReady.set(await this.download.prepare().catch(() => false));
     }
   }
 

@@ -17,7 +17,9 @@
           "/*.webmanifest",
           "/icons/*.png",
           "/media/**",
-          "/schemas/*.json"
+          "/schemas/*.json",
+          "/phone-model/manifest.json",
+          "/phone-model/worker.js"
         ]
       }
     }

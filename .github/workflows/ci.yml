@@ -61,7 +61,8 @@ jobs:
       # profile export, agent and checklist, FTMS control, device matching, reconnect, stop,
       # reachability, proprietary packet evidence, verdict evidence, history, profile import
       # a full investigation served offline, a protected characteristic with no repeat probe,
-      # and a camera plate read with the person's confirmed correction.
+      # a camera plate read with the person's confirmed correction, and a phone model download
+      # followed by a full agent investigation with a fake worker.
       - name: Run the critical behaviour specs
         run: npm run e2e:critical
 

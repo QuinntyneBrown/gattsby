@@ -117,6 +117,10 @@ change and currently asks for at least 22 GB free before downloading. The app do
 estimate the person's available disk space from its origin quota.
 [Chrome Prompt API](https://developer.chrome.com/docs/ai/prompt-api#review_the_hardware_requirements)
 
+On Android without the Prompt API, Readiness gets phone model availability and download size
+from the adapter loader. The Android download can be canceled and retried from Readiness.
+See [Run a model on phones](../../platform/run-a-model-on-phones/README.md).
+
 ### Errors
 
 Journey 5 reads and writes the preference in per-tab session storage, and model download is
