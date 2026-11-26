@@ -1,5 +1,6 @@
 import type { CapabilityDiagnostic } from '../environment/capability-diagnostic';
 import type { DeviceProfile } from './model/device-profile';
+import type { ImportedInvestigation } from './model/imported-investigation';
 import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationNote } from './model/investigation-note';
 import type { InvestigationRecord } from './model/investigation-record';
@@ -50,6 +51,8 @@ export abstract class InvestigationStore {
   abstract getProfile(id: string): Promise<DeviceProfile>;
   /** Returns true when the same profile was already stored. */
   abstract importProfile(profile: DeviceProfile, signal: AbortSignal): Promise<boolean>;
+  /** Returns true when the same investigation was already stored. */
+  abstract importRecord(record: ImportedInvestigation, signal: AbortSignal): Promise<boolean>;
   /** Returns the packets linked to one recording, or null if the recording does not exist. */
   abstract recordedPackets(
     investigationId: string,

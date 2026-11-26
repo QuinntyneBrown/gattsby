@@ -6,6 +6,7 @@ import type { InvestigationRecord } from './model/investigation-record';
 import type { OperatingMode } from './model/operating-mode';
 import type { Step } from './model/step';
 import type { VerdictCommit } from './model/verdict-commit';
+import { applyMissingToolUpdates } from '../outcome/merge-missing-tool-requests';
 import { StoreError } from './store-error';
 
 export async function buildRecordExport(
@@ -29,10 +30,12 @@ export async function buildRecordExport(
     kbVersion,
     appVersion,
     recordFormat,
+    readOnly,
     note,
     modeChanges,
     ...header
   } = record.investigation;
+  void readOnly;
   if (recordFormat !== 1)
     throw new StoreError('EXPORT_UNAVAILABLE', 'This record format couldn’t be exported.');
   const notes = note ? [note] : [];
@@ -151,4 +154,3 @@ function invalidRecord(validator: typeof validateRecord): StoreError {
   console.warn('Gattsby record export validation failed.', first?.instancePath, first?.keyword);
   return new StoreError('EXPORT_UNAVAILABLE', 'The investigation record did not validate.');
 }
-import { applyMissingToolUpdates } from '../outcome/merge-missing-tool-requests';

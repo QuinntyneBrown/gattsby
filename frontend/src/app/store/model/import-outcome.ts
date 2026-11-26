@@ -3,4 +3,5 @@ export interface ImportOutcome {
   readonly id: string;
   readonly displayName: string;
   readonly alreadyStored: boolean;
+  readonly hasVerdict?: boolean;
 }

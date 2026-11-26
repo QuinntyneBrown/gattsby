@@ -79,7 +79,7 @@ the write transaction has started it completes or aborts whole.
 | Kind | Current | Reads | Rule |
 |---|---|---|---|
 | Device profile | 1.0 | 1.0 | A minor version only adds optional fields; a major version ships a migration from the previous major (NFR-024) |
-| Investigation record | 1.0 | 1.0 | As above |
+| Investigation record | 1.1 | 1.0 and 1.1 | Both minor versions use the same schema. Optional fields introduced in 1.1 remain optional on import. |
 
 1. An older minor of the current major is stored as it is, without migration and without loss: a
    1.0 profile in a build that writes 1.1 keeps every field (NFR-024 AC1).
@@ -101,13 +101,12 @@ the write transaction has started it completes or aborts whole.
 1. **Profile.** `importProfile` writes the profile object unchanged into `profiles` under its own
    `id`, so a re-imported profile is identical to the original in every field (FR-064 AC1). Without
    its record, its evidence IDs do not resolve on this device; the Evidence page says so for each
-   one. It appears in Saved devices. FR-064 AC1 says "in the history"; the mocks list profiles in
-   Saved devices and investigations in the history, so a profile-only import appears only in Saved
-   devices.
+   one. It appears in Saved devices. Past investigations lists the full investigation records.
 2. **Record.** `importRecord` writes the investigation, its steps, raw log, observations,
    hypotheses, recordings, missing-tool requests, notes, photos (decoded from base64 into `Blob`s)
-   and its profile, each under its own key, in one transaction over every store. It appears in the
-   history and in Saved devices.
+   and its profile, each under its own key, in one transaction over every store. It appears in Past
+   investigations and in Saved devices when it includes a profile. An imported investigation opens
+   as saved evidence. Import does not start a model, Bluetooth connection, or a command.
 3. **Same ID.** When an item with the same ID is already stored, the import compares canonical JSON
    (keys sorted). Identical content is a success with nothing written ("Already on this device");
    different content is refused with `ALREADY_EXISTS`.

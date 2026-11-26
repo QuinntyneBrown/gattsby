@@ -100,9 +100,11 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
                       [routerLink]="
                         row.verdict
                           ? ['/investigations', row.id, 'verdict']
-                          : ['/investigations', row.id]
+                          : row.readOnly
+                            ? ['/investigations', row.id, 'evidence']
+                            : ['/investigations', row.id]
                       "
-                      [queryParams]="row.verdict ? null : { resume: true }"
+                      [queryParams]="row.verdict || row.readOnly ? null : { resume: true }"
                     >
                       @if (row.verdict) {
                         <g-verdict-mark [kind]="row.verdict.kind" />

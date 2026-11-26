@@ -1,13 +1,16 @@
 // Traces to: FR-064, NFR-013, NFR-015, NFR-024
+import type { Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { finishTreadmill } from './fixtures/finish-treadmill';
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
+import { seedStoredPhoto } from './fixtures/stored-photo';
 import { StoredRecords } from './fixtures/stored-records';
 import { DeleteAllDataDialogPage } from './pages/delete-all-data.dialog.page';
 import { DeviceProfilePage } from './pages/device-profile.page';
 import { ExportDialogPage } from './pages/export.dialog.page';
 import { HomePage } from './pages/home.page';
+import { HistoryPage } from './pages/history.page';
 import { ImportDialogPage } from './pages/import.dialog.page';
 import { SettingsPage } from './pages/settings.page';
 import { VerdictPage } from './pages/verdict.page';
@@ -32,17 +35,7 @@ test('re-imports the exported profile without changing its fields @critical', as
   const original = JSON.parse(content.toString('utf8'));
   await exportDialog.done.click();
 
-  const home = new HomePage(page);
-  const settings = new SettingsPage(page);
-  await home.goto();
-  await home.settings.click();
-  await settings.deleteAll.click();
-  const confirmation = new DeleteAllDataDialogPage(page);
-  await confirmation.confirmation.fill('DELETE');
-  await confirmation.confirm.click();
-  await expect(home.dataDeleted).toBeVisible();
-
-  await home.settings.click();
+  const settings = await openEmptySettings(page);
   await settings.importFile.click({ timeout: 4_000 });
   const dialog = new ImportDialogPage(page);
   await dialog.picker.setInputFiles({
@@ -56,3 +49,63 @@ test('re-imports the exported profile without changing its fields @critical', as
   expect(await new StoredRecords(page).profiles()).toEqual([original]);
   expect(fakeBluetooth.writes()).toEqual([]);
 });
+
+// Given an investigation exported with its photo, importing a supported 1.0 file
+// restores the verdict, timestamped traffic and the attachment without resuming it.
+test('opens the verdict and restores evidence from an older full record', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const id = await finishTreadmill(page, fakeBluetooth);
+  await seedStoredPhoto(page, id);
+  const records = new StoredRecords(page);
+  const originalPackets = await records.rawLog(id);
+  await new VerdictPage(page).exportRecord.click();
+  const exportDialog = new ExportDialogPage(page);
+  await exportDialog.includeNotesAndPhotos.check();
+  const saving = page.waitForEvent('download');
+  await exportDialog.fullRecord.click();
+  const file = await saving;
+  const exported = JSON.parse(await readFile((await file.path())!, 'utf8'));
+  await exportDialog.done.click();
+  exported.formatVersion = '1.0';
+
+  const settings = await openEmptySettings(page);
+  await settings.importFile.click();
+  const dialog = new ImportDialogPage(page);
+  await dialog.picker.setInputFiles({
+    name: file.suggestedFilename(),
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(exported)),
+  });
+  await expect(dialog.message).toContainText('Imported');
+  await dialog.openInvestigation.click();
+  await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
+  expect(await records.rawLog(id)).toEqual(originalPackets);
+  expect(await records.photoCount(id)).toBe(1);
+
+  const home = new HomePage(page);
+  await home.goto();
+  await home.pastInvestigations.click();
+  const history = new HistoryPage(page);
+  await expect(history.investigationLinks).toHaveCount(1);
+  await expect(history.investigationLinks.first()).toHaveAttribute(
+    'href',
+    `/investigations/${id}/verdict`,
+  );
+  expect(fakeBluetooth.writes()).toEqual([]);
+});
+
+async function openEmptySettings(page: Page): Promise<SettingsPage> {
+  const home = new HomePage(page);
+  const settings = new SettingsPage(page);
+  await home.goto();
+  await home.settings.click();
+  await settings.deleteAll.click();
+  const confirmation = new DeleteAllDataDialogPage(page);
+  await confirmation.confirmation.fill('DELETE');
+  await confirmation.confirm.click();
+  await expect(home.dataDeleted).toBeVisible();
+  await home.settings.click();
+  return settings;
+}

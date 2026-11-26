@@ -3,6 +3,8 @@ import { ImportError } from './import-error';
 import { InvestigationStore } from './investigation-store';
 import type { DeviceProfile } from './model/device-profile';
 import type { ImportOutcome } from './model/import-outcome';
+import type { InvestigationRecordDocument } from './model/investigation-record-document';
+import { restoreInvestigation } from './restore-investigation';
 import { StoreError } from './store-error';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -14,15 +16,22 @@ export class ImportService {
 
   async import(file: File, signal: AbortSignal): Promise<ImportOutcome> {
     const candidate = await readImportFile(file, signal);
-    if (candidate['kind'] !== 'gattsby.device-profile')
-      throw new ImportError('NOT_GATTSBY', 'Choose a device profile exported by Gattsby.');
-    const version = candidate['formatVersion'];
-    if (version !== '1.0')
-      throw new ImportError(
-        'UNSUPPORTED_VERSION',
-        'This format isn’t supported.',
-        `This profile uses format ${version}. This version of Gattsby reads 1.0.`,
-      );
+    try {
+      return candidate['kind'] === 'gattsby.device-profile'
+        ? await this.importProfile(candidate, signal)
+        : await this.importRecord(candidate, signal);
+    } catch (error) {
+      if (signal.aborted) throw signal.reason;
+      if (error instanceof ImportError) throw error;
+      throw importStorageError(error);
+    }
+  }
+
+  private async importProfile(
+    candidate: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<ImportOutcome> {
+    checkVersion(candidate['formatVersion'], ['1.0']);
     const { default: validate } = await import('../../schemas/generated/device-profile-1.js');
     if (!validate(candidate))
       throw new ImportError(
@@ -32,19 +41,50 @@ export class ImportService {
       );
     const profile = candidate as unknown as DeviceProfile;
     signal.throwIfAborted();
-    try {
-      const alreadyStored = await this.store.importProfile(profile, signal);
-      return {
-        kind: 'profile',
-        id: profile.id,
-        displayName: profile.identity.displayName,
-        alreadyStored,
-      };
-    } catch (error) {
-      if (signal.aborted) throw signal.reason;
-      throw importStorageError(error);
-    }
+    const alreadyStored = await this.store.importProfile(profile, signal);
+    return {
+      kind: 'profile',
+      id: profile.id,
+      displayName: profile.identity.displayName,
+      alreadyStored,
+    };
   }
+
+  private async importRecord(
+    candidate: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<ImportOutcome> {
+    checkVersion(candidate['formatVersion'], ['1.0', '1.1']);
+    const { default: validate } = await import('../../schemas/generated/investigation-record-1.js');
+    if (!validate(candidate))
+      throw new ImportError(
+        'SCHEMA_INVALID',
+        'This file doesn’t match the investigation record format.',
+        validate.errors?.[0]?.instancePath || undefined,
+      );
+    const record = restoreInvestigation(candidate as unknown as InvestigationRecordDocument);
+    signal.throwIfAborted();
+    const alreadyStored = await this.store.importRecord(record, signal);
+    return {
+      kind: 'record',
+      id: record.investigation.id,
+      displayName:
+        record.investigation.deviceName ?? record.profile?.identity.displayName ?? 'Investigation',
+      hasVerdict: !!record.investigation.verdict,
+      alreadyStored,
+    };
+  }
+}
+
+function checkVersion(version: unknown, readable: readonly string[]): void {
+  if (typeof version === 'string' && readable.includes(version)) return;
+  const current = readable.at(-1)!;
+  const newer = Number(String(version).split('.')[0]) >= Number(current.split('.')[0]);
+  throw new ImportError(
+    'UNSUPPORTED_VERSION',
+    newer ? 'Made by a newer Gattsby.' : 'This file uses an older, unsupported format.',
+    `This file uses format ${version}. This version of Gattsby reads ${readable.join(' and ')}.`,
+  );
 }
 
 export async function readImportFile(

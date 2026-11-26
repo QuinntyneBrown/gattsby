@@ -15,6 +15,10 @@ export class ImportDialogPage {
     return this.dialog.getByRole('button', { name: 'Open the profile', exact: true });
   }
 
+  get openInvestigation() {
+    return this.dialog.getByRole('button', { name: 'Open the investigation', exact: true });
+  }
+
   get message() {
     return this.dialog.getByRole('status').or(this.dialog.getByRole('alert'));
   }

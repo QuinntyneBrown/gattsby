@@ -17,6 +17,7 @@ export interface Investigation {
   readonly appVersion: string;
   readonly kbVersion: string;
   readonly recordFormat: number;
+  readonly readOnly?: true;
   readonly stage: Stage;
   readonly status: InvestigationStatus;
   readonly lastCommittedStep: number;

@@ -151,7 +151,7 @@ export class ImportDialog {
     await this.router.navigate(
       result.kind === 'profile'
         ? ['/profiles', result.id]
-        : ['/investigations', result.id, 'verdict'],
+        : ['/investigations', result.id, result.hasVerdict ? 'verdict' : 'evidence'],
     );
   }
 

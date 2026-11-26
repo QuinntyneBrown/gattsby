@@ -201,7 +201,7 @@ export class HomePage implements OnInit {
       (investigations) => {
         this.returning.set(investigations.length > 0);
         this.investigationCount.set(investigations.length);
-        this.resumable.set(investigations.filter((row) => !row.verdict));
+        this.resumable.set(investigations.filter((row) => !row.verdict && !row.readOnly));
         if (investigations.length) {
           void this.missingTools.list().then(
             (groups) =>
