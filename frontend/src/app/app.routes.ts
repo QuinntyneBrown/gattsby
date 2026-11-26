@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { investigationExists } from './pages/investigation/investigation-exists.guard';
+import { keepImportsReadOnly } from './pages/investigation/keep-imports-read-only.guard';
 import { leaveInvestigation } from './pages/investigation/leave-investigation.guard';
 import { readinessOnLaunch } from './pages/readiness/readiness.guard';
 
@@ -27,6 +28,7 @@ export const routes: Routes = [
   {
     path: 'investigations/:id',
     canMatch: [investigationExists],
+    canActivate: [keepImportsReadOnly],
     canDeactivate: [leaveInvestigation],
     title: 'Investigation · Gattsby',
     loadComponent: () =>

@@ -3,7 +3,9 @@
     <a
       class="btn btn--ghost btn--icon"
       [routerLink]="
-        profile.hasValue() ? ['/investigations', profile.value().investigationId, 'verdict'] : ['/']
+        recordHeader.hasValue() && recordHeader.value().verdict
+          ? ['/investigations', recordHeader.value().id, 'verdict']
+          : ['/profiles']
       "
       aria-label="Back"
     >
@@ -217,6 +219,17 @@
                 {{ p.counts.steps }} steps, {{ p.counts.packets }} packets,
                 {{ p.counts.approvedCommands }} approved commands.
               </p>
+              @if (recordHeader.hasValue()) {
+                <a
+                  class="btn btn--ghost"
+                  [routerLink]="['/investigations', p.investigationId, 'evidence']"
+                  >Open evidence</a
+                >
+              } @else if (recordHeader.error()) {
+                <p class="text-sm text-muted">
+                  The raw evidence is in the separate investigation record.
+                </p>
+              }
             </section>
             <section aria-labelledby="profile-notes-title">
               <h2 class="section-title" id="profile-notes-title">Notes</h2>
@@ -224,6 +237,12 @@
                 <p class="text-sm">
                   <bdi>{{ recordHeader.value().note }}</bdi>
                 </p>
+              } @else {
+                @for (note of p.notes ?? []; track $index) {
+                  <p class="text-sm">
+                    <bdi>{{ note }}</bdi>
+                  </p>
+                }
               }
               <p class="fine-print">
                 @if (p.location) {

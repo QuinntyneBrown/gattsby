@@ -6,6 +6,7 @@ export interface DeviceProfile {
   readonly investigationId: string;
   readonly createdAt: string;
   readonly location?: string;
+  readonly notes?: readonly string[];
   readonly identity: {
     readonly displayName: string;
     readonly advertisedName: string | null;

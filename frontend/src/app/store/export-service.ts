@@ -23,11 +23,13 @@ export class ExportService {
   ): Promise<string> {
     const header = await this.header(profile);
     const startedAt = header?.startedAt ?? Date.parse(profile.createdAt);
+    const { notes: savedNotes, ...body } = profile;
+    const notes = header?.note ? [header.note] : savedNotes;
     const payload = {
-      ...profile,
+      ...body,
       exportedAt: new Date().toISOString(),
       appVersion: this.appVersion,
-      ...(includeNotes && header?.note ? { notes: [header.note] } : {}),
+      ...(includeNotes && notes?.length ? { notes } : {}),
     };
     if (!validateProfile(payload)) {
       throw new StoreError('UNREADABLE_PROFILE', 'The device profile couldn’t be exported.');

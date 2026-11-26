@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import type { CapabilityDiagnostic } from '../environment/capability-diagnostic';
 import { InvestigationStore } from './investigation-store';
+import { canonicalJson } from './canonical-json';
 import {
   DATABASE_NAME,
   DATABASE_VERSION,
@@ -12,6 +13,7 @@ import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationPhoto } from './model/investigation-photo';
 import type { InvestigationNote } from './model/investigation-note';
 import type { DeviceProfile } from './model/device-profile';
+import type { ImportedInvestigation } from './model/imported-investigation';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { MissingToolListEntry } from './model/missing-tool-list-entry';
 import type { MissingToolRequest } from './model/missing-tool-request';
@@ -21,6 +23,7 @@ import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
+import { sameDeviceProfile } from './same-device-profile';
 import { validateNote } from './validate-note';
 
 const RECORD_FORMAT = 1;
@@ -33,7 +36,7 @@ const INVESTIGATION_ROWS = [
   'hypotheses',
   'photos',
   'missingToolRequests',
-];
+] as const;
 
 // The investigation store on IndexedDB (save-as-the-investigation-runs design). Every write
 // resolves on the transaction's `complete` event, never on a request's `success`.
@@ -495,6 +498,104 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return row as DeviceProfile;
   }
 
+  async importProfile(profile: DeviceProfile, signal: AbortSignal): Promise<boolean> {
+    let alreadyStored = false;
+    await this.write(
+      ['profiles'],
+      'strict',
+      (tx) => {
+        const profiles = tx.objectStore('profiles');
+        const match = profiles.get(profile.id);
+        match.onsuccess = () => {
+          if (match.result) {
+            alreadyStored = sameDeviceProfile(match.result as DeviceProfile, profile);
+            if (!alreadyStored)
+              refuse(tx, new StoreError('ALREADY_EXISTS', 'This profile already exists.'));
+            return;
+          }
+          const related = profiles.index('byInvestigation').getKey(profile.investigationId);
+          related.onsuccess = () => {
+            if (related.result !== undefined) {
+              refuse(
+                tx,
+                new StoreError('ALREADY_EXISTS', 'This investigation already has a profile.'),
+              );
+            } else {
+              profiles.add(profile);
+            }
+          };
+        };
+      },
+      signal,
+    );
+    return alreadyStored;
+  }
+
+  async importRecord(record: ImportedInvestigation, signal: AbortSignal): Promise<boolean> {
+    const { investigation, profile } = record;
+    const id = investigation.id;
+    let alreadyStored = false;
+    await this.write(
+      ['investigations', 'profiles', ...INVESTIGATION_ROWS],
+      'strict',
+      (tx) => {
+        const headers = tx.objectStore('investigations');
+        const profiles = tx.objectStore('profiles');
+        const existing = headers.get(id);
+        existing.onsuccess = () => {
+          if (existing.result) {
+            void matchesStoredRecord(tx, record, existing.result as Investigation).then(
+              (matches) => {
+                alreadyStored = matches;
+                if (!matches)
+                  refuse(
+                    tx,
+                    new StoreError('ALREADY_EXISTS', 'This investigation already exists.'),
+                  );
+              },
+              () => {
+                if (!signal.aborted)
+                  refuse(
+                    tx,
+                    new StoreError('STORAGE_UNAVAILABLE', 'Couldn’t compare the stored record.'),
+                  );
+              },
+            );
+            return;
+          }
+          const storeRows = () => {
+            headers.add(investigation);
+            for (const name of INVESTIGATION_ROWS) {
+              const store = tx.objectStore(name);
+              for (const row of record[name]) store.add(row);
+            }
+          };
+          if (!profile) {
+            storeRows();
+            return;
+          }
+          const related = profiles.index('byInvestigation').get(id);
+          related.onsuccess = () => {
+            if (related.result && !sameDeviceProfile(related.result as DeviceProfile, profile)) {
+              refuse(
+                tx,
+                new StoreError(
+                  'ALREADY_EXISTS',
+                  'This investigation already has a different profile.',
+                ),
+              );
+              return;
+            }
+            if (!related.result) profiles.add(profile);
+            storeRows();
+          };
+        };
+      },
+      signal,
+    );
+    return alreadyStored;
+  }
+
   async recordedPackets(
     investigationId: string,
     recordingId: string,
@@ -615,13 +716,36 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     stores: string[],
     durability: IDBTransactionDurability,
     work: (tx: IDBTransaction) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     const db = await this.open();
+    signal?.throwIfAborted();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(stores, 'readwrite', { durability });
-      tx.oncomplete = () => resolve();
-      tx.onabort = () => reject(toStoreError(tx));
-      work(tx);
+      const abort = () => {
+        try {
+          tx.abort();
+        } catch {
+          /* The transaction already finished. */
+        }
+      };
+      const release = () => signal?.removeEventListener('abort', abort);
+      signal?.addEventListener('abort', abort, { once: true });
+      tx.oncomplete = () => {
+        release();
+        resolve();
+      };
+      tx.onabort = () => {
+        release();
+        reject(signal?.aborted ? signal.reason : toStoreError(tx));
+      };
+      try {
+        work(tx);
+      } catch (error) {
+        abort();
+        release();
+        reject(error);
+      }
     });
   }
 
@@ -664,6 +788,42 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     });
     return this.database;
   }
+}
+
+async function matchesStoredRecord(
+  tx: IDBTransaction,
+  incoming: ImportedInvestigation,
+  saved: Investigation,
+): Promise<boolean> {
+  const comparableHeader = (header: Investigation) => {
+    return {
+      ...header,
+      readOnly: undefined,
+      note: incoming.includesNotesAndPhotos ? header.note : undefined,
+    };
+  };
+  if (
+    canonicalJson(comparableHeader(saved)) !==
+    canonicalJson(comparableHeader(incoming.investigation))
+  )
+    return false;
+  const keys = investigationRange(saved.id);
+  const rowChecks = INVESTIGATION_ROWS.filter(
+    (key) => key !== 'photos' || incoming.includesNotesAndPhotos,
+  ).map(async (key) => {
+    const previous = (await request(tx.objectStore(key).getAll(keys))) as { id: string }[];
+    const order = (rows: readonly { id: string }[]) =>
+      [...rows].sort((a, b) => a.id.localeCompare(b.id));
+    return canonicalJson(order(previous)) === canonicalJson(order(incoming[key]));
+  });
+  const profile = incoming.profile;
+  if (profile)
+    rowChecks.push(
+      request(tx.objectStore('profiles').get(profile.id)).then(
+        (stored: DeviceProfile | undefined) => !!stored && sameDeviceProfile(stored, profile),
+      ),
+    );
+  return (await Promise.all(rowChecks)).every(Boolean);
 }
 
 function request<T>(req: IDBRequest<T>): Promise<T> {

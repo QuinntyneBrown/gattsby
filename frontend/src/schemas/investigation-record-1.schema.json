@@ -792,7 +792,40 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "capabilityKey", "title", "reason"]
+        "additionalProperties": false,
+        "required": ["id", "capabilityKey", "title", "reason"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 120 },
+          "capabilityKey": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "title": { "type": "string", "maxLength": 256 },
+          "reason": { "type": "string", "maxLength": 2048 },
+          "evidence": { "type": "array", "items": { "type": "string", "maxLength": 128 } },
+          "stepN": { "type": "integer", "minimum": 0 },
+          "createdAt": { "type": "number", "minimum": 0, "maximum": 8640000000000000 },
+          "lastRaisedAt": { "type": "number", "minimum": 0, "maximum": 8640000000000000 },
+          "occurrences": { "type": "integer", "minimum": 1 },
+          "reasons": { "type": "array", "items": { "type": "string", "maxLength": 2048 } },
+          "sources": {
+            "type": "array",
+            "items": {
+              "enum": ["agent", "unsupported", "capabilityUnavailable", "encrypted", "noSafeLimit"]
+            }
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "prepare",
+                "find",
+                "identify",
+                "standard",
+                "proprietary",
+                "control",
+                "conclude"
+              ]
+            }
+          }
+        }
       }
     },
     "profile": {
