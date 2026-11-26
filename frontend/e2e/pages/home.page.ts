@@ -37,6 +37,10 @@ export class HomePage {
     return this.page.getByRole('link', { name: 'Settings' });
   }
 
+  get missingTools(): Locator {
+    return this.page.getByRole('link', { name: /Missing tools/ });
+  }
+
   resumeInvestigation(name: string) {
     return this.page.getByRole('link', { name: new RegExp(`^Resume: ${name}`) });
   }

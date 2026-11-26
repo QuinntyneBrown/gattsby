@@ -298,6 +298,28 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     )) as RawLogEntry[];
   }
 
+  async listMissingTools(): Promise<MissingToolListEntry[]> {
+    const db = await this.open();
+    const tx = db.transaction(['missingToolRequests', 'investigations']);
+    const [requests, investigations] = await Promise.all([
+      request(tx.objectStore('missingToolRequests').getAll()) as Promise<MissingToolRequest[]>,
+      request(tx.objectStore('investigations').getAll()) as Promise<Investigation[]>,
+    ]);
+    const byId = new Map(investigations.map((row) => [row.id, row]));
+    return requests.flatMap((request) => {
+      const investigation = byId.get(request.investigationId);
+      return investigation
+        ? [
+            {
+              request,
+              deviceName: investigation.deviceName ?? 'Unknown device',
+              hasVerdict: !!investigation.verdict,
+            },
+          ]
+        : [];
+    });
+  }
+
   async rawLogCount(id: string): Promise<number> {
     const db = await this.open();
     const log = db.transaction('rawLog').objectStore('rawLog');
@@ -560,3 +582,5 @@ function refuse(tx: IDBTransaction, error: StoreError): void {
   (tx as IDBTransaction & { gattsbyRefusal?: StoreError }).gattsbyRefusal = error;
   tx.abort();
 }
+import type { MissingToolListEntry } from './model/missing-tool-list-entry';
+import type { MissingToolRequest } from './model/missing-tool-request';

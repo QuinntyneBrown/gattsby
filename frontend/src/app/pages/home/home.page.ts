@@ -8,6 +8,7 @@ import { InvestigationStore } from '../../store/investigation-store';
 import type { Investigation } from '../../store/model/investigation';
 import { STAGE_NAMES } from '../../agent/stage-names';
 import { BrandComponent } from '../../ui/brand/brand.component';
+import { MissingToolsService } from '../../outcome/missing-tools.service';
 
 // The Home page (docs/mocks/pages/home/empty.html and default.html). "Identify a device" creates
 // and stores the investigation before the first prompt (FR-007). The paused investigation, saved
@@ -107,6 +108,17 @@ import { BrandComponent } from '../../ui/brand/brand.component';
           }
         </section>
       }
+      @if (returning() && openMissingTools() !== null) {
+        <a class="row" routerLink="/missing-tools" style="margin-top: var(--space-6)">
+          <span class="row__body">
+            <span class="row__title">Missing tools</span>
+            <span class="row__meta">{{ openMissingTools() }} open</span>
+          </span>
+          <svg class="icon row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      }
       <p class="fine-print" style="margin-top: var(--space-10)">
         Everything runs on this device. Nothing is sent to a server.
       </p>
@@ -118,6 +130,7 @@ export class HomePage implements OnInit {
   private readonly store = inject(InvestigationStore);
   private readonly capabilities = inject(CapabilityDetector);
   private readonly modes = inject(ModeSelector);
+  private readonly missingTools = inject(MissingToolsService);
   private readonly router = inject(Router);
   protected readonly returning = signal(false);
   protected readonly resumable = signal<readonly Investigation[]>([]);
@@ -125,12 +138,20 @@ export class HomePage implements OnInit {
   protected readonly starting = signal(false);
   protected readonly failed = signal(false);
   protected readonly mode = signal<'agent' | 'checklist' | null>(null);
+  protected readonly openMissingTools = signal<number | null>(null);
 
   ngOnInit(): void {
     void this.store.list().then(
       (investigations) => {
         this.returning.set(investigations.length > 0);
         this.resumable.set(investigations.filter((row) => !row.verdict));
+        if (investigations.length) {
+          void this.missingTools.list().then(
+            (groups) =>
+              this.openMissingTools.set(groups.filter(({ status }) => status === 'open').length),
+            () => this.openMissingTools.set(null),
+          );
+        }
       },
       () => this.returning.set(false),
     );

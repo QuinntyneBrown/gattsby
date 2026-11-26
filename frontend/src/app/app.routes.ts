@@ -49,6 +49,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/settings/settings.page').then((m) => m.SettingsPage),
   },
   {
+    path: 'missing-tools',
+    title: 'Missing tools · Gattsby',
+    loadComponent: () =>
+      import('./pages/missing-tools/missing-tools.page').then((m) => m.MissingToolsPage),
+  },
+  {
     path: '**',
     title: 'Not found · Gattsby',
     loadComponent: () => import('./pages/not-found/not-found.page').then((m) => m.NotFoundPage),

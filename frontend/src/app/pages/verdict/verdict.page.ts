@@ -147,6 +147,7 @@ import { verdictView, type VerdictView } from './verdict-view';
                     [queryParams]="{ ref: request.id }"
                     >Evidence</a
                   >
+                  <a class="btn btn--ghost" routerLink="/missing-tools">See all requests</a>
                 </section>
               }
               @if (view()?.readable?.length) {

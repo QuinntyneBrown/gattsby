@@ -356,3 +356,14 @@ None; this is the first entry.
   failed step's provisional packets and resume recording only on "Record again".
 - Exercise the same proprietary fixture with and without an on-device model. The checklist
   reaches the same partial verdict without making a model call or a Bluetooth write.
+
+## Journey 14 — Review evidence and missing tools
+
+- Apply the export lesson from journey 4. Keep a reading's evidence IDs in the verdict and
+  resolve them against the same investigation. This let the acceptance test verify the exact
+  packets and timestamps that established speed.
+- Apply the bounded recording lesson from journey 13 when reading existing logs. Page the
+  timeline and preserve timestamp order while mixing packets, answers and hypothesis versions.
+- A repeated request can have useful new evidence. Normalise its key, keep the first ID and
+  merge the new reason and evidence in the reporting step's transaction. Across investigations,
+  count distinct investigations, even when a request was repeated within one.

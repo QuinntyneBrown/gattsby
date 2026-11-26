@@ -89,10 +89,11 @@ The capability and reason are rendered as text, never as HTML (NFR-013).
 6. Groups are listed with open requests first, ordered by the date first raised, oldest first, and
    built requests last, as the mock shows.
 7. Deleting an investigation deletes its requests; groups are recounted on the next read.
-8. A request's status is `open` or `built`. The mock shows "Built", but no requirement says how a
-   request becomes built. The design proposes that a registry tool or knowledge-base decoder declare
-   the capability keys it resolves, and that a group show "Built" when one does; this is
-   `<TO SUPPLY>`.
+8. A request's status is `open` or `built`. A decoder request with a `decode-service:<uuid>`
+   key is built when the current knowledge base supplies a decoder for a characteristic of that
+   service. Other capabilities stay open until their support can be established from the registry
+   or knowledge base. The count is the number of investigations, regardless of how often each
+   investigation raised the request.
 
 ### Storage
 
@@ -108,6 +109,9 @@ store has the index `byCapabilityKey` and the unique compound index `byInvestiga
 |---|---|
 | `MissingToolRequest` | `id`, `investigationId`, `capability`, `capabilityKey`, `reasons: string[]`, `evidence: string[]`, `stage`, `source`, `occurrences`, `firstRaisedAt`, `lastRaisedAt` |
 | `MissingToolGroup` | `capability`, `capabilityKey`, `status`, `count`, `latestReason`, `firstRaisedAt`, `investigations: { id, deviceName, raisedAt }[]` |
+
+Records saved before merge metadata was added keep their original key and fall back to one
+occurrence and the stored reason. New reports add the reporting step as evidence.
 
 ### Missing-tool list format 1.0
 

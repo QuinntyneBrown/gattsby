@@ -18,11 +18,11 @@ the shared core (BLE layer, knowledge base, store).
 | 11 | Pause, stop and resume | Confirm stop or leave, pause automatically or on request, and resume with the same device. Opening stopped records from history is journey 15. | 3 | 95 |
 | 12 | Report a non-connectable device | Check power, other connections and range, then explain what Chrome could establish after three scans. | 2 | 100 |
 | 13 | Decode a proprietary protocol | Compare saved activity levels, report candidate encodings and framing, and stop recording at quota. The link to free space depends on journey 15. | 12 | 97 |
-| 14 | Review evidence and missing tools | See the hypothesis, its evidence and capabilities the agent lacked. | 4 | 0 |
+| 14 | Review evidence and missing tools | Open the packets that support a reading, filter the evidence timeline and export missing-tool requests grouped across investigations. | 4 | 100 |
 | 15 | Browse and delete history | List past investigations and delete one or all. | 3 | 0 |
 | 16 | Import profiles and records | Load an exported profile or record back into the app. | 3 | 0 |
 | 17 | Work offline | Run fully offline once loaded, with no network requests. | 3 | 0 |
 | 18 | Unlock vendor data safely | Send a known vendor unlock, never bypassing encryption or pairing. | 4 | 0 |
 | 19 | Read a model plate photo | Photograph the model plate to identify maker and model. | 5 | 0 |
 | 20 | Use the agent on a phone | Run full agent mode once phones offer an on-device model. | 5 | 0 |
-| | **Total** | | **101** | **71** |
+| | **Total** | | **101** | **75** |
