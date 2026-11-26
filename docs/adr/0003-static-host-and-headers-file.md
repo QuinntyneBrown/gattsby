@@ -31,6 +31,10 @@ with its Content Security Policy, so that a Trusted Types violation anywhere fai
   `check-headers.ts` against the deployed URL after each deployment (NFR-014).
 - The development server (`ng serve`) does not apply the headers; it is for building screens, not
   for proving security.
+- The phone model deployment contract uses the exact same-origin script path
+  `/phone-model/worker.js`. It is the only addition to the existing Trusted Types script URL
+  allowlist. The app ships a disabled manifest until the owner selects a runtime and model under
+  FR-074. The current directives also apply to the worker.
 
 ## Consequences
 

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, expect, it, vi } from 'vitest';
 import { Clock } from '../shared/clock';
 import { ModelDownloadController } from './model-download-controller';
-import { PromptApiModelAdapter } from './prompt-api-model-adapter';
+import { ModelAdapterLoader } from './model-adapter-loader';
 
 afterEach(() => {
   TestBed.resetTestingModule();
@@ -22,7 +22,7 @@ it('updates download status every second while preserving measured progress', as
   );
   TestBed.configureTestingModule({
     providers: [
-      { provide: PromptApiModelAdapter, useValue: { download } },
+      { provide: ModelAdapterLoader, useValue: { load: async () => ({ download }) } },
       {
         provide: Clock,
         useValue: {
@@ -51,4 +51,34 @@ it('updates download status every second while preserving measured progress', as
   expect(controller.status()).toBe('available');
   expect(controller.progress()).toBe(100);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it('aborts the active transfer and ignores a completion from the canceled attempt', async () => {
+  let canceledSignal: AbortSignal | undefined;
+  let finishCanceled: () => void = () => undefined;
+  let lateProgress: (percent: number) => void = () => undefined;
+  const download = vi
+    .fn<(progress: (percent: number) => void, signal: AbortSignal) => Promise<void>>()
+    .mockImplementationOnce((progress, signal) => {
+      canceledSignal = signal;
+      lateProgress = progress;
+      return new Promise((resolve) => (finishCanceled = resolve));
+    })
+    .mockResolvedValueOnce(undefined);
+  TestBed.configureTestingModule({
+    providers: [{ provide: ModelAdapterLoader, useValue: { load: async () => ({ download }) } }],
+  });
+  const controller = TestBed.inject(ModelDownloadController);
+  await controller.prepare();
+  const canceled = controller.start();
+  controller.cancel();
+  expect(canceledSignal?.aborted).toBe(true);
+  expect(controller.status()).toBe('idle');
+  lateProgress(50);
+  finishCanceled();
+  await canceled;
+  expect(controller.status()).toBe('idle');
+  expect(controller.progress()).toBe(0);
+  await controller.start();
+  expect(controller.status()).toBe('available');
 });

@@ -1,6 +1,7 @@
-import { inject, Injectable, Injector } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { BleLayer } from '../ble/ble-layer';
-import { LANGUAGE_MODEL } from '../model/language-model.token';
+import { ModelAdapterLoader } from '../model/model-adapter-loader';
+import type { ModelAvailability } from '../model/model-availability';
 import { Clock } from '../shared/clock';
 import { InvestigationStore } from '../store/investigation-store';
 import type { CapabilityDiagnostic } from './capability-diagnostic';
@@ -8,6 +9,11 @@ import type { Capabilities } from './capabilities';
 import { CapabilityDetector } from './capability-detector';
 
 const PROBE_LIMIT_MS = 1000;
+const UNAVAILABLE: ModelAvailability = {
+  api: false,
+  availability: 'unavailable',
+  imageInput: false,
+};
 
 // Asks each adapter for its availability, in parallel, each within 1 s (check-capabilities
 // design). Prompts for nothing.
@@ -15,7 +21,7 @@ const PROBE_LIMIT_MS = 1000;
 export class BrowserCapabilityDetector extends CapabilityDetector {
   private readonly ble = inject(BleLayer);
   private readonly store = inject(InvestigationStore);
-  private readonly injector = inject(Injector);
+  private readonly models = inject(ModelAdapterLoader);
   private readonly clock = inject(Clock);
 
   async detect(options: { model?: boolean } = {}): Promise<Capabilities> {
@@ -42,14 +48,18 @@ export class BrowserCapabilityDetector extends CapabilityDetector {
         },
         (code) => diagnose('bluetooth', code),
       ),
-      options.model === false || !this.injector.get(LANGUAGE_MODEL)
-        ? { api: false, availability: 'unavailable' as const, imageInput: false }
+      options.model === false
+        ? UNAVAILABLE
         : this.probe(
             async () => {
-              const { PromptApiModelAdapter } = await import('../model/prompt-api-model-adapter');
-              return this.injector.get(PromptApiModelAdapter).availability();
+              const adapter = await this.models.load();
+              if (!adapter) return UNAVAILABLE;
+              const availability = await adapter.availability();
+              if (availability.availability !== 'downloadable') return availability;
+              const bytes = await adapter.downloadInfo();
+              return bytes ? { ...availability, downloadBytes: bytes } : availability;
             },
-            { api: false, availability: 'unavailable' as const, imageInput: false },
+            UNAVAILABLE,
             (code) => diagnose('model', code),
           ),
       this.probe(

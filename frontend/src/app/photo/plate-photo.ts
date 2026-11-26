@@ -1,4 +1,5 @@
-import { DestroyRef, inject, Injectable, Injector, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { ModelAdapterLoader } from '../model/model-adapter-loader';
 import { Clock } from '../shared/clock';
 import type { OperatingMode } from '../store/model/operating-mode';
 import type { InvestigationPhoto } from '../store/model/investigation-photo';
@@ -9,7 +10,7 @@ const READ_LIMIT_MS = 10_000;
 
 @Injectable()
 export class PlatePhoto {
-  private readonly injector = inject(Injector);
+  private readonly adapters = inject(ModelAdapterLoader);
   private readonly clock = inject(Clock);
   private operation = new AbortController();
   private image: Blob | null = null;
@@ -35,13 +36,13 @@ export class PlatePhoto {
     try {
       const [{ cameraAvailable }, adapter] = await Promise.all([
         import('./media-devices-camera-adapter'),
-        this.adapter(),
+        this.adapters.load(),
       ]);
-      const capability = await adapter.availability();
+      const capability = await adapter?.availability();
       if (signal.aborted) return;
-      this.imageAvailable.set(capability.imageInput);
+      this.imageAvailable.set(!!adapter?.readImage && !!capability?.imageInput);
       this.cameraAvailable.set(cameraAvailable());
-      this.stage.set(capability.imageInput ? 'capture' : 'manual');
+      this.stage.set(this.imageAvailable() ? 'capture' : 'manual');
     } catch {
       if (!signal.aborted) this.stage.set('manual');
     }
@@ -116,11 +117,6 @@ export class PlatePhoto {
     };
   }
 
-  private async adapter() {
-    const { PromptApiModelAdapter } = await import('../model/prompt-api-model-adapter');
-    return this.injector.get(PromptApiModelAdapter);
-  }
-
   private async read(encode: () => Promise<Blob>): Promise<void> {
     if (!this.imageAvailable() || (this.stage() !== 'capture' && this.stage() !== 'camera')) return;
     const signal = this.operation.signal;
@@ -133,7 +129,7 @@ export class PlatePhoto {
       this.releaseCamera();
       this.image = image;
       this.preview.set(URL.createObjectURL(image));
-      const adapter = await this.adapter();
+      const adapter = await this.adapters.load();
       const timeout = new AbortController();
       const elapsed = new Promise<null>((resolve) => {
         cancel = this.clock.setTimeout(() => {
@@ -142,7 +138,7 @@ export class PlatePhoto {
         }, READ_LIMIT_MS);
       });
       const reading = await Promise.race([
-        adapter.readImage(image, AbortSignal.any([signal, timeout.signal])),
+        adapter?.readImage?.(image, AbortSignal.any([signal, timeout.signal])) ?? null,
         elapsed,
       ]);
       signal.throwIfAborted();

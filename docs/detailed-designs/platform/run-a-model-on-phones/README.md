@@ -18,78 +18,75 @@ new model is a new implementation of the contract, with no change to the orchest
 
 **mobile data** — cellular connection on which the person may pay for each byte the download uses
 
-The phone model reuses the Readiness page's model states: `downloadable`
-(`docs/mocks/pages/readiness/downloadable.html`), `downloading` (`downloading.html`) and
-`download-failed` (`download-failed.html`), with the size and a mobile-data note shown before the
-download. No mock yet shows the phone wording; a mock is needed before implementation, and the
-copy is `<TO SUPPLY>` (OQ-06).
-
-The feature exists because the brief names the phone as the in-store device and the model as the
-agent; the seam is designed now so that the MVP's adapter does not close the door on it.
+Readiness reuses its existing components in four phone states under `docs/mocks/pages/readiness/`.
+`phone-downloadable` shows the size and the mobile data note before the download.
+`phone-downloading` shows progress and offers Cancel download. `phone-download-failed` offers
+retry. `phone-webgpu-unavailable` explains why checklist mode is used.
 
 ## Description
 
-The design introduces these building blocks in the Angular (pending ADR 0001) workspace under
-`frontend/src/app/`. Everything marked `<TO SUPPLY>` waits on OQ-01 and OQ-02.
+The feature uses these building blocks in the Angular workspace under `frontend/src/app/`.
+OQ-01 and OQ-02 gate the production model package.
 
-- **`ModelAdapter`** (`model/model-adapter.ts`) — the contract the MVP already defines:
-  `availability()`, `download(onProgress)`, `createSession()`, `contextWindow`,
-  `measureTokens(text)` and `readImage(blob)`. This feature adds `downloadInfo()`, returning the
-  download's size in bytes and whether the device is on mobile data, and an `AbortSignal` on
-  `download`. `PromptApiModelAdapter` returns `null` for the size it cannot know.
-- **`ModelAdapterLoader`** (`model/model-adapter-loader.ts`) — imports the one adapter that fits this
-  browser: `PromptApiModelAdapter` when `LanguageModel` exists; otherwise `WebGpuModelAdapter` when
-  the phone model is enabled and WebGPU is present; otherwise none, and checklist mode. `ModeSelector`,
-  `ModelDecider`, `ModelDownloadController` and `CapabilityDetector` get their adapter from it.
-- **`WebGpuModelAdapter`** (`model/web-gpu-model-adapter.ts`) — the phone implementation. It is the
-  only code that touches `navigator.gpu` (NFR-021). Its availability is `unavailable` without a WebGPU
-  adapter, `downloadable` when the files are not cached, and `available` when they are. It runs the
-  runtime in a Web Worker (`model/web-gpu-model.worker.ts`) so inference does not block the page.
-  It is imported dynamically, and the runtime only after the person's tap.
-- **`WebGpuModelSession`** (`model/web-gpu-model-session.ts`) — implements `ModelSession`:
-  `promptAction(prompt, schema, signal)` posts to the worker and resolves the model's JSON text as
-  `unknown`; an aborted signal tells the worker to stop. `ActionValidator` validates the result
-  exactly as it validates Gemini Nano's (FR-043).
-- **`PhoneModelManifest`** (`model/phone-model-manifest.ts`) — the model's `id`, `files`,
-  `totalBytes`, `contextWindow` and `runtime`, all `<TO SUPPLY>` (OQ-02).
-- **`ModelDownloadController`** (`model/model-download-controller.ts`) — unchanged in behaviour: it
-  shows `downloadInfo()` before the download, starts only on the person's tap, and reports progress
-  at least once a second (see the choose-operating-mode design).
+- **`ModelAdapter`** (`model/model-adapter.ts`) — `availability()`, `open(signal)`,
+  `download(onProgress, signal)`, `downloadInfo()` and optional `readImage(blob, signal)`.
+  `downloadInfo()` returns the size in bytes or `null` when Chrome owns the download.
+- **`ModelAdapterLoader`** (`model/model-adapter-loader.ts`) — imports the native Prompt API adapter
+  when Chrome provides it, otherwise the phone adapter on Android. Capability detection, session
+  handoff, Readiness downloads and plate photos use the loader.
+- **`WebGpuModelAdapter`** (`model/web-gpu-model-adapter.ts`) — probes for an available WebGPU
+  adapter, validates the same-origin manifest, and checks its versioned Cache Storage entries.
+  It opens the dedicated worker when it starts a session. [Chrome's WebGPU documentation](https://developer.chrome.com/docs/web-platform/webgpu/troubleshooting-tips)
+- **`WebGpuModelSession`** (`model/web-gpu-model-session.ts`) — sends requests with IDs to the worker.
+  A canceled prompt sends an abort for that request. The worker returns JSON text and the existing
+  `ActionValidator` checks it (FR-043).
+- **`PhoneModelManifest`** (`model/phone-model-manifest.ts`) — a versioned model ID, context window
+  and a list of model files with byte sizes. The default `/phone-model/manifest.json` is `null`.
+  The worker and model files are supplied together when OQ-02 is decided.
+- **`ModelDownloadController`** (`model/model-download-controller.ts`) — starts on the person's
+  tap, reports progress and owns the per-download abort signal.
 
-### What does not change
+### Action validation and fallback
 
 The orchestrator, `Decider`, `ModelDecider`, `DecisionStateBuilder`, `ActionValidator`, the tool
 registry and the safety rules depend on the `ModelAdapter` and `ModelSession` contracts only. A
-phone investigation in full agent mode runs through them with no change to the orchestrator
-(FR-074). The 10-second timeout, the abort on stop and emergency stop, and the fallback triggers
-apply unchanged (FR-006, FR-047).
+phone investigation in full agent mode uses the same orchestrator, 10-second timeout, abort on
+stop and emergency stop, and checklist fallback conditions (FR-074, FR-006, FR-047).
 
 ### Constraints from other requirements
 
 | Constraint | Consequence for the phone model |
 |---|---|
 | No request off the app's origin (NFR-012) | The model's files are served from Gattsby's own origin, not from a model hub or CDN. Their hosting and size limits on the static host are `<TO SUPPLY>` (A-04). |
-| Initial bundle at most 250 KB (NFR-004) | The runtime and adapter load by dynamic import after the tap. |
-| Offline after first load (NFR-006) | The files are stored in Cache Storage after the download. The service worker does not precache them; they are too large to fetch without the person's consent. |
+| Initial bundle at most 250 KB (NFR-004) | The loader imports the phone adapter for capability checks. The runtime initializes in the worker when a session starts. |
+| Offline after first load (NFR-006) | The service worker caches the manifest and, when supplied, the worker script. The model files go to versioned Cache Storage when the person starts a download. |
 | Script CSP without `unsafe-eval` (NFR-014) | A WebAssembly runtime needs `'wasm-unsafe-eval'` in `script-src`. That keyword is distinct from `'unsafe-eval'`, but adding it needs an ADR. |
 | Trusted Types (NFR-013) | Creating the worker passes a script URL through the `gattsby` policy's allowlist (see the render-untrusted-text design). |
 | Structured output (FR-042) | The runtime constrains output to the action schema where it supports JSON-schema decoding; otherwise validation and the fallback rules catch invalid output. Which applies is `<TO SUPPLY>` (OQ-02). |
-| Image input (FR-022) | `readImage` returns `UNSUPPORTED` unless the chosen model reads images; the photo tool then degrades (see the read-a-model-plate-photo design). |
-| Storage (NFR-008) | The download is refused with `STORAGE_FULL` when `navigator.storage.estimate()` leaves less room than `totalBytes`. |
+| Image input (FR-022) | The phone adapter reports that image input is unavailable. The plate dialog offers typing (see the read-a-model-plate-photo design). |
+| Storage (NFR-008) | The adapter checks whether the storage estimate has room for the remaining model files. An insufficient estimate or a rejected cache write leads to the Readiness retry state. |
 
 ### Download on mobile data
 
-The size is always shown before the download, and the download never starts without the person's
-tap (FR-074). Whether the phone is on mobile data is read from the Network Information API
-(`navigator.connection.type`) where Chrome provides it; where it does not, `onMobileData` is `null`
-and the note asks the person to use Wi-Fi. The exact wording and whether Gattsby should refuse to
-download on mobile data are `<TO SUPPLY>` (OQ-02, OQ-06).
+Readiness shows the configured size and says "Mobile data charges may apply. Use Wi-Fi if you can."
+Carrier charges vary by plan. The person chooses when to start (FR-074). A canceled or failed
+transfer keeps only complete files so retry can reuse them.
+
+### Worker package
+
+The manifest lists a stable model version and immutable files under `/phone-model/assets/`.
+The worker loads the files from the named Cache Storage cache. The app sends an `open` request
+with the cache name, file list and model instructions. It sends `measure` and `ask` requests with
+the prompt and response schema. Measurement includes the prompt, schema and system instructions.
+The worker replies with the matching request ID and a value or an error. An `abort` message names
+the request ID to release. The app terminates the worker when the investigation releases its model
+session.
 
 ### Open decisions
 
 - Whether the feature is built at all: OQ-01.
 - The model, its runtime, its size, its context window and its speed on a mid-range phone: OQ-02.
-- Whether the phone model also serves desktop browsers without Gemini Nano: `<TO SUPPLY>`.
+- Desktop keeps the existing adapter selection. FR-074 covers Chrome for Android.
 
 ### Tests that prove it
 

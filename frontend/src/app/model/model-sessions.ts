@@ -1,5 +1,6 @@
-import { DestroyRef, inject, Injectable, Injector } from '@angular/core';
+import { DestroyRef, inject, Injectable } from '@angular/core';
 import { Clock } from '../shared/clock';
+import { ModelAdapterLoader } from './model-adapter-loader';
 import type { ModelSession } from './model-session';
 
 const SESSION_TIMEOUT = 10_000;
@@ -8,7 +9,7 @@ const HANDOFF_TIMEOUT = 15_000;
 // Hands a session created at startup to the investigation page that owns its lifetime.
 @Injectable({ providedIn: 'root' })
 export class ModelSessions {
-  private readonly injector = inject(Injector);
+  private readonly adapters = inject(ModelAdapterLoader);
   private readonly clock = inject(Clock);
   private pending: { id: string; session: ModelSession; releaseTimer: () => void } | null = null;
 
@@ -18,10 +19,9 @@ export class ModelSessions {
 
   async create(): Promise<ModelSession | null> {
     const abort = new AbortController();
-    const session = import('./prompt-api-model-adapter')
-      .then(({ PromptApiModelAdapter }) =>
-        this.injector.get(PromptApiModelAdapter).open(abort.signal),
-      )
+    const session = this.adapters
+      .load()
+      .then((adapter) => adapter?.open(abort.signal) ?? null)
       .catch(() => null);
     let stop: (() => void) | undefined;
     const deadline = new Promise<null>((resolve) => {

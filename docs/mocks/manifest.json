@@ -33,7 +33,10 @@
         "FR-004",
         "FR-005",
         "NFR-016",
-        "NFR-025"
+        "NFR-025",
+        "FR-074",
+        "NFR-004",
+        "NFR-021"
       ],
       "states": [
         "default",
@@ -46,7 +49,11 @@
         "permission-denied",
         "unsupported",
         "insecure",
-        "error"
+        "error",
+        "phone-downloadable",
+        "phone-downloading",
+        "phone-download-failed",
+        "phone-webgpu-unavailable"
       ],
       "not_applicable": {
         "empty": "The check always lists the same six capabilities; there is no collection to be empty."

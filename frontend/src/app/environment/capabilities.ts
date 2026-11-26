@@ -1,4 +1,4 @@
-import type { LanguageModelAvailability } from '../model/language-model-api';
+import type { ModelAvailability } from '../model/model-availability';
 import type { CapabilityDiagnostic } from './capability-diagnostic';
 
 // What this browser and platform can do: the output of `check_capabilities` (TOOL-001), with
@@ -11,11 +11,7 @@ export interface Capabilities {
     readonly adapterAvailable: boolean;
     readonly blocked: boolean;
   };
-  readonly model: {
-    readonly api: boolean;
-    readonly availability: LanguageModelAvailability;
-    readonly imageInput: boolean;
-  };
+  readonly model: ModelAvailability;
   readonly watchAdvertisements: boolean;
   readonly requestLEScan: boolean;
   readonly getDevices: boolean;

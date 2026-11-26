@@ -24,5 +24,5 @@ the shared core (BLE layer, knowledge base, store).
 | 17 | Work offline | Cache the app and its assets, run a full offline investigation, and defer Reload until the investigation ends. Cold-start timing on a mid-range phone remains to be measured. | 3 | 95 |
 | 18 | Unlock vendor data safely | Offer the documented Movesense subscription after a silent recording, keep approved write provenance, and report protected data. Real-device verification of Chrome’s GATT error handling remains open. | 4 | 95 |
 | 19 | Read a model plate photo | Confirm maker and model from a local photo or by typing. A playbook-initiated photo tool remains open. | 5 | 95 |
-| 20 | Use the agent on a phone | Run full agent mode once phones offer an on-device model. | 5 | 0 |
-| | **Total** | | **101** | **93** |
+| 20 | Use the agent on a phone | Check download size, cancel or retry a download, and investigate in full agent mode with a fake phone model. Runtime, model hosting and Android hardware validation remain open. | 5 | 85 |
+| | **Total** | | **101** | **97** |

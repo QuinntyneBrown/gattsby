@@ -434,3 +434,16 @@ None; this is the first entry.
   a separate JPEG containing synthetic GPS and camera metadata.
 - Treat image input as a separate model capability. Typing remains available with an
   unavailable model, a refused camera permission or an unreadable photo.
+
+## Journey 20 — Use the agent on a phone
+
+- Apply the production-header lesson from journey 17. Run the fake worker at the same
+  script URL as the future deployment. Test it with the real CSP and Trusted Types policy.
+- Apply the model lesson from journey 6. Route both adapters through the same session contract
+  and existing action validation. Force an ambiguous FTMS step so the test proves a worker
+  response was used.
+- Supply the package size before the tap and count actual resource requests. Abort the work
+  when the person cancels. A failed file remains unavailable until a retry stores a complete
+  response.
+- Model selection, licensing, hosting and real Android performance remain product decisions.
+  Keep the deployment manifest disabled while exercising the integration with the fixtures.

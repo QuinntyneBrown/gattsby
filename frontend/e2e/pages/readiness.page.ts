@@ -41,6 +41,14 @@ export class ReadinessPage {
     return this.page.getByRole('progressbar', { name: 'Model download' });
   }
 
+  get downloadDetails() {
+    return this.page.getByText(/Mobile data charges may apply/);
+  }
+
+  get cancelDownload() {
+    return this.page.getByRole('button', { name: 'Cancel download' });
+  }
+
   capability(name: string) {
     return this.page
       .getByRole('listitem')
