@@ -118,6 +118,7 @@ export async function recordNotifications(
     if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
       ctx.raiseMissingTool({
         capabilityKey: 'encrypted-notifications',
+        source: 'encrypted',
         title: 'Listen to protected notifications',
         reason: 'The device requires authentication or encryption.',
         evidence: [],

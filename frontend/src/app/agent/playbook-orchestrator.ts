@@ -12,6 +12,11 @@ import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index'
 import type { ModelSession } from '../model/model-session';
 import { ModelSessions } from '../model/model-sessions';
 import { HypothesisTracker } from '../outcome/hypothesis-tracker';
+import {
+  mergeMissingToolRequest,
+  missingToolKey,
+  applyMissingToolUpdates,
+} from '../outcome/merge-missing-tool-requests';
 import { buildProfile } from '../outcome/profile-builder';
 import { verdictLabel, type VerdictFacts } from '../outcome/verdict-builder';
 import { Clock } from '../shared/clock';
@@ -763,7 +768,10 @@ export class PlaybookOrchestrator {
         }),
       },
       verdictFacts: () =>
-        this.facts([...this.requests(), ...requests], [...this.observations(), ...observations]),
+        this.facts(applyMissingToolUpdates(this.requests(), requests), [
+          ...this.observations(),
+          ...observations,
+        ]),
       observe: (o) => {
         const observation: Observation = {
           ...o,
@@ -783,18 +791,33 @@ export class PlaybookOrchestrator {
       recordings: () => this.store.recordings(id),
       recordedPackets: (recordingId, limit) => this.store.recordedPackets(id, recordingId, limit),
       raiseMissingTool: (r: NewMissingToolRequest) => {
-        const existing = [...this.requests(), ...requests].find(
-          (x) => x.capabilityKey === r.capabilityKey,
+        const capabilityKey = missingToolKey(r.capabilityKey);
+        const existing = applyMissingToolUpdates(this.requests(), requests).find(
+          (x) => missingToolKey(x.capabilityKey) === capabilityKey,
         );
-        if (existing) return existing.id;
-        const request: MissingToolRequest = {
-          ...r,
-          investigationId: id,
-          id: `m-${++this.requestCounter}`,
-          stepN: n,
-          createdAt: Date.now(),
-        };
-        requests.push(request);
+        const raisedAt = this.clock.now();
+        const evidence = [...new Set([...r.evidence, `s-${n}`])];
+        const source = r.source ?? 'unsupported';
+        const request: MissingToolRequest = existing
+          ? mergeMissingToolRequest(existing, r.reason, evidence, action.stage, source, raisedAt)
+          : {
+              title: r.title,
+              reason: r.reason,
+              capabilityKey,
+              evidence,
+              investigationId: id,
+              id: `m-${++this.requestCounter}`,
+              stepN: n,
+              createdAt: raisedAt,
+              occurrences: 1,
+              lastRaisedAt: raisedAt,
+              reasons: [r.reason],
+              stages: [action.stage],
+              sources: [source],
+            };
+        const stageIndex = requests.findIndex(({ id }) => id === request.id);
+        if (stageIndex < 0) requests.push(request);
+        else requests[stageIndex] = request;
         handedOut.push(request.id);
         return request.id;
       },
@@ -847,6 +870,23 @@ export class PlaybookOrchestrator {
       if (tool?.safetyClass !== 'write' && tool?.safetyClass !== 'control') {
         this.repeatStep = () => this.runStep(id, action, modelDecision, refusal, chosenByPerson);
       }
+    }
+    if (
+      !result.ok &&
+      !requests.length &&
+      tool &&
+      (result.error.code === 'UNSUPPORTED' || result.error.code === 'AUTH_REQUIRED')
+    ) {
+      const encrypted = result.error.code === 'AUTH_REQUIRED';
+      const label = tool.labels.purpose(action.input as never, labels);
+      const requestId = ctx.raiseMissingTool({
+        capabilityKey: `${encrypted ? 'protected' : 'unsupported'}:${tool.name}`,
+        title: encrypted ? `Access protected data for ${label.toLowerCase()}` : label,
+        reason: result.error.message.slice(0, 280),
+        source: encrypted ? 'encrypted' : 'unsupported',
+        evidence: result.evidence,
+      });
+      result = { ...result, evidence: [...result.evidence, requestId] };
     }
     const step: Step = {
       investigationId: id,
@@ -907,7 +947,7 @@ export class PlaybookOrchestrator {
 
     if (action.tool === 'finish' && result.ok) {
       const data = result.data as { verdict: VerdictKind; label: string };
-      const facts = this.facts([...this.requests(), ...requests], allObservations);
+      const facts = this.facts(applyMissingToolUpdates(this.requests(), requests), allObservations);
       const verdict: Verdict = {
         kind: data.verdict,
         protocol: facts.hypothesis?.protocol ?? null,
@@ -1025,7 +1065,7 @@ export class PlaybookOrchestrator {
       (record) => record && { ...record, stage: step.stage, lastCommittedStep: step.n },
     );
     this.observations.set(allObservations);
-    this.requests.update((r) => [...r, ...requests]);
+    this.requests.update((r) => applyMissingToolUpdates(r, requests));
     if (hypothesis) this.hypotheses.update((h) => [...h, hypothesis]);
     if (modePatch) {
       this.releaseModel();

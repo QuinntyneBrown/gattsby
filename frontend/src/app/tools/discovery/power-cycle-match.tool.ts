@@ -37,6 +37,7 @@ export const powerCycleMatchTool = entry<PowerCycleInput, unknown>({
     if (!ctx.state.advertisementsAvailable) {
       ctx.raiseMissingTool({
         capabilityKey: 'watch-advertisements',
+        source: 'capabilityUnavailable',
         title: 'Watch Bluetooth advertisements',
         reason: 'This browser does not expose advertisement watching for automatic matching.',
         evidence: [],

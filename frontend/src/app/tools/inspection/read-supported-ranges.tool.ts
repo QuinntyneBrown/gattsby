@@ -77,6 +77,7 @@ export const readSupportedRangesTool = entry<Record<string, never>, unknown>({
         if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
           ctx.raiseMissingTool({
             capabilityKey: `encrypted-read:${uuid}`,
+            source: 'encrypted',
             title: `Read the protected ${name}`,
             reason: 'The device requires authentication or encryption.',
             evidence: [],

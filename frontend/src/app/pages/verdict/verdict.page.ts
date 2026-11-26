@@ -139,7 +139,14 @@ import { verdictView, type VerdictView } from './verdict-view';
                 <section class="tool-card" [attr.aria-labelledby]="request.id">
                   <p class="tool-card__eyebrow">Missing-tool request raised</p>
                   <h2 class="tool-card__title" [id]="request.id">{{ request.title }}</h2>
-                  <p class="tool-card__text">{{ request.reason }}</p>
+                  @for (reason of request.reasons ?? [request.reason]; track reason) {
+                    <p class="tool-card__text">{{ reason }}</p>
+                  }
+                  <a
+                    [routerLink]="['/investigations', id(), 'evidence']"
+                    [queryParams]="{ ref: request.id }"
+                    >Evidence</a
+                  >
                 </section>
               }
               @if (view()?.readable?.length) {
