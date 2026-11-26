@@ -112,6 +112,7 @@
         "prepare",
         "find",
         "find-candidates",
+        "find-report-candidates",
         "find-cancelled",
         "cannot-find",
         "identify",

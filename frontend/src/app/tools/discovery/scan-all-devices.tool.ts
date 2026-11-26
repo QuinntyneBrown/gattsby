@@ -37,6 +37,9 @@ export const scanAllDevicesTool = entry<Record<string, never>, ScanOutput>({
       [
         { label: 'Show all nearby devices', mode: 'acceptAll' },
         { label: 'Scan again', mode: 'filtered' },
+        ...(!ctx.state.powerCycleAttempted
+          ? [{ label: 'Several names look alike', mode: 'candidateHelp' as const }]
+          : []),
       ],
       ctx.state.machineType ?? null,
       ctx.state.brand ?? null,

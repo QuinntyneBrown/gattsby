@@ -7,6 +7,8 @@ const MVP_TOOLS = [
   'check_capabilities',
   'scan_devices',
   'scan_all_devices',
+  'report_candidate_names',
+  'power_cycle_match',
   'connect',
   'disconnect',
   'enumerate_gatt',

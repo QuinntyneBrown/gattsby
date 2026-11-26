@@ -6,14 +6,16 @@ import type { ToolContext } from '../tool-context';
 import { ToolError } from '../tool-error';
 import { fail, ok, type ToolResult } from '../tool-result';
 
-export interface ScanOutput extends ChosenDevice {
+export interface ScanSelection extends ChosenDevice {
   readonly mode: 'filtered' | 'acceptAll';
   readonly excludedAsBlocklisted: readonly string[];
 }
 
+export type ScanOutput = ScanSelection | { readonly candidateHelp: true };
+
 export interface TapButton {
   readonly label: string;
-  readonly mode: 'filtered' | 'acceptAll';
+  readonly mode: 'filtered' | 'acceptAll' | 'candidateHelp';
 }
 
 const MACHINE_WORDS: Readonly<Record<string, string>> = {
@@ -33,13 +35,13 @@ export function machineWord(machineType: string | null | undefined): string {
 // and `requestDevice`.
 export async function scanBehindTap(
   ctx: ToolContext,
-  prompt: { title: string; detail: string },
+  prompt: { title: string; detail: string; skippable?: boolean },
   buttons: readonly TapButton[],
   machineType: string | null,
   brand: string | null,
 ): Promise<ToolResult<ScanOutput>> {
   const builder = new ScanOptionsBuilder(ctx.kb);
-  const requests: Record<TapButton['mode'], ScanRequest> = {
+  const requests: Record<ScanRequest['mode'], ScanRequest> = {
     filtered: builder.filtered(machineType, brand),
     acceptAll: builder.acceptAll(),
   };
@@ -55,12 +57,35 @@ export async function scanBehindTap(
       steps: [],
       allowFreeText: false,
       needsReady: false,
-      skippable: false,
+      skippable: prompt.skippable ?? false,
       stoppable: false,
     },
     ctx.signal,
   );
-  const mode = buttons.find((b) => b.label === response.answer)?.mode ?? buttons[0].mode;
+  if (response.skipped) {
+    const id = ctx.observe({
+      kind: 'scan-skipped',
+      subject: ctx.stage,
+      value: 'skipped',
+      text: 'The person skipped the chooser.',
+      tag: 'confirmed',
+      evidence: [],
+    });
+    return fail('USER_CANCELLED', 'The person skipped the chooser.', undefined, [id]);
+  }
+  const mode = buttons.find((b) => b.label === response.answer)?.mode;
+  if (!mode) return fail('INVALID_INPUT', 'Choose one of the available steps.');
+  if (mode === 'candidateHelp') {
+    const id = ctx.observe({
+      kind: 'candidate-help',
+      subject: 'device-chooser',
+      value: 'requested',
+      text: 'The person said several names look alike.',
+      tag: 'confirmed',
+      evidence: [],
+    });
+    return ok('Several names look alike.', { candidateHelp: true }, [id]);
+  }
   const request = requests[mode];
   const excluded = request.excludedAsBlocklisted;
   for (const uuid of excluded) {

@@ -19,11 +19,15 @@ export interface DecisionState {
   readonly stage: Stage;
   readonly stepCount: number;
   readonly capabilitiesChecked: boolean;
+  readonly advertisementsAvailable: boolean;
   /** `undefined` until asked; `null` for "Don't know" or a skip. */
   readonly machineType: string | null | undefined;
   readonly brand: string | null | undefined;
   readonly poweredOn: boolean;
   readonly scans: readonly ScanAttempt[];
+  readonly candidateHelp: boolean;
+  readonly reportedCandidates: readonly string[] | null;
+  readonly powerCycleAttempted: boolean;
   readonly device: ChosenDevice | null;
   readonly connectAttempts: number;
   readonly connectFailures: number;
@@ -65,10 +69,14 @@ export const INITIAL_STATE: DecisionState = {
   stage: 'prepare',
   stepCount: 0,
   capabilitiesChecked: false,
+  advertisementsAvailable: false,
   machineType: undefined,
   brand: undefined,
   poweredOn: false,
   scans: [],
+  candidateHelp: false,
+  reportedCandidates: null,
+  powerCycleAttempted: false,
   device: null,
   connectAttempts: 0,
   connectFailures: 0,
@@ -124,7 +132,12 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
   const answer = step.exchange && !step.exchange.skipped ? step.exchange.answer : null;
   switch (step.tool) {
     case 'check_capabilities':
-      return { ...next, capabilitiesChecked: true };
+      return {
+        ...next,
+        capabilitiesChecked: true,
+        advertisementsAvailable:
+          data?.['watchAdvertisements'] === true || data?.['requestLEScan'] === true,
+      };
     case 'ask_user':
       if (step.ruleId === 'prepare.machine-type') {
         return { ...next, machineType: answer ? (MACHINE_TYPES[answer] ?? 'other') : null };
@@ -161,6 +174,7 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return next;
     case 'scan_devices':
     case 'scan_all_devices': {
+      if (data?.['candidateHelp'] === true) return { ...next, candidateHelp: true };
       const mode =
         (data?.['mode'] as ScanAttempt['mode'] | undefined) ??
         (step.tool === 'scan_devices' ? 'filtered' : 'acceptAll');
@@ -182,6 +196,14 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
         unreachable: (data?.['excludedAsBlocklisted'] as string[] | undefined) ?? state.unreachable,
       };
     }
+    case 'report_candidate_names':
+      return { ...next, reportedCandidates: (data?.['names'] as string[] | undefined) ?? [] };
+    case 'power_cycle_match':
+      return {
+        ...next,
+        powerCycleAttempted: true,
+        device: (data?.['device'] as ChosenDevice | undefined) ?? state.device,
+      };
     case 'connect':
       return {
         ...next,

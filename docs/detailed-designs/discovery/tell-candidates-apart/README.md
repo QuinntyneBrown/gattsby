@@ -76,7 +76,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    observation (FR-013).
 4. "Skip" returns `USER_CANCELLED`, records the step as skipped (FR-052), and the rules return to the
    Find prompt.
-5. The `confidence` of a guided match is `<TO SUPPLY>`; the mock tags the observation `confirmed`.
+5. A device chosen after the guided instructions has confidence 1 for the person's selection. The
+   observation names the guided method. It makes no claim that Gattsby watched the chooser.
 
 ### Automatic match (P2)
 
@@ -95,8 +96,9 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 The `find-candidates` mock lists four candidate names, each tagged FTMS, under the `scan_devices`
 step. The page cannot read the chooser (A-10), so in the guided match those names are known only as
-the person reports them, or from advertisement samples where watching is available. Whether the
-guided prompt asks the person to type the names is `<TO SUPPLY>` (OQ-06).
+the person reports them, or from advertisement samples where watching is available. OQ-06 is
+resolved with one optional field for comma-separated names. The feed attributes those names to
+the person. Chrome still receives the actual selection in its chooser.
 
 ### Errors
 
