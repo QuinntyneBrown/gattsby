@@ -6,6 +6,7 @@ import type { Hypothesis } from '../store/model/hypothesis';
 import type { Observation } from '../store/model/observation';
 import type { UpdateHypothesisInput } from '../tools/meta/update-hypothesis.tool';
 import { scoreConfidence } from './confidence-scorer';
+import { confirmedPlate } from '../photo/confirmed-plate';
 
 interface Guess {
   readonly serviceUuid: string;
@@ -89,14 +90,17 @@ export class HypothesisTracker {
     const guess = currentGuess(state, kb, config);
     if (!guess) return null;
     const info = state.deviceInfo && state.deviceInfo !== 'absent' ? state.deviceInfo : null;
+    const plate = confirmedPlate(observations);
+    const maker = info?.manufacturer ? undefined : plate.get('manufacturer');
+    const model = info?.model ? undefined : plate.get('model');
     const { confidence, contributions } = scoreConfidence(guess.serviceUuid, observations);
     const previous = this.current();
     const next = {
       protocol: guess.protocol,
       label: guess.label,
       deviceType: guess.deviceType,
-      maker: info?.manufacturer ?? null,
-      model: info?.model ?? null,
+      maker: info?.manufacturer ?? maker?.value ?? null,
+      model: info?.model ?? model?.value ?? null,
       confidence,
     };
     if (
@@ -123,6 +127,8 @@ export class HypothesisTracker {
       ...(proposal ? { proposedConfidence: proposal.proposedConfidence } : {}),
       evidence: [
         ...new Set([
+          ...(maker ? [maker.id] : []),
+          ...(model ? [model.id] : []),
           ...contributions.flatMap((c) => c.observationIds),
           ...(proposal?.evidence ?? []),
         ]),

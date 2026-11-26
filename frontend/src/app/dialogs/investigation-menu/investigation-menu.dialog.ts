@@ -60,6 +60,13 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
                 <span class="sheet-menu__title">Add a note or the location</span>
               </button>
             </li>
+            @if (running()) {
+              <li>
+                <button class="sheet-menu__item" type="button" (click)="readPlate()">
+                  <span class="sheet-menu__title">Photo of the model plate or console</span>
+                </button>
+              </li>
+            }
           </ul>
         </div>
       </div>
@@ -71,6 +78,7 @@ export class InvestigationMenuDialog {
   readonly running = input(false);
   readonly closed = output<void>();
   readonly noteRequested = output<void>();
+  readonly plateRequested = output<void>();
   readonly emergencyStop = output<void>();
   readonly stopRequested = output<void>();
   readonly pauseRequested = output<void>();
@@ -93,6 +101,11 @@ export class InvestigationMenuDialog {
   protected addNote(): void {
     this.dialog().nativeElement.close();
     this.noteRequested.emit();
+  }
+
+  protected readPlate(): void {
+    this.dialog().nativeElement.close();
+    this.plateRequested.emit();
   }
 
   protected stop(): void {

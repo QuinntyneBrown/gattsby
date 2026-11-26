@@ -12,6 +12,7 @@ import {
 import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationPhoto } from './model/investigation-photo';
 import type { InvestigationNote } from './model/investigation-note';
+import type { Observation } from './model/observation';
 import type { DeviceProfile } from './model/device-profile';
 import type { ImportedInvestigation } from './model/imported-investigation';
 import type { InvestigationRecord } from './model/investigation-record';
@@ -369,6 +370,30 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       };
     });
     return details;
+  }
+
+  async savePlateEvidence(
+    id: string,
+    observations: readonly Observation[],
+    attachment: InvestigationPhoto | null,
+  ): Promise<void> {
+    await this.write(['investigations', 'observations', 'photos'], 'strict', (tx) => {
+      const lookup = tx.objectStore('investigations').get(id);
+      lookup.onsuccess = () => {
+        const current = lookup.result as Investigation | undefined;
+        if (!current) {
+          refuse(tx, new StoreError('NOT_FOUND', 'No investigation with that id.'));
+          return;
+        }
+        if (current.verdict || current.readOnly) {
+          refuse(tx, new StoreError('ALREADY_CONCLUDED', 'This investigation has finished.'));
+          return;
+        }
+        const entries = tx.objectStore('observations');
+        observations.forEach((observation) => entries.add(observation));
+        if (attachment) tx.objectStore('photos').add(attachment);
+      };
+    });
   }
 
   async rawLog(id: string): Promise<RawLogEntry[]> {

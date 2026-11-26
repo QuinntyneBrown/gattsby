@@ -3,8 +3,10 @@ import type { DeviceProfile } from './model/device-profile';
 import type { ImportedInvestigation } from './model/imported-investigation';
 import type { Investigation, NewInvestigation } from './model/investigation';
 import type { InvestigationNote } from './model/investigation-note';
+import type { InvestigationPhoto } from './model/investigation-photo';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
+import type { Observation } from './model/observation';
 import type { StepCommit } from './model/step-commit';
 import type { Stage } from './model/stage';
 import type { ModeChange } from './model/mode-change';
@@ -34,6 +36,11 @@ export abstract class InvestigationStore {
   abstract get(id: string): Promise<InvestigationRecord>;
   abstract getInvestigation(id: string): Promise<Investigation>;
   abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
+  abstract savePlateEvidence(
+    id: string,
+    observations: readonly Observation[],
+    attachment: InvestigationPhoto | null,
+  ): Promise<void>;
   abstract list(): Promise<Investigation[]>;
   abstract delete(id: string): Promise<void>;
   abstract deleteAll(onBlocked?: () => void): Promise<void>;

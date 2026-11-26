@@ -26,6 +26,9 @@ import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
 import { ApprovalDialog } from '../../dialogs/approval/approval.dialog';
 import { EmergencyStopDialog } from '../../dialogs/emergency-stop/emergency-stop.dialog';
 import { InvestigationMenuDialog } from '../../dialogs/investigation-menu/investigation-menu.dialog';
+import { PhotoReadDialog } from '../../dialogs/photo-read/photo-read.dialog';
+import type { PlateDetails } from '../../photo/plate-details';
+import { PlatePhoto } from '../../photo/plate-photo';
 import { StillThereDialog } from '../../dialogs/still-there/still-there.dialog';
 import { UnexpectedEffectDialog } from '../../dialogs/unexpected-effect/unexpected-effect.dialog';
 import { LiveMetrics } from '../../live/live-metrics';
@@ -69,6 +72,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     EmergencyStopDialog,
     UnexpectedEffectDialog,
     InvestigationMenuDialog,
+    PhotoReadDialog,
     ModeBannerComponent,
     ConnectionBannerComponent,
     StopInvestigationDialog,
@@ -87,6 +91,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     ChecklistDecider,
     ConnectionSupervisor,
     ConnectionReleaser,
+    PlatePhoto,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -412,6 +417,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           [running]="orchestrator.status() === 'running'"
           (closed)="optionsOpen.set(false)"
           (noteRequested)="openNote()"
+          (plateRequested)="openPlate()"
           (emergencyStop)="orchestrator.stop('emergencyStop')"
           (stopRequested)="stopOpen.set(true)"
           (pauseRequested)="orchestrator.pause('person')"
@@ -442,6 +448,27 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           [error]="noteError()"
           (closed)="noteOpen.set(false)"
           (saveRequested)="saveNote($event)"
+          (emergencyStop)="orchestrator.stop('emergencyStop')"
+        />
+      }
+      @if (plateOpen()) {
+        <g-photo-read-dialog
+          [connected]="connected()"
+          [saving]="savingPlate()"
+          [error]="plateError() ?? platePhoto.error()"
+          [stage]="platePhoto.stage()"
+          [cameraAvailable]="platePhoto.cameraAvailable()"
+          [canChoosePhoto]="platePhoto.imageAvailable()"
+          [stream]="platePhoto.stream()"
+          [preview]="platePhoto.preview()"
+          [reading]="platePhoto.reading()"
+          (closed)="closePlate()"
+          (confirmed)="confirmPlate($event)"
+          (cameraRequested)="platePhoto.camera()"
+          (captured)="platePhoto.capture($event)"
+          (fileChosen)="platePhoto.choose($event)"
+          (typeRequested)="platePhoto.type()"
+          (retakeRequested)="platePhoto.retake()"
           (emergencyStop)="orchestrator.stop('emergencyStop')"
         />
       }
@@ -480,6 +507,7 @@ export class InvestigationPage implements OnInit, OnDestroy {
   readonly resume = input<string>();
   protected readonly orchestrator = inject(PlaybookOrchestrator);
   protected readonly prompts = inject(PromptChannel);
+  protected readonly platePhoto = inject(PlatePhoto);
   private readonly live = inject(LiveMetrics);
   protected readonly metrics = this.live.metrics;
   protected readonly liveRate = computed(() => {
@@ -504,6 +532,9 @@ export class InvestigationPage implements OnInit, OnDestroy {
   protected readonly modeBannerDismissed = signal(false);
   protected readonly noteOpen = signal(false);
   protected readonly savingNote = signal(false);
+  protected readonly plateOpen = signal(false);
+  protected readonly savingPlate = signal(false);
+  protected readonly plateError = signal<string | null>(null);
   protected readonly noteSaved = signal(false);
   protected readonly savedNote = signal<InvestigationNote>({ location: '', note: '' });
   protected readonly noteError = signal<{ title: string; message: string } | null>(null);
@@ -521,7 +552,14 @@ export class InvestigationPage implements OnInit, OnDestroy {
   protected readonly deviceName = computed(() => this.orchestrator.state().device?.name ?? null);
   protected readonly deviceInfo = computed(() => {
     const info = this.orchestrator.state().deviceInfo;
-    return info && info !== 'absent' ? info : null;
+    const plate = this.orchestrator.plate();
+    const read = info && info !== 'absent' ? info : null;
+    return {
+      ...read,
+      manufacturer: read?.manufacturer || plate.maker || undefined,
+      model: read?.model || plate.model || undefined,
+      serial: read?.serial || plate.serial || undefined,
+    };
   });
   protected readonly services = computed(
     () =>
@@ -659,6 +697,36 @@ export class InvestigationPage implements OnInit, OnDestroy {
     this.noteSaved.set(false);
     this.optionsOpen.set(false);
     this.noteOpen.set(true);
+  }
+
+  protected openPlate(): void {
+    this.optionsOpen.set(false);
+    this.plateError.set(null);
+    this.plateOpen.set(true);
+    void this.platePhoto.open(this.orchestrator.mode());
+  }
+
+  protected closePlate(): void {
+    this.platePhoto.close();
+    this.plateOpen.set(false);
+  }
+
+  protected async confirmPlate(details: PlateDetails): Promise<void> {
+    this.savingPlate.set(true);
+    this.plateError.set(null);
+    try {
+      const attachment = await this.platePhoto.attachment(this.id());
+      await this.orchestrator.confirmPlate(details, attachment, this.platePhoto.reading());
+      this.closePlate();
+    } catch (error) {
+      this.plateError.set(
+        error instanceof StoreError && error.code === 'STORAGE_FULL'
+          ? 'Storage is full. Free some space and try again.'
+          : 'Couldn’t save the plate details. Try again.',
+      );
+    } finally {
+      this.savingPlate.set(false);
+    }
   }
 
   protected finishReadOnly(promptId: string): void {

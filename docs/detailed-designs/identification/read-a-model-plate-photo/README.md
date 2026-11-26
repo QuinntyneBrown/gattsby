@@ -17,11 +17,10 @@ confidence (`capture_photo`, TOOL-027)
 **sanitized photo** — photo re-encoded without its EXIF metadata, location included, before it is
 stored (NFR-017)
 
-The photo step starts in one of two ways. The playbook rules may propose it when the maker or model
-is still unknown after Device Information (see the read-device-information design), or the person
-chooses "Photo of the model plate or console" in the Investigation options dialog
+The person chooses "Photo of the model plate or console" in the Investigation options dialog
 (`docs/mocks/dialogs/investigation-menu/default.html`). The Read the model plate dialog
-(`docs/mocks/dialogs/photo-read/`) then has four states. `busy` reads "Reading the plate on this
+(`docs/mocks/dialogs/photo-read/`) offers the camera, a local photo or typing. The camera state
+shows a live preview before the person takes a photo. `busy` reads "Reading the plate on this
 device…" and "The photo stays on this device and goes only to the on-device model." `default` reads
 "Check what I read" with editable Maker, Model and "Serial number (optional)" fields, a confidence
 meter, "Retake" and "Use this". `invalid` reads "Enter the model, or tap Skip." `unavailable` reads
@@ -29,20 +28,20 @@ meter, "Retake" and "Use this". `invalid` reads "Enter the model, or tap Skip." 
 
 ## Description
 
-The design introduces these building blocks in the Angular (pending ADR 0001) workspace under
+The feature uses these building blocks in the Angular workspace under
 `frontend/src/app/`:
 
-- **`capturePhotoTool`** (`tools/person/capture-photo.tool.ts`) — registry entry for `capture_photo`
-  (TOOL-027), safety class `n/a`, stage `identify`, phase P2. Input `{ subject: "modelPlate" |
-  "console" }`. Output `{ photoId, read?, confirmedByPerson }`. Precondition: a camera, or the file
-  picker as a fallback.
+- **`PlatePhoto`** (`photo/plate-photo.ts`) — controls the person-started capture, sanitization,
+  read, fallback and temporary preview. The design diagrams show the separate `capture_photo`
+  registry entry for a possible future playbook proposal (TOOL-027).
 - **`CameraAdapter`** (`photo/camera-adapter.ts`) / **`MediaDevicesCameraAdapter`**
   (`photo/media-devices-camera-adapter.ts`) — the only code that touches the camera, dynamically
-  imported (NFR-004, NFR-021). `capture(signal)` opens `getUserMedia` with the rear camera preferred,
-  returns one frame as a `Blob`, and stops every track on capture, cancel or abort.
-- **`PhotoSanitizer`** (`photo/photo-sanitizer.ts`) — pure helper with unit tests. It decodes the
+  imported (NFR-004, NFR-021). `openCamera(signal)` opens `getUserMedia` with the rear camera
+  preferred. The controller stops every track on capture, cancel or abort.
+- **`PhotoSanitizer`** (`photo/photo-sanitizer.ts`) — browser image helper. It decodes the
   image with `createImageBitmap` (honouring the EXIF orientation), draws it to a canvas and re-encodes
-  it, which writes no EXIF. The output format, quality and maximum size are `<TO SUPPLY>`.
+  it as JPEG at quality 0.85 and with a 1,600 px maximum edge, which writes no EXIF. It refuses
+  source files larger than 20 MiB or a sanitized JPEG larger than 2 MiB.
 - **`ModelAdapter`** (`model/model-adapter.ts`) / **`PromptApiModelAdapter`** — `readImage(blob,
   signal)` sends the image to a model session with a JSON schema for `{ maker?, model?, serial?,
   confidence }` as `responseConstraint`, and destroys the session afterwards.
@@ -52,7 +51,6 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   connected.
 - **`InvestigationMenuDialog`** (`dialogs/investigation-menu/investigation-menu.dialog.ts`) — offers
   the photo as a person-started step.
-- **`PromptChannel`** (`agent/prompt-channel.ts`) — posts the prompt of kind `photo`.
 - **`InvestigationStore`** (`store/investigation-store.ts`) — stores the sanitized photo in the
   `photos` object store with its investigation ID; it is deleted with its investigation (see the
   browse-and-delete-history design).
@@ -62,7 +60,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 ### Reading rules
 
 1. The camera permission is requested only when the person chooses to take a photo (NFR-016). With
-   no camera, a file input (`accept="image/*"`, `capture="environment"`) is the fallback.
+  no camera, a local file input (`accept="image/*"`) is the fallback.
 2. The photo is sanitized before it is stored or read; the stored image holds no EXIF metadata
    (NFR-017).
 3. The photo is stored only in IndexedDB and passed only to the on-device model; it is never sent
@@ -72,13 +70,12 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 5. The plate read is untrusted text. It fills the dialog's input fields as values and is never
    rendered as HTML (NFR-013).
 6. The person confirms or corrects the read before it becomes an observation (FR-022, TOOL-027). The
-   observation records the photo ID, the model's read, the person's final values and
-   `confirmedByPerson: true`.
-7. "Use this" with an empty Model field shows the `invalid` state; "Skip" ends the step with
-   `USER_CANCELLED` and records it as skipped (FR-052).
+   confirmed observations hold the person's final values and link to the photo. A separate
+   observation stores the model's suggestion and confidence. The transaction saves both at once.
+7. "Use this" with an empty Model field shows the `invalid` state. "Skip" discards the draft.
 8. Without image input, or in checklist mode, the dialog opens in `unavailable` and the person types
-   the model (FR-022). A model error, or a read that exceeds its time limit (`<TO SUPPLY>`), leads to
-   the same state.
+   the model (FR-022). A model error, an empty model read or a read that exceeds ten seconds leads
+   to the same state.
 9. Object URLs made for the preview are revoked when the dialog closes, and the camera stream and the
    model session are released (AGENTS.md, "Load only what is needed now").
 
@@ -86,8 +83,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 | Code | Raised by | Meaning to the person |
 |---|---|---|
-| `UNSUPPORTED` | `capturePhotoTool` | Neither camera nor file picker is available; the step is skipped |
-| `USER_CANCELLED` | `capturePhotoTool` | The person closed the camera or tapped "Skip" |
+| Image input unavailable | `PlatePhoto` | Type the plate details |
+| Unreadable photo | `PlatePhoto` | Type the plate details or choose another photo |
 | `STORAGE_FULL` | `InvestigationStore` | The photo was not stored; the person is told to free space (NFR-008) |
 
 ### Tests that prove it
@@ -95,7 +92,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 Acceptance specs stub the camera with a fixed image and use the fake `LanguageModel` with image input
 scripted to read "T100"; they assert that the dialog shows the read, that nothing is recorded until
 "Use this", and that a corrected value is what the observation holds. A second spec reports no image
-input and asserts the `unavailable` state. A unit test feeds `PhotoSanitizer` a JPEG with GPS EXIF
+input and asserts the `unavailable` state. A browser test gives the file picker a JPEG with GPS EXIF
 data and asserts the output has none.
 
 ## Requirements
@@ -142,8 +139,9 @@ to the on-device model.
 
 ### Behaviour — read the plate and confirm it
 
-The photo is taken, sanitized and stored, the model reads it on the device, and the person confirms
-or corrects the fields before the observation is committed; an empty model shows the `invalid` state.
+The photo is taken and sanitized, the model reads it on the device, and the person confirms
+or corrects the fields before the photo and observations are committed. An empty model field shows
+the `invalid` state.
 
 ![Sequence diagram for reading and confirming a model plate](diagrams/sequence-read-and-confirm.png)
 

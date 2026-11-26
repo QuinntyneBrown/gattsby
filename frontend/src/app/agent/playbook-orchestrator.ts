@@ -18,6 +18,11 @@ import {
   applyMissingToolUpdates,
 } from '../outcome/merge-missing-tool-requests';
 import { buildProfile } from '../outcome/profile-builder';
+import type { PlateDetails } from '../photo/plate-details';
+import { plateField } from '../photo/plate-field';
+import type { PlateReading } from '../photo/plate-reading';
+import type { InvestigationPhoto } from '../store/model/investigation-photo';
+import { confirmedPlate } from '../photo/confirmed-plate';
 import { verdictLabel, type VerdictFacts } from '../outcome/verdict-builder';
 import { Clock } from '../shared/clock';
 import { storageWarningPercent } from '../shared/format-storage';
@@ -177,7 +182,59 @@ export class PlaybookOrchestrator {
   readonly mode = computed(() => this.investigationSignal()?.mode ?? 'agent');
   readonly modeChange = computed(() => this.investigationSignal()?.modeChanges?.at(-1) ?? null);
   readonly hypothesis = computed(() => this.hypotheses().at(-1) ?? null);
+  readonly plate = computed(() => {
+    const fields = confirmedPlate(this.observations());
+    const value = (subject: string) => fields.get(subject)?.value ?? '';
+    return { maker: value('manufacturer'), model: value('model'), serial: value('serial') };
+  });
   readonly missingToolRequests = this.requests.asReadonly();
+
+  async confirmPlate(
+    details: PlateDetails,
+    attachment: InvestigationPhoto | null,
+    reading: PlateReading | null,
+  ): Promise<void> {
+    const investigation = this.investigationSignal();
+    if (!investigation || this.status() !== 'running')
+      throw new StoreError('ALREADY_CONCLUDED', 'The investigation is no longer running.');
+    const observations: Observation[] = [];
+    for (const [subject, raw] of [
+      ['manufacturer', details.maker],
+      ['model', details.model],
+      ['serial', details.serial],
+    ]) {
+      const value = plateField(raw);
+      if (!value) continue;
+      observations.push({
+        investigationId: investigation.id,
+        id: `o-${++this.observationCounter}`,
+        stepN: Math.max(1, this.state().stepCount),
+        kind: 'plate-read',
+        subject,
+        value,
+        text: `Confirmed from the model plate: ${value}`,
+        tag: 'confirmed',
+        evidence: attachment ? [attachment.id] : [],
+      });
+    }
+    if (!observations.some(({ subject }) => subject === 'model'))
+      throw new StoreError('INVALID_NOTE', 'Enter the model, or tap Skip.');
+    if (attachment && reading) {
+      observations.push({
+        investigationId: investigation.id,
+        id: `o-${++this.observationCounter}`,
+        stepN: Math.max(1, this.state().stepCount),
+        kind: 'plate-suggestion',
+        subject: attachment.id,
+        value: JSON.stringify(reading),
+        text: `On-device plate reading before corrections. Model confidence ${Math.round(reading.confidence * 100)}%.`,
+        tag: 'guess',
+        evidence: [attachment.id],
+      });
+    }
+    await this.store.savePlateEvidence(investigation.id, observations, attachment);
+    this.observations.update((current) => [...current, ...observations]);
+  }
 
   readonly stageStates = computed(() => {
     const current = STAGES.indexOf(this.stage());
@@ -1069,7 +1126,7 @@ export class PlaybookOrchestrator {
     this.investigationSignal.update(
       (record) => record && { ...record, stage: step.stage, lastCommittedStep: step.n },
     );
-    this.observations.set(allObservations);
+    this.observations.update((current) => [...current, ...observations]);
     this.checkStorageUse();
     this.requests.update((r) => applyMissingToolUpdates(r, requests));
     if (hypothesis) this.hypotheses.update((h) => [...h, hypothesis]);
