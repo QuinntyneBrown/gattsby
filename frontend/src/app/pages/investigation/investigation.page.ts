@@ -31,6 +31,9 @@ import { LiveMetrics } from '../../live/live-metrics';
 import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner.component';
 import { ConnectionBannerComponent } from '../../notifications/connection-banner/connection-banner.component';
 import { ConnectionSupervisor } from '../../agent/connection-supervisor';
+import { ConnectionReleaser } from '../../agent/connection-releaser';
+import { StopInvestigationDialog } from '../../dialogs/stop-investigation/stop-investigation.dialog';
+import { LeaveInvestigationDialog } from '../../dialogs/leave-investigation/leave-investigation.dialog';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { ControlPointExchange } from '../../tools/control/control-point-exchange';
 import { InvestigationStore } from '../../store/investigation-store';
@@ -67,6 +70,8 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     InvestigationMenuDialog,
     ModeBannerComponent,
     ConnectionBannerComponent,
+    StopInvestigationDialog,
+    LeaveInvestigationDialog,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -80,6 +85,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     EmergencyStopController,
     ChecklistDecider,
     ConnectionSupervisor,
+    ConnectionReleaser,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -361,9 +367,29 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
       @if (optionsOpen()) {
         <g-investigation-menu-dialog
           [connected]="connected()"
+          [running]="orchestrator.status() === 'running'"
           (closed)="optionsOpen.set(false)"
           (noteRequested)="openNote()"
           (emergencyStop)="orchestrator.stop('emergencyStop')"
+          (stopRequested)="stopOpen.set(true)"
+          (pauseRequested)="orchestrator.pause('person')"
+        />
+      }
+      @if (stopOpen()) {
+        <g-stop-investigation-dialog
+          [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
+          [busy]="stopping()"
+          (closed)="stopOpen.set(false)"
+          (confirmed)="confirmStop()"
+          (emergencyStop)="stopInEmergency()"
+        />
+      }
+      @if (leaveOpen()) {
+        <g-leave-investigation-dialog
+          [device]="deviceName() ?? 'Unnamed device'"
+          [busy]="leaving()"
+          (answered)="answerLeave($event)"
+          (emergencyStop)="emergencyWhileLeaving()"
         />
       }
       @if (noteOpen()) {
@@ -390,20 +416,26 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           </button>
         </div>
       }
-      @if (prompts.idle()) {
-        <g-still-there-dialog
-          [instruction]="prompts.current()?.title ?? ''"
-          [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
-          (continued)="prompts.continueAfterIdle()"
-          (stop)="orchestrator.stop('personStop')"
-          (emergencyStop)="orchestrator.stop('emergencyStop')"
-        />
+      @if (!orchestrator.emergencyStop.view()) {
+        @if (orchestrator.pauseDetails(); as pause) {
+          <g-still-there-dialog
+            [instruction]="pause.instruction"
+            [paused]="pause.reason !== 'idle'"
+            [released]="pause.reason === 'hidden'"
+            [device]="connected() ? (deviceName() ?? 'Unnamed device') : null"
+            (continued)="orchestrator.resumePaused()"
+            (saveAndExit)="savePausedExit()"
+            (stop)="orchestrator.stop('personStop')"
+            (emergencyStop)="orchestrator.stop('emergencyStop')"
+          />
+        }
       }
     </div>
   `,
 })
 export class InvestigationPage implements OnInit, OnDestroy {
   readonly id = input.required<string>();
+  readonly resume = input<string>();
   protected readonly orchestrator = inject(PlaybookOrchestrator);
   protected readonly prompts = inject(PromptChannel);
   private readonly live = inject(LiveMetrics);
@@ -418,6 +450,11 @@ export class InvestigationPage implements OnInit, OnDestroy {
   private readonly feedScroll = viewChild<ElementRef<HTMLElement>>('feedScroll');
   private readonly noteDialog = viewChild(AddNoteDialog);
   protected readonly optionsOpen = signal(false);
+  protected readonly stopOpen = signal(false);
+  protected readonly stopping = signal(false);
+  protected readonly leaveOpen = signal(false);
+  protected readonly leaving = signal(false);
+  private leaveAnswer: ((leave: boolean) => void) | null = null;
   protected readonly unexpectedEffect = computed(() => {
     const prompt = this.prompts.current();
     return prompt?.kind === 'control-warning' ? prompt : null;
@@ -462,6 +499,13 @@ export class InvestigationPage implements OnInit, OnDestroy {
   );
 
   constructor() {
+    inject(ConnectionReleaser).watch(
+      () => this.connected() && !this.orchestrator.recording(),
+      () => this.orchestrator.releaseForHiddenPage(),
+    );
+    effect(() => {
+      if (this.prompts.idle()) this.orchestrator.pause('idle');
+    });
     effect(() => {
       this.orchestrator.feed();
       const scroll = this.feedScroll()?.nativeElement;
@@ -470,7 +514,7 @@ export class InvestigationPage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.orchestrator.open(this.id()).then(() => {
+    void this.orchestrator.open(this.id(), this.resume() === 'true').then(() => {
       const investigation = this.orchestrator.investigation();
       this.savedNote.set({
         location: investigation?.location ?? '',
@@ -490,6 +534,56 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     void this.orchestrator.leave();
+  }
+
+  async canLeave(): Promise<boolean> {
+    const status = this.orchestrator.status();
+    if (status === 'concluded' || status === 'concluding' || status === 'loading' || this.leaving())
+      return true;
+    if (!this.connected()) {
+      await this.orchestrator.saveExit();
+      return true;
+    }
+    this.leaveAnswer?.(false);
+    return new Promise((resolve) => {
+      this.leaveAnswer = resolve;
+      this.leaveOpen.set(true);
+    });
+  }
+
+  protected async savePausedExit(): Promise<void> {
+    this.leaving.set(true);
+    await this.orchestrator.saveExit();
+    await this.router.navigate(['/']);
+  }
+
+  protected async answerLeave(leave: boolean): Promise<void> {
+    const answer = this.leaveAnswer;
+    if (!answer || this.leaving()) return;
+    if (leave) {
+      this.leaving.set(true);
+      await this.orchestrator.saveExit();
+    }
+    this.leaveOpen.set(false);
+    this.leaving.set(false);
+    this.leaveAnswer = null;
+    answer(leave);
+  }
+
+  protected emergencyWhileLeaving(): void {
+    if (this.leaving()) return;
+    void this.answerLeave(false);
+    this.orchestrator.stop('emergencyStop');
+  }
+
+  protected confirmStop(): void {
+    this.stopping.set(true);
+    this.orchestrator.stop('personStop');
+  }
+
+  protected stopInEmergency(): void {
+    this.stopOpen.set(false);
+    this.orchestrator.stop('emergencyStop');
   }
 
   protected respond(response: PromptCardResponse): void {

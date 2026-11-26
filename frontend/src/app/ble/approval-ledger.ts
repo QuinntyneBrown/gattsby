@@ -12,6 +12,10 @@ export class ApprovalLedger {
 
   begin(): void {
     this.locked = false;
+    this.revokeAll();
+  }
+
+  revokeAll(): void {
     this.unused.clear();
     this.emergency.clear();
   }
@@ -63,8 +67,7 @@ export class ApprovalLedger {
 
   lock(): void {
     this.locked = true;
-    this.unused.clear();
-    this.emergency.clear();
+    this.revokeAll();
   }
 
   issueEmergency(approval: ApprovalDecision): void {

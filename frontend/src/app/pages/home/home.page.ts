@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
 import { CapabilityDetector } from '../../environment/capability-detector';
 import { ModeSelector } from '../../environment/mode-selector';
 import { InvestigationStore } from '../../store/investigation-store';
+import type { Investigation } from '../../store/model/investigation';
+import { STAGE_NAMES } from '../../agent/stage-names';
 import { BrandComponent } from '../../ui/brand/brand.component';
 
 // The Home page (docs/mocks/pages/home/empty.html and default.html). "Identify a device" creates
@@ -11,7 +14,7 @@ import { BrandComponent } from '../../ui/brand/brand.component';
 // devices, past investigations and missing-tool requests join with journeys 11, 4, 15 and 14.
 @Component({
   selector: 'g-home-page',
-  imports: [BrandComponent, RouterLink],
+  imports: [BrandComponent, DatePipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -77,6 +80,33 @@ import { BrandComponent } from '../../ui/brand/brand.component';
           </div>
         }
       </section>
+      @if (resumable().length) {
+        <section aria-label="Saved investigations" style="margin-top: var(--space-6)">
+          @for (investigation of resumable(); track investigation.id) {
+            <a
+              class="resume-card"
+              [routerLink]="['/investigations', investigation.id]"
+              [queryParams]="{ resume: true }"
+            >
+              <span class="resume-card__icon">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              </span>
+              <span class="resume-card__body">
+                <span class="resume-card__title"
+                  >Resume: <bdi>{{ investigation.deviceName ?? 'New investigation' }}</bdi></span
+                >
+                <span class="resume-card__meta"
+                  >Paused at {{ stageNames[investigation.stage] }} ·
+                  {{ investigation.interruptedAt ?? investigation.startedAt | date: 'short' }}</span
+                >
+              </span>
+            </a>
+          }
+        </section>
+      }
       <p class="fine-print" style="margin-top: var(--space-10)">
         Everything runs on this device. Nothing is sent to a server.
       </p>
@@ -90,13 +120,18 @@ export class HomePage implements OnInit {
   private readonly modes = inject(ModeSelector);
   private readonly router = inject(Router);
   protected readonly returning = signal(false);
+  protected readonly resumable = signal<readonly Investigation[]>([]);
+  protected readonly stageNames = STAGE_NAMES;
   protected readonly starting = signal(false);
   protected readonly failed = signal(false);
   protected readonly mode = signal<'agent' | 'checklist' | null>(null);
 
   ngOnInit(): void {
     void this.store.list().then(
-      (investigations) => this.returning.set(investigations.length > 0),
+      (investigations) => {
+        this.returning.set(investigations.length > 0);
+        this.resumable.set(investigations.filter((row) => !row.verdict));
+      },
       () => this.returning.set(false),
     );
     void this.modes.prefersAgent().then(async (prefersAgent) => {

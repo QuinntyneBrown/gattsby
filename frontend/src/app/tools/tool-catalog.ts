@@ -3,6 +3,8 @@ import { scanDevicesTool } from './discovery/scan-devices.tool';
 import { reportCandidateNamesTool } from './discovery/report-candidate-names.tool';
 import { powerCycleMatchTool } from './discovery/power-cycle-match.tool';
 import { watchAdvertisementsTool } from './discovery/watch-advertisements.tool';
+import { getPermittedDevicesTool } from './discovery/get-permitted-devices.tool';
+import { pickResumeDeviceTool } from './discovery/pick-resume-device.tool';
 import { connectTool } from './connection/connect.tool';
 import { reconnectTool } from './connection/reconnect.tool';
 import { disconnectTool } from './connection/disconnect.tool';
@@ -33,6 +35,8 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   reportCandidateNamesTool,
   powerCycleMatchTool,
   watchAdvertisementsTool,
+  getPermittedDevicesTool,
+  pickResumeDeviceTool,
   connectTool,
   reconnectTool,
   disconnectTool,

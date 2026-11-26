@@ -57,9 +57,17 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
         </div>
         <div class="dialog__header">
           <div>
-            <h2 class="dialog__title" id="still-there-title">Still there?</h2>
+            <h2 class="dialog__title" id="still-there-title">
+              {{ paused() ? 'Paused' : 'Still there?' }}
+            </h2>
             <p class="dialog__lead" id="still-there-description">
-              Nothing has happened for 2 minutes. Everything so far is saved.
+              @if (released()) {
+                The page was hidden, so Gattsby disconnected. Resume reconnects to this device.
+              } @else if (paused()) {
+                Nothing is sent or recorded while paused. Everything so far is saved.
+              } @else {
+                Nothing has happened for 2 minutes. Everything so far is saved.
+              }
             </p>
           </div>
         </div>
@@ -75,14 +83,21 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
           </div>
         </div>
         <div class="dialog__footer">
-          <button class="btn btn--lg" type="button" (click)="stop.emit()">Stop</button>
+          <button class="btn btn--lg" type="button" (click)="stop.emit()">
+            {{ paused() ? 'Stop and get a verdict' : 'Stop' }}
+          </button>
+          @if (paused()) {
+            <button class="btn btn--lg" type="button" (click)="saveAndExit.emit()">
+              Save and exit
+            </button>
+          }
           <button
             #continueButton
             class="btn btn--primary btn--lg"
             type="button"
             (click)="continueInvestigation()"
           >
-            Continue
+            {{ paused() ? 'Resume' : 'Continue' }}
           </button>
         </div>
       </div>
@@ -92,8 +107,11 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
 export class StillThereDialog {
   readonly instruction = input.required<string>();
   readonly device = input<string | null>(null);
+  readonly paused = input(false);
+  readonly released = input(false);
   readonly continued = output<void>();
   readonly stop = output<void>();
+  readonly saveAndExit = output<void>();
   readonly emergencyStop = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly continueButton =

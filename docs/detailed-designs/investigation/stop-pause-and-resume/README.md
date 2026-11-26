@@ -107,12 +107,17 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
   orchestrator in this tab, a `running` investigation is interrupted.
 - `resume(id)` loads the investigation. Steps up to `lastCompletedStep` are intact; a step after it
   is absent or marked incomplete (FR-060) and is decided again.
-- The mode is chosen afresh with `ModeSelector`, because the model's availability may have changed;
-  a change is recorded as a `ModeChange` (see the choose-operating-mode design).
+- The browser rechecks the model when resuming an investigation in full agent mode. If a session
+  cannot be opened, checklist mode takes over and records the mode change. An investigation
+  already in checklist mode stays in checklist mode.
 - The first action is always a reconnect (FR-009). Until it succeeds, no other tool runs; if it
   fails, the reconnect rules of the recover-a-dropped-connection design apply.
 - An investigation interrupted before Find has no device to reconnect to and resumes at its stage
   with no reconnect.
+- In the fallback Find prompt, the person picks the same device by name. Gattsby compares the
+  browser's device ID with the saved ID and asks again if a different device was selected.
+- The raw log resumes after the highest saved sequence number so new traffic cannot overwrite
+  earlier evidence.
 
 ### Errors
 

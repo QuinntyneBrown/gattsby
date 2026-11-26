@@ -93,6 +93,9 @@ function install(config: SimulationConfig): void {
   if (!config.bluetooth.advertisementScanning) {
     Object.defineProperty(bluetooth, 'requestLEScan', { value: undefined });
   }
+  if (config.bluetooth.permittedDevicesUnavailable) {
+    Object.defineProperty(bluetooth, 'getDevices', { value: undefined });
+  }
   Object.defineProperty(Navigator.prototype, 'bluetooth', {
     configurable: true,
     get: () => (config.bluetooth.absent ? undefined : bluetooth),

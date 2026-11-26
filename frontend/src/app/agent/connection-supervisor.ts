@@ -14,6 +14,16 @@ export class ConnectionSupervisor {
     this.banner.set({ kind: 'warning', attempt: 1, recordingSeconds });
   }
 
+  resuming(deviceId: string, deviceName: string | null, at: number): void {
+    this.drop = { deviceId, at, intentional: false };
+    this.banner.set({
+      kind: 'warning',
+      attempt: 1,
+      recordingSeconds: null,
+      resumingDevice: deviceName ?? 'the device',
+    });
+  }
+
   attempting(attempt: number): void {
     this.banner.update((state) => state && { ...state, kind: 'warning', attempt });
   }

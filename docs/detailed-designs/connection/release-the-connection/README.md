@@ -58,8 +58,9 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 1. Order: mark releasing, stop each notification, remove each listener, disconnect, log. A failed
    `stopNotifications()` is logged and does not block the disconnect.
-2. A stop disconnects within 2 seconds (FR-009). The per-call time limit for `stopNotifications()`
-   inside that budget is `<TO SUPPLY>`; when it is spent, the layer disconnects anyway.
+2. A stop initiates disconnect within 2 seconds (FR-009). Notification stops run concurrently
+   with a shared 1-second deadline. The layer detaches handlers before waiting and disconnects
+   when the deadline expires.
 3. When the Verdict page appears, the device is disconnected and no notification listener remains
    (FR-018).
 4. Navigating away from a connected investigation, by link, back button or menu, goes through the
@@ -69,7 +70,8 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    it pauses the loop and releases (FR-018). Chrome throttles timers in hidden tabs, so the release
    may come later than 60 seconds, never earlier.
 6. A released investigation is paused, not ended. Resuming it starts with a reconnect (FR-009; see
-   the connect-to-the-device design).
+   the connect-to-the-device design). The `released` state of the Paused dialog explains that the
+   page was hidden and that Resume reconnects.
 7. On `pagehide` the releaser calls `disconnect` without waiting; Chrome also closes the connection
    when the tab closes.
 8. Leaving the screen also frees the investigation's memory: the raw-log window, subscriptions and
@@ -83,9 +85,12 @@ listener left, that navigating to Past investigations during an investigation sh
 disconnects on "Leave and disconnect", and that "Stay" keeps the connection. A unit test drives the
 hidden-page timer with a fake clock and a fake visibility source.
 
-### Built in journey 2
+### Implementation
 
-The orchestrator disconnects after committing the verdict and before opening the Verdict page, and the Investigation page releases the connection and the raw log's memory when it is destroyed, so leaving by the back link or the brand disconnects. Not built yet: `leaveInvestigationGuard` and the leave and stop dialogs, and the hidden-page timer (journey 11). Until then leaving disconnects without asking.
+The orchestrator disconnects before opening the Verdict page. The Investigation page confirms
+connected navigation through the leave guard and releases the raw log's memory when it is
+destroyed. The visibility timer releases an idle connection and opens the released state of
+the Paused dialog.
 
 ## Requirements
 

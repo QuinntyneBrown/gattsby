@@ -10,6 +10,7 @@ import { devices, uuids } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { LeaveInvestigationDialogPage } from './pages/leave-investigation.dialog.page';
 import { VerdictPage } from './pages/verdict.page';
 
 async function startAndPrepare(page: Page, machineType: string): Promise<InvestigationPage> {
@@ -187,6 +188,7 @@ test.describe('Identify a standard machine', () => {
       await expect(investigation.promptTitle).toHaveText('Reading the maker and model');
 
       await investigation.leave.click();
+      await new LeaveInvestigationDialogPage(page).choose('Leave and disconnect');
 
       await expect(new HomePage(page).identifyADevice).toBeVisible();
       expect(fakeBluetooth.calls()).toContain('disconnect');

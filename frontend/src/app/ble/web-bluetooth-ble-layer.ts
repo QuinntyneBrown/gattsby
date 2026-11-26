@@ -48,6 +48,7 @@ type AdvertisementScanner = Bluetooth & {
 
 const MAX_ADVERTISING_FIELDS = 8;
 const MAX_ADVERTISING_BYTES = 64;
+const NOTIFICATION_STOP_TIMEOUT_MS = 1_000;
 
 // The BLE layer on Web Bluetooth (scan-for-the-device, connect-to-the-device,
 // enumerate-the-gatt-layout and release-the-connection designs).
@@ -71,14 +72,7 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = event.target as BluetoothDevice;
     const intentional = this.state().status === 'releasing';
     this.log.append({ kind: 'disconnect', direction: 'in', hex: '', detail: device.id });
-    if (!intentional) {
-      this.droppedSubscriptions = {
-        deviceId: device.id,
-        entries: [...this.subscriptions.values()].filter(
-          ({ characteristic }) => characteristic !== FTMS_CONTROL_POINT,
-        ),
-      };
-    }
+    if (!intentional) this.rememberSubscriptions(device.id);
     for (const subscription of this.subscriptions.values()) void subscription.stop();
     device.removeEventListener('gattserverdisconnected', this.onDisconnected);
     this.services.clear();
@@ -88,6 +82,20 @@ export class WebBluetoothBleLayer extends BleLayer {
     }
     this.disconnects.next({ deviceId: device.id, at: this.clock.now(), intentional });
   };
+
+  private rememberSubscriptions(deviceId: string): void {
+    const entries = [...this.subscriptions.values()].filter(
+      ({ characteristic }) => characteristic !== FTMS_CONTROL_POINT,
+    );
+    if (entries.length || this.droppedSubscriptions?.deviceId !== deviceId)
+      this.droppedSubscriptions = { deviceId, entries };
+  }
+
+  async suspendSubscriptions(): Promise<void> {
+    if (!this.device) return;
+    this.rememberSubscriptions(this.device.id);
+    await this.stopSubscriptions();
+  }
 
   async availability(): Promise<BleAvailability> {
     const bluetooth = this.bluetooth;
@@ -320,13 +328,16 @@ export class WebBluetoothBleLayer extends BleLayer {
 
   async primaryServices(): Promise<GattServiceInfo[]> {
     const gatt = this.requireConnected();
+    const connection = this.state();
     let services: BluetoothRemoteGATTService[];
     try {
       services = await gatt.getPrimaryServices();
     } catch (error) {
+      this.requireSameConnection(connection);
       if (errorName(error) === 'NotFoundError') return [];
       throw this.gattError(error);
     }
+    this.requireSameConnection(connection);
     const layout: GattServiceInfo[] = [];
     for (const service of services) {
       const uuid = canonicalUuid(service.uuid);
@@ -343,17 +354,21 @@ export class WebBluetoothBleLayer extends BleLayer {
       } catch (error) {
         layout.push({ uuid, characteristics: [], error: errorName(error) });
       }
+      this.requireSameConnection(connection);
     }
     return layout;
   }
 
   async read(service: string, characteristic: string): Promise<ReadResult> {
     this.requireConnected();
+    const connection = this.state();
     const handle = this.services.get(canonicalUuid(service));
     if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
     try {
       const c = await handle.getCharacteristic(canonicalUuid(characteristic));
+      this.requireSameConnection(connection);
       const bytes = bytesOf(await c.readValue());
+      this.requireSameConnection(connection);
       const entryId = this.log.append({
         kind: 'read',
         direction: 'in',
@@ -363,6 +378,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       });
       return { bytes, entryId };
     } catch (error) {
+      this.requireSameConnection(connection);
       this.log.append({
         kind: 'read',
         direction: 'in',
@@ -381,6 +397,7 @@ export class WebBluetoothBleLayer extends BleLayer {
     receive: (value: ReadResult & { t: number }) => NotificationDecoding | undefined,
   ): Promise<() => Promise<void>> {
     this.requireConnected();
+    const connection = this.state();
     const serviceUuid = canonicalUuid(service);
     const uuid = canonicalUuid(characteristic);
     const subscriptionKey = `${serviceUuid}/${uuid}`;
@@ -388,10 +405,12 @@ export class WebBluetoothBleLayer extends BleLayer {
     if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
     try {
       const c = await handle.getCharacteristic(uuid);
+      this.requireSameConnection(connection);
       if (!c.properties.notify && !c.properties.indicate) {
         throw new ToolError('PROPERTY_MISSING', 'This characteristic does not send updates.');
       }
       await this.subscriptions.get(subscriptionKey)?.stop();
+      this.requireSameConnection(connection);
       const listener = (): void => {
         if (!c.value) return;
         const bytes = bytesOf(c.value);
@@ -421,6 +440,7 @@ export class WebBluetoothBleLayer extends BleLayer {
       c.addEventListener('characteristicvaluechanged', listener);
       try {
         await c.startNotifications();
+        this.requireSameConnection(connection);
       } catch (error) {
         await stop();
         throw error;
@@ -483,7 +503,7 @@ export class WebBluetoothBleLayer extends BleLayer {
     const device = this.device;
     if (!device) return;
     this.state.update((s) => ({ ...s, status: 'releasing' }));
-    await Promise.all([...this.subscriptions.values()].map(({ stop }) => stop()));
+    await this.stopSubscriptions();
     device.gatt?.disconnect();
     // Chrome fires `gattserverdisconnected`; the fake does too. Make sure the state settles.
     if (this.device === device) {
@@ -496,10 +516,33 @@ export class WebBluetoothBleLayer extends BleLayer {
     }
   }
 
+  private async stopSubscriptions(): Promise<void> {
+    const stops = [...this.subscriptions.values()].map(({ stop }) => stop());
+    if (stops.length) {
+      let cancel = (): void => undefined;
+      try {
+        await Promise.race([
+          Promise.allSettled(stops),
+          new Promise<void>((resolve) => {
+            cancel = this.clock.setTimeout(resolve, NOTIFICATION_STOP_TIMEOUT_MS);
+          }),
+        ]);
+      } finally {
+        cancel();
+      }
+    }
+  }
+
   private requireConnected(): BluetoothRemoteGATTServer {
     const gatt = this.device?.gatt;
-    if (!gatt?.connected) throw new ToolError('NOT_CONNECTED', 'The device is not connected.');
+    if (!gatt?.connected || this.state().status !== 'connected')
+      throw new ToolError('NOT_CONNECTED', 'The device is not connected.');
     return gatt;
+  }
+
+  private requireSameConnection(connection: ConnectionState): void {
+    if (connection !== this.state())
+      throw new ToolError('NOT_CONNECTED', 'The Bluetooth connection changed.');
   }
 
   private gattError(error: unknown): ToolError {

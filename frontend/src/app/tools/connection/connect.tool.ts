@@ -46,7 +46,7 @@ export const connectTool = entry<ConnectInput, { connected: true; at: number }>(
       return fail('INVALID_INPUT', 'The time limit must be 1 to 20 seconds.');
     }
     try {
-      const { at, entryId } = await ctx.ble.connect(input.deviceId, timeout);
+      const { at, entryId } = await ctx.ble.connect(input.deviceId, timeout, ctx.signal);
       const id = ctx.observe({
         kind: 'connected',
         subject: input.deviceId,

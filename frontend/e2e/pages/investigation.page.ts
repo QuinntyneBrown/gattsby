@@ -82,6 +82,14 @@ export class InvestigationPage {
     await this.connectionBanner.getByRole('button', { name, exact: true }).click();
   }
 
+  async chooseOption(name: string): Promise<void> {
+    await this.options.click();
+    await this.page
+      .getByRole('dialog', { name: 'Investigation options' })
+      .getByRole('button', { name, exact: true })
+      .click();
+  }
+
   async typeAnswer(text: string): Promise<void> {
     await this.freeText.fill(text);
     await this.dock.getByRole('button', { name: 'Send answer' }).click();

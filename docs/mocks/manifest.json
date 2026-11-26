@@ -373,7 +373,8 @@
       ],
       "states": [
         "default",
-        "paused"
+        "paused",
+        "released"
       ],
       "not_applicable": {
         "busy": "Continue and Pause act locally and at once.",
