@@ -53,6 +53,17 @@ function encodingInput({ state, kb, facts }: RuleContext) {
   };
 }
 
+function framingInput(ctx: RuleContext) {
+  const uuid =
+    ctx.state.proprietaryRanking?.[0]?.uuid ??
+    ctx.facts.observations.find(({ kind }) => kind === 'varying-field')?.subject ??
+    proprietaryCharacteristics(ctx)[0];
+  const recording = PROPRIETARY_LEVELS.map((level) => ctx.state.proprietaryRecordings[level]).find(
+    (level) => level?.status === 'recorded' && (level.count ?? 0) >= 20,
+  );
+  return uuid && recording?.id ? { uuid, recordingId: recording.id } : null;
+}
+
 export const PROPRIETARY_RULES: readonly StageRule[] = [
   {
     id: 'proprietary.record-level',
@@ -116,5 +127,12 @@ export const PROPRIETARY_RULES: readonly StageRule[] = [
     when: (ctx) => !ctx.state.proprietaryEncodingAttempted && !!encodingInput(ctx),
     then: (ctx) =>
       decided('proprietary.guess', 'proprietary', 'guess_field_encoding', encodingInput(ctx)!),
+  },
+  {
+    id: 'proprietary.framing',
+    stage: 'proprietary',
+    when: (ctx) => !nextLevel(ctx) && !ctx.state.proprietaryFramingAttempted && !!framingInput(ctx),
+    then: (ctx) =>
+      decided('proprietary.framing', 'proprietary', 'detect_framing', framingInput(ctx)!),
   },
 ];

@@ -165,3 +165,24 @@ test('ranks the effort field and records a supported candidate encoding', async 
   await expect(verdict.group('Observed')).toContainText('Candidate encoding');
   expect(fakeBluetooth.writes()).toEqual([]);
 });
+
+// Given mixed packet lengths and a consistent checksum, the framing tool records
+// the header, length byte, counter and checksum with the share that supports each.
+test('records the packet framing and fit', async ({ page, fakeBluetooth }) => {
+  const investigation = await connectToRower(page);
+  const id = investigation.id();
+  await captureLevels(page, investigation, fakeBluetooth);
+  const verdict = new VerdictPage(page);
+  await expect(verdict.title).toHaveText('Partially decoded');
+  const records = new StoredRecords(page);
+  const steps = await records.steps(id);
+  expect(steps.find(({ tool }) => tool === 'detect_framing')?.result.data).toMatchObject({
+    header: { bytes: 'F0', offset: 0, share: 1 },
+    length: { offset: 2, includesHeader: true, share: 1 },
+    counter: { offset: 1, step: 1, share: 1 },
+    checksum: { offset: -1, algorithm: 'sum8', range: [0, -2], share: 1 },
+    fit: 1,
+  });
+  await expect(verdict.group('Observed')).toContainText('Framing');
+  expect(fakeBluetooth.writes()).toEqual([]);
+});

@@ -56,8 +56,7 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 
 The detector works on the packets *P* of one characteristic, in arrival order. It needs at least 20
 packets; fewer returns `INSUFFICIENT_DATA` (TOOL-019). An element is reported only when its share is
-at least 0.9. That threshold matches the 90 % coverage rule of `guess_field_encoding`; whether framing
-should use the same value is `<TO SUPPLY>`.
+at least 0.9, the same threshold used for encoding coverage.
 
 1. **Header.** From offset 0, the detector extends the header while the most common value at the
    next offset has a share of at least 0.9. It stops at a byte that fits a length relation, and
@@ -98,8 +97,7 @@ same convention.
 | `crc16-ccitt` | CRC-16, polynomial `0x1021`, initial value `0xFFFF`, not reflected, no final XOR (CCITT-FALSE) | `0x29B1` |
 | `crc16-modbus` | CRC-16, polynomial `0x8005` reflected (`0xA001`), initial value `0xFFFF`, input and output reflected, no final XOR; sent low byte first | `0x4B37` |
 
-Whether `crc16-ccitt` should also be tried with an initial value of `0x0000` (XMODEM, check value
-`0x31C3`) is `<TO SUPPLY>`.
+The `crc16-ccitt` check uses the CCITT-FALSE initial value of `0xFFFF`.
 
 ### Guards against false fits
 

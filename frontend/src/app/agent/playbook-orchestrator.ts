@@ -897,7 +897,12 @@ export class PlaybookOrchestrator {
       await (this.stopRelease ?? this.ble.disconnect());
       rawLog.push(...this.log.takePending());
       const referenced = [
-        ...new Set(newState.readableMetrics.flatMap((metric) => metric.evidence)),
+        ...new Set([
+          ...newState.readableMetrics.flatMap((metric) => metric.evidence),
+          ...allObservations
+            .filter(({ kind }) => ['varying-field', 'candidate-encoding', 'framing'].includes(kind))
+            .flatMap(({ evidence }) => evidence.filter((entry) => entry.startsWith('r-'))),
+        ]),
       ];
       const storedEvidence = await this.store.rawEvidence(id, referenced);
       const profile = buildProfile(

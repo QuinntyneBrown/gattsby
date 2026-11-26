@@ -66,6 +66,7 @@ export interface DecisionState {
   readonly proprietaryCompared: boolean;
   readonly proprietaryRanking: readonly FieldCandidate[] | null;
   readonly proprietaryEncodingAttempted: boolean;
+  readonly proprietaryFramingAttempted: boolean;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly readableMetrics: readonly ReadableMetric[];
@@ -122,6 +123,7 @@ export const INITIAL_STATE: DecisionState = {
   proprietaryCompared: false,
   proprietaryRanking: null,
   proprietaryEncodingAttempted: false,
+  proprietaryFramingAttempted: false,
   speedAction: null,
   speedConfirmation: null,
   readableMetrics: [],
@@ -193,6 +195,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       };
     case 'guess_field_encoding':
       return { ...next, proprietaryEncodingAttempted: true };
+    case 'detect_framing':
+      return { ...next, proprietaryFramingAttempted: true };
     case 'check_capabilities':
       return {
         ...next,

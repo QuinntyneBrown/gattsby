@@ -22,6 +22,7 @@ import { decodeStandardTool } from './analysis/decode-standard.tool';
 import { assessReachabilityTool } from './analysis/assess-reachability.tool';
 import { findVaryingBytesTool } from './analysis/find-varying-bytes.tool';
 import { correlateWithActionTool } from './analysis/correlate-with-action.tool';
+import { detectFramingTool } from './analysis/detect-framing.tool';
 import { guessFieldEncodingTool } from './analysis/guess-field-encoding.tool';
 import { finishTool } from './meta/finish.tool';
 import { requestMissingTool } from './meta/request-missing-tool.tool';
@@ -55,6 +56,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   findVaryingBytesTool,
   correlateWithActionTool,
   guessFieldEncodingTool,
+  detectFramingTool,
   requestControlTool,
   sendCommandTool,
   checkCommandEffectTool,

@@ -31,6 +31,7 @@ const OBSERVED = new Set([
   'silent',
   'not-recorded',
   'candidate-encoding',
+  'framing',
 ]);
 
 export function verdictView(
