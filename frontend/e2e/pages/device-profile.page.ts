@@ -11,6 +11,10 @@ export class DeviceProfilePage {
     return this.page.getByText('Connected — FTMS', { exact: true });
   }
 
+  get name() {
+    return this.page.getByRole('heading', { level: 1 });
+  }
+
   get error() {
     return this.page.getByRole('alert');
   }

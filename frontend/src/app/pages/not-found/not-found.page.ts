@@ -1,13 +1,13 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ImportDialog } from '../../dialogs/import/import.dialog';
 import { BrandComponent } from '../../ui/brand/brand.component';
 import { EmptyStateComponent } from '../../ui/empty-state/empty-state.component';
 
-// Shown for any address no route matches (docs/mocks/pages/not-found/default.html). The mock's
-// "Import a record" action arrives with the import dialog (journey 16).
+// Shown for any address no route matches (docs/mocks/pages/not-found/default.html).
 @Component({
   selector: 'g-not-found-page',
-  imports: [BrandComponent, EmptyStateComponent, RouterLink],
+  imports: [BrandComponent, EmptyStateComponent, ImportDialog, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -26,8 +26,16 @@ import { EmptyStateComponent } from '../../ui/empty-state/empty-state.component'
           <path d="m21 21-4.3-4.3" />
         </svg>
         <a class="btn btn--primary" routerLink="/">Go to home</a>
+        <button class="btn btn--lg" type="button" (click)="showImport.set(true)">
+          Import a record
+        </button>
       </g-empty-state>
     </main>
+    @if (showImport()) {
+      <g-import-dialog (closed)="showImport.set(false)" />
+    }
   `,
 })
-export class NotFoundPage {}
+export class NotFoundPage {
+  protected readonly showImport = signal(false);
+}

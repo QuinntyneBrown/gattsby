@@ -104,14 +104,20 @@ the write transaction has started it completes or aborts whole.
    one. It appears in Saved devices. Past investigations lists the full investigation records.
 2. **Record.** `importRecord` writes the investigation, its steps, raw log, observations,
    hypotheses, recordings, missing-tool requests, notes, photos (decoded from base64 into `Blob`s)
-   and its profile, each under its own key, in one transaction over every store. It appears in Past
+   and its profile, each under its own key, in one transaction over every store. The store keeps
+   validated photo data as base64 with its media type and capture time until it is opened. It appears in Past
    investigations and in Saved devices when it includes a profile. An imported investigation opens
    as saved evidence. Import does not start a model, Bluetooth connection, or a command.
 3. **Same ID.** When an item with the same ID is already stored, the import compares canonical JSON
-   (keys sorted). Identical content is a success with nothing written ("Already on this device");
-   different content is refused with `ALREADY_EXISTS`.
+   (keys sorted). The exported time, app version and optionally attached notes on a profile do
+   not change its profile identity. For records, an export that omits attachments does not
+   overwrite attachments already on the device. Identical content is a success with nothing
+   written ("Already on this device"). Different content is refused with `ALREADY_EXISTS`.
 4. **Display.** Imported strings are rendered as text; a device name holding `<script>` shows as
    those characters (FR-064 AC3; see the render-untrusted-text design).
+5. **Bounds.** Parsed strings outside photo data have a 65,536-character upper bound. Schemas
+   apply the narrower field limits. Record restoration rejects duplicate row keys and checks
+   that its dates and profile refer to the same investigation before opening a write transaction.
 
 ### Errors
 

@@ -39,6 +39,8 @@ export async function buildRecordExport(
   if (recordFormat !== 1)
     throw new StoreError('EXPORT_UNAVAILABLE', 'This record format couldn’t be exported.');
   const notes = note ? [note] : [];
+  const { notes: profileNotes, ...profileBody } = profile;
+  void profileNotes;
   const payload = {
     kind: 'gattsby.investigation-record',
     formatVersion: '1.1',
@@ -60,7 +62,7 @@ export async function buildRecordExport(
     hypotheses: record.hypotheses.map(withoutInvestigationId),
     recordings: recordings.map(withoutInvestigationId),
     missingToolRequests: record.missingToolRequests.map(withoutInvestigationId),
-    profile: header.location ? { ...profile, location: header.location } : profile,
+    profile: header.location ? { ...profileBody, location: header.location } : profileBody,
     ...(typeof attachments === 'number'
       ? { omitted: { notes: notes.length, photos: attachments } }
       : {

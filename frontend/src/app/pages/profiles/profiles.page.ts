@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
+import { ImportDialog } from '../../dialogs/import/import.dialog';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { DeviceProfile } from '../../store/model/device-profile';
 import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.component';
@@ -25,7 +26,7 @@ const DEVICE_FILTERS = [
 @Component({
   selector: 'g-profiles-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, VerdictMarkComponent],
+  imports: [DatePipe, ImportDialog, RouterLink, VerdictMarkComponent],
   styles: `
     :host {
       display: contents;
@@ -61,6 +62,7 @@ const DEVICE_FILTERS = [
             </p>
           }
         </div>
+        <button class="btn btn--ghost" type="button" (click)="showImport.set(true)">Import</button>
       </header>
       <main id="main" class="profiles" tabindex="-1" [attr.aria-busy]="loading()">
         @if (loading()) {
@@ -162,6 +164,9 @@ const DEVICE_FILTERS = [
         }
       </main>
     </div>
+    @if (showImport()) {
+      <g-import-dialog (closed)="showImport.set(false)" (imported)="load()" />
+    }
   `,
 })
 export class ProfilesPage implements OnInit {
@@ -171,6 +176,7 @@ export class ProfilesPage implements OnInit {
   protected readonly profiles = signal<readonly DeviceProfile[]>([]);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
+  protected readonly showImport = signal(false);
   protected readonly starting = signal(false);
   protected readonly startFailed = signal(false);
   protected readonly filters = DEVICE_FILTERS;

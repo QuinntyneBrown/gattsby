@@ -7,6 +7,14 @@ export class SavedDevicesPage {
     return this.page.getByRole('heading', { name: 'Saved devices', exact: true });
   }
 
+  get importFile(): Locator {
+    return this.page.getByRole('button', { name: 'Import', exact: true });
+  }
+
+  goto() {
+    return this.page.goto('/profiles');
+  }
+
   get search(): Locator {
     return this.page.getByRole('searchbox', { name: 'Search saved devices' });
   }

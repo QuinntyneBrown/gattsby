@@ -11,6 +11,7 @@ import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
 import { STAGE_NAMES } from '../../agent/stage-names';
 import { DeleteInvestigationDialog } from '../../dialogs/delete-investigation/delete-investigation.dialog';
+import { ImportDialog } from '../../dialogs/import/import.dialog';
 import { formatStorage, storageWarningPercent } from '../../shared/format-storage';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { Investigation } from '../../store/model/investigation';
@@ -20,7 +21,7 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
 @Component({
   selector: 'g-history-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, DeleteInvestigationDialog, RouterLink, VerdictMarkComponent],
+  imports: [DatePipe, DeleteInvestigationDialog, ImportDialog, RouterLink, VerdictMarkComponent],
   styles: `
     :host {
       display: contents;
@@ -126,7 +127,10 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
                           ><bdi>{{ row.deviceName ?? 'New investigation' }}</bdi></span
                         >
                         <span class="row__meta">{{
-                          row.verdict?.label ?? 'In progress · paused at ' + stages[row.stage]
+                          row.verdict?.label ??
+                            (row.readOnly
+                              ? 'Imported investigation record'
+                              : 'In progress · paused at ' + stages[row.stage])
                         }}</span>
                         <span class="row__meta row__meta--xs">
                           @if (isToday(row.startedAt)) {
@@ -173,6 +177,9 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
               >
                 Identify a device
               </button>
+              <button class="btn btn--lg" type="button" (click)="showImport.set(true)">
+                Import a record
+              </button>
               @if (startFailed()) {
                 <p role="alert">Couldn’t start an investigation. Try again.</p>
               }
@@ -181,6 +188,9 @@ import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.compone
         }
       </main>
     </div>
+    @if (showImport()) {
+      <g-import-dialog (closed)="showImport.set(false)" (imported)="load()" />
+    }
     @if (deletion(); as row) {
       <g-delete-investigation-dialog
         [deviceName]="row.deviceName ?? 'New investigation'"
@@ -202,6 +212,7 @@ export class HistoryPage implements OnInit {
   protected readonly storageWarning = computed(() => storageWarningPercent(this.usage()));
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
+  protected readonly showImport = signal(false);
   protected readonly starting = signal(false);
   protected readonly startFailed = signal(false);
   protected readonly deletion = signal<Investigation | null>(null);

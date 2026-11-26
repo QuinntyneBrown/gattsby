@@ -380,3 +380,15 @@ None; this is the first entry.
 - Apply the quota lesson from journey 13. Before storage fills, show the browser's estimate.
   At quota, the existing Leave confirmation lets the person visit History after stopping the
   recording and keeping the earlier evidence.
+
+## Journey 16 — Import profiles and records
+
+- Apply the export lesson from journey 4. Round trip a real download through the same file
+  dialog a person uses. Profiles keep their exported fields. Investigation packet timestamps
+  are relative in the file and restored to their original clock values when opened.
+- Apply the deletion lesson from journey 15. Validate the entire file and its row keys before
+  writing. Store the record, evidence and attachments in one transaction.
+- Read both record minor versions through the published schema and retain fields that older
+  records omitted. Imported investigations show evidence without resuming the playbook.
+- Treat the presence of an attachment in stored data and the choice to include it in a new
+  export as two separate decisions. Check the privacy default when exporting a restored profile.

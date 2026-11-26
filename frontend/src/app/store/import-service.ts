@@ -8,6 +8,7 @@ import { restoreInvestigation } from './restore-investigation';
 import { StoreError } from './store-error';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_TEXT_FIELD = 65_536;
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 @Injectable({ providedIn: 'root' })
@@ -40,6 +41,13 @@ export class ImportService {
         validate.errors?.[0]?.instancePath || undefined,
       );
     const profile = candidate as unknown as DeviceProfile;
+    if (!Number.isFinite(Date.parse(profile.createdAt))) {
+      throw new ImportError(
+        'SCHEMA_INVALID',
+        'This file doesn’t match the device profile format.',
+        '/createdAt',
+      );
+    }
     signal.throwIfAborted();
     const alreadyStored = await this.store.importProfile(profile, signal);
     return {
@@ -106,6 +114,12 @@ export async function readImportFile(
     content = JSON.parse(text, (key, value: unknown) => {
       if (FORBIDDEN_KEYS.has(key))
         throw new ImportError('FORBIDDEN_KEY', 'This file contains a disallowed object key.');
+      if (key !== 'dataBase64' && typeof value === 'string' && value.length > MAX_TEXT_FIELD) {
+        throw new ImportError(
+          'SCHEMA_INVALID',
+          'This file contains a text field that is too long.',
+        );
+      }
       return value;
     });
   } catch (error) {

@@ -24,7 +24,9 @@ export function restoreInvestigation(file: InvestigationRecordDocument): Importe
   const rows = {
     rawLog: file.rawLog.map((packet) => {
       if (packet.id !== `r-${packet.seq}`) invalid('/rawLog/id');
-      return withId({ ...packet, t: packet.t + start });
+      const t = packet.t + start;
+      if (!Number.isFinite(new Date(t).getTime())) invalid('/rawLog/t');
+      return withId({ ...packet, t });
     }),
     steps,
     observations: file.observations.map(withId),

@@ -796,8 +796,11 @@ async function matchesStoredRecord(
   saved: Investigation,
 ): Promise<boolean> {
   const comparableHeader = (header: Investigation) => {
-    const { readOnly: _readOnly, note, ...meta } = header;
-    return incoming.includesNotesAndPhotos ? { ...meta, note } : meta;
+    return {
+      ...header,
+      readOnly: undefined,
+      note: incoming.includesNotesAndPhotos ? header.note : undefined,
+    };
   };
   if (
     canonicalJson(comparableHeader(saved)) !==

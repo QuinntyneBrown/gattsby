@@ -237,6 +237,12 @@
                 <p class="text-sm">
                   <bdi>{{ recordHeader.value().note }}</bdi>
                 </p>
+              } @else {
+                @for (note of p.notes ?? []; track $index) {
+                  <p class="text-sm">
+                    <bdi>{{ note }}</bdi>
+                  </p>
+                }
               }
               <p class="fine-print">
                 @if (p.location) {
