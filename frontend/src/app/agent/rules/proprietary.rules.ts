@@ -28,6 +28,13 @@ function needsProprietary(ctx: RuleContext): boolean {
   return ctx.state.connected && !!ctx.state.layout && !standardPath(ctx);
 }
 
+function recordingIds(ctx: RuleContext): string[] {
+  return PROPRIETARY_LEVELS.flatMap((level) => {
+    const id = ctx.state.proprietaryRecordings[level]?.id;
+    return id ? [id] : [];
+  });
+}
+
 export const PROPRIETARY_RULES: readonly StageRule[] = [
   {
     id: 'proprietary.record-level',
@@ -60,5 +67,15 @@ export const PROPRIETARY_RULES: readonly StageRule[] = [
           : undefined,
       );
     },
+  },
+  {
+    id: 'proprietary.compare',
+    stage: 'proprietary',
+    when: (ctx) =>
+      !nextLevel(ctx) && !ctx.state.proprietaryCompared && recordingIds(ctx).length >= 2,
+    then: (ctx) =>
+      decided('proprietary.compare', 'proprietary', 'find_varying_bytes', {
+        recordingIds: recordingIds(ctx),
+      }),
   },
 ];

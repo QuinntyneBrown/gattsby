@@ -9,6 +9,10 @@ import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { VerdictPage } from './pages/verdict.page';
+
+const dataUuid = 'ce060031-43e5-11e4-916c-0800200c9a66';
+const silentUuid = 'ce060033-43e5-11e4-916c-0800200c9a66';
 
 test.use({
   bluetooth: {
@@ -71,4 +75,59 @@ test('records idle and two effort levels from the same device', async ({ page, f
   expect(rows[1].characteristics).toEqual(rows[0].characteristics);
   expect(rows[2].characteristics).toEqual(rows[0].characteristics);
   expect(fakeBluetooth.writes()).toEqual([]);
+});
+
+// Given the saved recordings, when the byte comparison runs, then the verdict links the
+// offsets that follow effort to actual packets and identifies a silent characteristic.
+test('reports a varying field with packet evidence @critical', async ({ page, fakeBluetooth }) => {
+  const investigation = await connectToRower(page);
+  const id = investigation.id();
+  await captureLevels(page, investigation, fakeBluetooth);
+  const verdict = new VerdictPage(page);
+  await expect(verdict.title).toHaveText('Partially decoded');
+  await expect(verdict.group('Observed')).toContainText('Varying bytes');
+  const records = new StoredRecords(page);
+  const steps = await records.steps(id);
+  expect(steps.find(({ tool }) => tool === 'find_varying_bytes')?.result.data).toMatchObject({
+    perCharacteristic: expect.arrayContaining([
+      expect.objectContaining({ uuid: dataUuid, betweenLabels: expect.arrayContaining([5]) }),
+    ]),
+  });
+  const observations = await records.observations(id);
+  const varying = observations.find(
+    ({ kind, subject }) => kind === 'varying-field' && subject === dataUuid,
+  );
+  const raw = await records.rawLog(id);
+  const recordings = await records.recordings(id);
+  for (const recording of recordings) {
+    expect(varying?.evidence).toContain(recording.id);
+    expect(
+      raw.some(
+        ({ id, recordingId }) => recordingId === recording.id && varying?.evidence.includes(id),
+      ),
+    ).toBe(true);
+  }
+  expect(observations).toContainEqual(
+    expect.objectContaining({ kind: 'silent', subject: silentUuid }),
+  );
+  expect(fakeBluetooth.writes()).toEqual([]);
+});
+
+test.describe('The browser has no on-device model', () => {
+  test.use({ model: { availability: 'absent' } });
+
+  test('completes the proprietary recording and comparison in checklist mode', async ({
+    page,
+    fakeBluetooth,
+    fakeModel,
+  }) => {
+    const investigation = await connectToRower(page);
+    await investigation.choose('Connect to the device');
+    await investigation.choose('List exposed services');
+    await investigation.choose('Match known profiles');
+    await captureLevels(page, investigation, fakeBluetooth);
+    await expect(new VerdictPage(page).title).toHaveText('Partially decoded');
+    expect(fakeModel.calls()).toEqual([]);
+    expect(fakeBluetooth.writes()).toEqual([]);
+  });
 });

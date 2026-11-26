@@ -21,6 +21,7 @@ const MVP_TOOLS = [
   'subscribe_and_record',
   'decode_standard',
   'assess_reachability',
+  'find_varying_bytes',
   'request_control',
   'send_command',
   'check_command_effect',

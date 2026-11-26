@@ -18,9 +18,19 @@ export const UNKNOWN_SERVICES: ScriptedDevice = {
           properties: { notify: true },
           notificationIntervalMs: 400,
           notify: (state) => {
-            const frame = [0xa5, state.ticks & 0xff, ...uint16(state.effort * 150), 0x00];
-            return [...frame, frame.reduce((sum, byte) => sum ^ byte, 0)];
+            // Synthetic frames for testing. The single data field follows the scripted effort.
+            const strokeRate =
+              (state.effort === 0 ? 0 : state.effort === 1 ? 253 : 271) +
+              (state.effort === 0 ? 0 : state.ticks % 7);
+            const frame = [0xf0, state.ticks & 0xff, 0, 0x72, 0x55, ...uint16(strokeRate), 0x3c];
+            if (state.ticks % 2) frame.push(0x21);
+            frame[2] = frame.length + 1;
+            return [...frame, frame.reduce((sum, byte) => sum + byte, 0) & 0xff];
           },
+        },
+        {
+          uuid: 'ce060033-43e5-11e4-916c-0800200c9a66',
+          properties: { notify: true },
         },
         {
           uuid: 'ce060032-43e5-11e4-916c-0800200c9a66',

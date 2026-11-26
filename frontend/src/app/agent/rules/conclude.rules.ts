@@ -11,6 +11,9 @@ export function verdictSummary(kind: VerdictKind, facts: VerdictFacts): string {
     case 'connected':
       return `Your software can connect to this device with ${protocol}.`;
     case 'partiallyDecoded':
+      if (facts.observations.some(({ kind }) => kind === 'varying-field')) {
+        return 'Some bytes changed with effort. The recordings show where the readings may be encoded.';
+      }
       return protocol && facts.protocolKnown
         ? `Identified as ${protocol} from its services${maker ? ' and Device Information' : ''}. No metric has been confirmed with live data yet.`
         : 'Some fields were decoded, but not enough to name a known protocol.';

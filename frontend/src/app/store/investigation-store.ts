@@ -39,6 +39,7 @@ export abstract class InvestigationStore {
   abstract recordedPackets(
     investigationId: string,
     recordingId: string,
+    limitPerCharacteristic?: number,
   ): Promise<RawLogEntry[] | null>;
   /** Whether storage opens, and how much of the quota is used; prompts for nothing. */
   abstract usage(): Promise<{

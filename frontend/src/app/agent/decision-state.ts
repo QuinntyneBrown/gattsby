@@ -62,6 +62,7 @@ export interface DecisionState {
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
   readonly standardRecordingId: string | null;
   readonly proprietaryRecordings: Readonly<Partial<Record<ProprietaryLevel, ProprietaryRecording>>>;
+  readonly proprietaryCompared: boolean;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly readableMetrics: readonly ReadableMetric[];
@@ -115,6 +116,7 @@ export const INITIAL_STATE: DecisionState = {
   standardRecording: 'pending',
   standardRecordingId: null,
   proprietaryRecordings: {},
+  proprietaryCompared: false,
   speedAction: null,
   speedConfirmation: null,
   readableMetrics: [],
@@ -177,6 +179,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
   switch (step.tool) {
     case 'assess_reachability':
       return { ...next, reachability: data as unknown as ReachabilityAssessment | null };
+    case 'find_varying_bytes':
+      return { ...next, proprietaryCompared: true };
     case 'check_capabilities':
       return {
         ...next,

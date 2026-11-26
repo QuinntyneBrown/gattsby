@@ -17,6 +17,10 @@ const KINDS: readonly VerdictKind[] = [
   'notConnectable',
   'stoppedByPerson',
 ];
+const EVIDENCE_KINDS: Partial<Record<VerdictKind, readonly string[]>> = {
+  notConnectable: ['reachability'],
+  partiallyDecoded: ['varying-field', 'candidate-encoding', 'framing'],
+};
 
 // finish (TOOL-030): issues the verdict once the evidence supports it (FR-054). The orchestrator
 // commits it with the final step and releases the connection (issue-the-verdict design).
@@ -58,12 +62,14 @@ export const finishTool = entry<
     const check = checkVerdict(input.verdict, facts);
     if (!check.supported) return fail('PRECONDITION_FAILED', check.missing);
     const label = verdictLabel(input.verdict, facts.hypothesis?.protocol ?? null);
-    const evidence =
-      input.verdict === 'notConnectable'
-        ? facts.observations
-            .filter(({ kind }) => kind === 'reachability')
-            .flatMap(({ id, evidence }) => [id, ...evidence])
-        : [];
+    const kinds = EVIDENCE_KINDS[input.verdict] ?? [];
+    const evidence = [
+      ...new Set(
+        facts.observations
+          .filter(({ kind }) => kinds.includes(kind))
+          .flatMap(({ id, evidence }) => [id, ...evidence]),
+      ),
+    ];
     return ok(`${label}.`, { verdict: input.verdict, label, profileId: null }, evidence);
   },
 });

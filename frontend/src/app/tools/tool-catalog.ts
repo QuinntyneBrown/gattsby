@@ -20,6 +20,7 @@ import { readSupportedRangesTool } from './inspection/read-supported-ranges.tool
 import { subscribeAndRecordTool } from './listening/subscribe-and-record.tool';
 import { decodeStandardTool } from './analysis/decode-standard.tool';
 import { assessReachabilityTool } from './analysis/assess-reachability.tool';
+import { findVaryingBytesTool } from './analysis/find-varying-bytes.tool';
 import { finishTool } from './meta/finish.tool';
 import { requestMissingTool } from './meta/request-missing-tool.tool';
 import { updateHypothesisTool } from './meta/update-hypothesis.tool';
@@ -49,6 +50,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   subscribeAndRecordTool,
   decodeStandardTool,
   assessReachabilityTool,
+  findVaryingBytesTool,
   requestControlTool,
   sendCommandTool,
   checkCommandEffectTool,

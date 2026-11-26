@@ -758,7 +758,8 @@ export class PlaybookOrchestrator {
         handedOut.push(recording.id);
         return recording.id;
       },
-      recordedPackets: (recordingId) => this.store.recordedPackets(id, recordingId),
+      recordings: () => this.store.recordings(id),
+      recordedPackets: (recordingId, limit) => this.store.recordedPackets(id, recordingId, limit),
       raiseMissingTool: (r: NewMissingToolRequest) => {
         const existing = [...this.requests(), ...requests].find(
           (x) => x.capabilityKey === r.capabilityKey,

@@ -27,6 +27,9 @@ const OBSERVED = new Set([
   'held-by-other',
   'connection-quirk',
   'reachability',
+  'varying-field',
+  'silent',
+  'not-recorded',
 ]);
 
 export function verdictView(
