@@ -69,12 +69,10 @@ scans both count. The order of the checks is fixed: power, then other connection
 - *Not connectable* carries the evidence that Bluetooth Low Energy was not found (the scan steps and
   their raw-log `scan` entries) and the note that the device may use Bluetooth Classic, ANT+, Wi-Fi
   or USB (FR-014).
-- The mock's "What might work instead" list names a console setting to check, the other transports,
-  and the maker's own cloud service. The source of the maker-specific line (a vendor entry in the
-  knowledge base, or fixed text) is `<TO SUPPLY>`.
-- The mock's observation "Bluetooth on this laptop works — 14 other devices seen" needs a count the
-  page cannot read from the chooser (A-10). Its source (the person's answer, or advertisement samples
-  where `PD-ADV` is available) is `<TO SUPPLY>`.
+- "What might work instead" gives the person checks that apply to an unknown model: look for a
+  Bluetooth Low Energy or FTMS option, look up a native app or adapter, or ask the maker.
+- The evidence counts the chooser attempts and the person’s answers. Chrome does not expose the
+  list or the device count when the chooser closes.
 - The device profile is built as for every verdict (see the build-the-device-profile design), and
   the connection is released (see the release-the-connection design), although none was made.
 

@@ -52,7 +52,7 @@ export async function executeTool(
     result = await tool.run(input, approval ? { ...ctx, approval } : ctx);
   } catch (error) {
     if (error instanceof ToolError) {
-      result = fail(error.code, error.message);
+      result = fail(error.code, error.message, undefined, error.evidence);
     } else if (error instanceof StoreError && error.code === 'STORAGE_FULL') {
       result = fail('STORAGE_FULL', error.message);
     } else if (error instanceof DOMException && error.name === 'AbortError') {

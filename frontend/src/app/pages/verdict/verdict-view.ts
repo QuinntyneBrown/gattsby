@@ -1,6 +1,7 @@
 import { DEVICE_TYPE_WORDS } from '../../outcome/device-type-words';
 import type { InvestigationRecord } from '../../store/model/investigation-record';
 import type { ObservationTag } from '../../store/model/observation';
+import type { ReachabilityAssessment } from '../../analysis/reachability-assessment';
 
 export interface VerdictItem {
   readonly key: string;
@@ -16,6 +17,7 @@ export interface VerdictView {
   readonly readable: readonly VerdictItem[];
   readonly observed: readonly VerdictItem[];
   readonly undetermined: readonly VerdictItem[];
+  readonly heldByOther: boolean;
 }
 
 const OBSERVED = new Set([
@@ -24,6 +26,7 @@ const OBSERVED = new Set([
   'decoded-value',
   'held-by-other',
   'connection-quirk',
+  'reachability',
 ]);
 
 export function verdictView(
@@ -80,7 +83,12 @@ export function verdictView(
     value: 'anything outside the known list is invisible',
     tag: null,
   });
-  return { meta, protocol, readable, observed, undetermined };
+  const assessment = steps.find(({ tool }) => tool === 'assess_reachability')?.result;
+  const causes = assessment?.ok
+    ? (assessment.data as ReachabilityAssessment | null)?.likelyCauses
+    : null;
+  const heldByOther = Array.isArray(causes) && causes.includes('held by another central');
+  return { meta, protocol, readable, observed, undetermined, heldByOther };
 }
 
 function verdictItem(observation: { text: string; tag: ObservationTag }): VerdictItem {

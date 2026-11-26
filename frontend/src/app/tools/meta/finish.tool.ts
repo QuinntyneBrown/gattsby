@@ -58,7 +58,13 @@ export const finishTool = entry<
     const check = checkVerdict(input.verdict, facts);
     if (!check.supported) return fail('PRECONDITION_FAILED', check.missing);
     const label = verdictLabel(input.verdict, facts.hypothesis?.protocol ?? null);
-    return ok(`${label}.`, { verdict: input.verdict, label, profileId: null });
+    const evidence =
+      input.verdict === 'notConnectable'
+        ? facts.observations
+            .filter(({ kind }) => kind === 'reachability')
+            .flatMap(({ id, evidence }) => [id, ...evidence])
+        : [];
+    return ok(`${label}.`, { verdict: input.verdict, label, profileId: null }, evidence);
   },
 });
 

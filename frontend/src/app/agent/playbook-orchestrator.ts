@@ -1022,6 +1022,7 @@ export class PlaybookOrchestrator {
       observations,
       missingToolRequests: requests,
       everConnected: this.state().everConnected,
+      reachability: this.state().reachability,
       stopReason: this.stopReason ?? 'finish',
       emergencyAcknowledged: this.emergencyEvent?.outcome === 'acknowledged',
       protocolKnown:

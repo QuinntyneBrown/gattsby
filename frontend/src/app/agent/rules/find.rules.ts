@@ -1,6 +1,12 @@
 import { decided, type StageRule } from '../stage-rule';
+import { REACHABILITY_CHECKS } from '../../analysis/reachability-checks';
+import type { DecisionState } from '../decision-state';
 
-const MAX_SCANS = 4;
+function pendingCheck(state: DecisionState) {
+  return REACHABILITY_CHECKS.find(
+    ({ key }) => !state.reachabilityChecks[key] || state.reachabilityChecks[key] === 'needs-action',
+  );
+}
 
 // Find: the filtered scan first, then the open scan after a cancel (FR-011, FR-012).
 export const FIND_RULES: readonly StageRule[] = [
@@ -48,7 +54,7 @@ export const FIND_RULES: readonly StageRule[] = [
     stage: 'find',
     when: ({ state }) =>
       !state.device &&
-      state.scans.length < MAX_SCANS &&
+      state.scans.length === 1 &&
       state.scans[state.scans.length - 1]?.outcome === 'cancelled',
     then: () =>
       decided(
@@ -61,5 +67,50 @@ export const FIND_RULES: readonly StageRule[] = [
           why: 'Some machines only show up when the list isn’t filtered.',
         },
       ),
+  },
+  {
+    id: 'find.check-usual-causes',
+    stage: 'find',
+    when: ({ state }) =>
+      !state.device &&
+      state.scans.length === 2 &&
+      state.scans.every(({ outcome }) => outcome === 'cancelled') &&
+      !!pendingCheck(state),
+    then: ({ state }) => {
+      const check = pendingCheck(state)!;
+      if (state.reachabilityChecks[check.key] === 'needs-action' && check.remedy) {
+        return decided(`find.repair.${check.key}`, 'find', 'request_action', {
+          instruction: check.remedy,
+          needsReady: false,
+        });
+      }
+      if (check.key === 'range') {
+        return decided('find.check.range', 'find', 'request_action', {
+          instruction: check.title,
+          needsReady: false,
+        });
+      }
+      return decided(`find.check.${check.key}`, 'find', 'ask_user', {
+        question: check.title,
+        detail: check.detail,
+        answers: [...check.answers],
+      });
+    },
+  },
+  {
+    id: 'find.last-scan',
+    stage: 'find',
+    when: ({ state }) =>
+      !state.device &&
+      state.scans.length === 2 &&
+      state.scans.every(({ outcome }) => outcome === 'cancelled') &&
+      !pendingCheck(state),
+    then: () => decided('find.last-scan', 'find', 'scan_all_devices', { last: true }),
+  },
+  {
+    id: 'find.assess-reachability',
+    stage: 'find',
+    when: ({ state }) => !state.device && state.scans.length > 0 && !state.reachability,
+    then: () => decided('find.assess-reachability', 'find', 'assess_reachability', {}),
   },
 ];

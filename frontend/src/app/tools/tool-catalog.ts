@@ -19,6 +19,7 @@ import { readDeviceInfoTool } from './inspection/read-device-info.tool';
 import { readSupportedRangesTool } from './inspection/read-supported-ranges.tool';
 import { subscribeAndRecordTool } from './listening/subscribe-and-record.tool';
 import { decodeStandardTool } from './analysis/decode-standard.tool';
+import { assessReachabilityTool } from './analysis/assess-reachability.tool';
 import { finishTool } from './meta/finish.tool';
 import { requestMissingTool } from './meta/request-missing-tool.tool';
 import { updateHypothesisTool } from './meta/update-hypothesis.tool';
@@ -47,6 +48,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   readSupportedRangesTool,
   subscribeAndRecordTool,
   decodeStandardTool,
+  assessReachabilityTool,
   requestControlTool,
   sendCommandTool,
   checkCommandEffectTool,

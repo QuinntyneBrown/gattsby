@@ -16,7 +16,7 @@ the shared core (BLE layer, knowledge base, store).
 | 9 | Pick the right device | Match the device in Chrome or use advertisements from already permitted devices. | 3 | 100 |
 | 10 | Recover a dropped connection | Detect a drop, reconnect to the same device and repeat the interrupted recording. | 3 | 100 |
 | 11 | Pause, stop and resume | Confirm stop or leave, pause automatically or on request, and resume with the same device. Opening stopped records from history is journey 15. | 3 | 95 |
-| 12 | Report a non-connectable device | Explain that a Classic, ANT+, Wi-Fi or USB device is unreachable. | 2 | 0 |
+| 12 | Report a non-connectable device | Check power, other connections and range, then explain what Chrome could establish after three scans. | 2 | 100 |
 | 13 | Decode a proprietary protocol | Record traffic, find varying fields, guess encodings and framing. | 12 | 0 |
 | 14 | Review evidence and missing tools | See the hypothesis, its evidence and capabilities the agent lacked. | 4 | 0 |
 | 15 | Browse and delete history | List past investigations and delete one or all. | 3 | 0 |
@@ -25,4 +25,4 @@ the shared core (BLE layer, knowledge base, store).
 | 18 | Unlock vendor data safely | Send a known vendor unlock, never bypassing encryption or pairing. | 4 | 0 |
 | 19 | Read a model plate photo | Photograph the model plate to identify maker and model. | 5 | 0 |
 | 20 | Use the agent on a phone | Run full agent mode once phones offer an on-device model. | 5 | 0 |
-| | **Total** | | **101** | **57** |
+| | **Total** | | **101** | **59** |

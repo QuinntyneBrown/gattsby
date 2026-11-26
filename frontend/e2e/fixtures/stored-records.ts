@@ -116,6 +116,7 @@ export class StoredRecords {
 
   async rawLog(id: string) {
     const rows = await this.readAll<{
+      id: string;
       investigationId: string;
       kind: string;
       t: number;

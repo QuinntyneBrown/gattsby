@@ -3,6 +3,7 @@ import type { MissingToolRequest } from '../store/model/missing-tool-request';
 import type { Observation } from '../store/model/observation';
 import type { StopReason } from '../store/model/stop-reason';
 import type { VerdictKind } from '../store/model/verdict';
+import type { ReachabilityAssessment } from '../analysis/reachability-assessment';
 
 // What the verdict is checked against (issue-the-verdict design).
 export interface VerdictFacts {
@@ -10,6 +11,7 @@ export interface VerdictFacts {
   readonly observations: readonly Observation[];
   readonly missingToolRequests: readonly MissingToolRequest[];
   readonly everConnected: boolean;
+  readonly reachability?: ReachabilityAssessment | null;
   readonly stopReason: StopReason;
   readonly emergencyAcknowledged?: boolean;
   /** Whether the protocol is one the knowledge base holds. */
@@ -25,8 +27,8 @@ const ORDER: readonly VerdictKind[] = [
   'stoppedByPerson',
   'connected',
   'partiallyDecoded',
-  'needsMissingTool',
   'notConnectable',
+  'needsMissingTool',
 ];
 
 /** Whether the evidence supports a verdict kind (FR-054, TOOL-030). Pure. */
@@ -54,9 +56,14 @@ export function checkVerdict(kind: VerdictKind, facts: VerdictFacts): VerdictChe
         ? { supported: true }
         : { supported: false, missing: 'No missing-tool request was raised.' };
     case 'notConnectable':
-      return !facts.everConnected
+      return !facts.everConnected && facts.reachability?.reachable === 'no'
         ? { supported: true }
-        : { supported: false, missing: 'The device did connect.' };
+        : {
+            supported: false,
+            missing: facts.everConnected
+              ? 'The device did connect.'
+              : 'The reachability checks do not establish that the device is unreachable.',
+          };
   }
 }
 

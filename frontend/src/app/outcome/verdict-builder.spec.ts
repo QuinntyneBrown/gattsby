@@ -64,8 +64,22 @@ describe('VerdictBuilder (FR-054)', () => {
     ).toBe('needsMissingTool');
   });
 
-  it('issues “Not connectable” when no connection succeeded', () => {
-    expect(deriveVerdict({ ...base, everConnected: false })).toBe('notConnectable');
+  it('issues “Not connectable” when an assessment shows the device is unreachable', () => {
+    expect(
+      deriveVerdict({
+        ...base,
+        everConnected: false,
+        reachability: {
+          reachable: 'no',
+          likelyCauses: ['Bluetooth Classic'],
+          ruledOut: ['off or asleep'],
+        },
+      }),
+    ).toBe('notConnectable');
+  });
+
+  it('requires a reachability assessment before naming the verdict', () => {
+    expect(checkVerdict('notConnectable', { ...base, everConnected: false }).supported).toBe(false);
   });
 
   it('gives the person’s stop precedence over everything else', () => {

@@ -135,19 +135,23 @@ export class WebBluetoothBleLayer extends BleLayer {
     } catch (error) {
       const name = errorName(error);
       const adapter = await bluetooth.getAvailability().catch(() => false);
-      this.log.append({
+      const evidence = this.log.append({
         kind: 'scan',
         direction: 'out',
         hex: '',
         detail: `${request.mode}: ${name}`,
       });
       if (!adapter || name === 'SecurityError' || name === 'NotAllowedError') {
-        throw new ToolError('BLE_UNAVAILABLE', 'Bluetooth is off or blocked for this site.');
+        throw new ToolError('BLE_UNAVAILABLE', 'Bluetooth is off or blocked for this site.', [
+          evidence,
+        ]);
       }
       if (name === 'NotFoundError') {
-        throw new ToolError('USER_CANCELLED', 'The person closed the chooser without picking.');
+        throw new ToolError('USER_CANCELLED', 'The person closed the chooser without picking.', [
+          evidence,
+        ]);
       }
-      throw new ToolError('UNSUPPORTED', `Chrome refused the scan (${name}).`);
+      throw new ToolError('UNSUPPORTED', `Chrome refused the scan (${name}).`, [evidence]);
     }
     this.devices.set(device.id, device);
     this.log.append({
