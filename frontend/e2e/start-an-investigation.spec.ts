@@ -50,7 +50,7 @@ test.describe('Start an investigation', () => {
     expect(stored).toMatchObject({
       mode: 'agent',
       appVersion: '0.1.0',
-      kbVersion: '2026.11',
+      kbVersion: '2026.11.1',
       status: 'running',
     });
     expect(stored?.startedAt).toBeGreaterThan(0);

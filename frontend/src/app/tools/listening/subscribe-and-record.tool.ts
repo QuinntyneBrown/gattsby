@@ -8,6 +8,7 @@ interface RecordInput {
   readonly characteristics: readonly string[];
   readonly seconds: number;
   readonly label?: string;
+  readonly level?: number;
 }
 
 export const subscribeAndRecordTool = entry<RecordInput, unknown>({
@@ -27,6 +28,7 @@ export const subscribeAndRecordTool = entry<RecordInput, unknown>({
       },
       seconds: { type: 'integer', minimum: 1, maximum: 120 },
       label: { type: 'string', minLength: 1, maxLength: 140 },
+      level: { type: 'integer', minimum: 0, maximum: 3 },
     },
   },
   outputSchema: { type: 'object' },
@@ -69,6 +71,12 @@ export const subscribeAndRecordTool = entry<RecordInput, unknown>({
     ) {
       return fail('INVALID_INPUT', 'The recording label must be 1 to 140 characters.');
     }
+    if (
+      input.level !== undefined &&
+      (!Number.isInteger(input.level) || input.level < 0 || input.level > 3)
+    ) {
+      return fail('INVALID_INPUT', 'The activity level must be between 0 and 3.');
+    }
     if (ctx.ble.connection().status !== 'connected') {
       return fail('NOT_CONNECTED', 'The device is not connected.');
     }
@@ -95,6 +103,7 @@ export const subscribeAndRecordTool = entry<RecordInput, unknown>({
         recordingId,
         input.seconds,
         ctx.signal,
+        ctx.stage === 'standard',
       );
     } catch (error) {
       if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
@@ -110,6 +119,7 @@ export const subscribeAndRecordTool = entry<RecordInput, unknown>({
     ctx.saveRecording({
       id: recordingId,
       label,
+      ...(input.level !== undefined && { level: input.level }),
       characteristics,
       startedAt: result.startedAt,
       seconds: input.seconds,

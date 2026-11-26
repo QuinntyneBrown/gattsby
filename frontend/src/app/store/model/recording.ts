@@ -4,6 +4,7 @@ export interface Recording {
   readonly investigationId: string;
   readonly stepN: number;
   readonly label: string;
+  readonly level?: number;
   readonly characteristics: readonly string[];
   readonly startedAt: number;
   readonly seconds: number;

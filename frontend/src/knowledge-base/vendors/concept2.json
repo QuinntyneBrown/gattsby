@@ -1,0 +1,24 @@
+{
+  "kind": "vendor",
+  "id": "concept2",
+  "brand": "Concept2",
+  "phase": "MVP",
+  "sources": {
+    "pm5": {
+      "type": "specification",
+      "title": "Concept2 PM CSAFE Communication Definition 0.34, pp. 16–17",
+      "reference": "https://cms.concept2.com/sites/default/files/2026-03/Concept2%20PM%20CSAFE%20Communication%20Definition.pdf"
+    }
+  },
+  "machineTypes": ["rower"],
+  "services": [
+    {
+      "uuid": "ce060030-43e5-11e4-916c-0800200c9a66",
+      "name": "Concept2 Rowing",
+      "source": "pm5"
+    }
+  ],
+  "characteristics": [],
+  "namePatterns": [],
+  "manufacturerIds": []
+}

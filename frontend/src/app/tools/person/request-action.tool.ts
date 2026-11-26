@@ -8,6 +8,7 @@ export interface RequestActionInput {
   readonly expectedSeconds?: number;
   readonly sequence?: string;
   readonly title?: string;
+  readonly detail?: string;
   readonly steps?: readonly string[];
   readonly why?: string;
   readonly stoppable?: boolean;
@@ -61,7 +62,7 @@ export const requestActionTool = entry<RequestActionInput, RequestActionOutput>(
       {
         kind: 'action',
         title: input.title ?? input.instruction,
-        detail: input.title ? null : null,
+        detail: input.detail ?? null,
         why: input.why ?? null,
         sequence: input.sequence ?? null,
         answers: [button],

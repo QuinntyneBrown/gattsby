@@ -16,6 +16,7 @@ export const UNKNOWN_SERVICES: ScriptedDevice = {
         {
           uuid: 'ce060031-43e5-11e4-916c-0800200c9a66',
           properties: { notify: true },
+          notificationIntervalMs: 400,
           notify: (state) => {
             const frame = [0xa5, state.ticks & 0xff, ...uint16(state.effort * 150), 0x00];
             return [...frame, frame.reduce((sum, byte) => sum ^ byte, 0)];

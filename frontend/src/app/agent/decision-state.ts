@@ -13,6 +13,8 @@ import type { Step } from '../store/model/step';
 import type { ControlEffect } from '../store/model/control-effect';
 import type { DeviceInformation } from './device-information';
 import type { ProfileCandidate } from './profile-candidate';
+import { PROPRIETARY_LEVELS, type ProprietaryLevel } from './proprietary-levels';
+import type { ProprietaryRecording } from './proprietary-recording';
 
 export interface ScanAttempt {
   readonly mode: 'filtered' | 'acceptAll';
@@ -59,6 +61,7 @@ export interface DecisionState {
   readonly machineFeatureEvidence: readonly string[];
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
   readonly standardRecordingId: string | null;
+  readonly proprietaryRecordings: Readonly<Partial<Record<ProprietaryLevel, ProprietaryRecording>>>;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly readableMetrics: readonly ReadableMetric[];
@@ -111,6 +114,7 @@ export const INITIAL_STATE: DecisionState = {
   machineFeatureEvidence: [],
   standardRecording: 'pending',
   standardRecordingId: null,
+  proprietaryRecordings: {},
   speedAction: null,
   speedConfirmation: null,
   readableMetrics: [],
@@ -201,6 +205,19 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       }
       return next;
     case 'request_action':
+      if (step.stage === 'proprietary') {
+        const level = PROPRIETARY_LEVELS.find(
+          (level) => step.ruleId === `proprietary.ready.${level}`,
+        );
+        if (level)
+          return {
+            ...next,
+            proprietaryRecordings: {
+              ...state.proprietaryRecordings,
+              [level]: { status: answer === 'Ready' ? 'ready' : 'skipped' },
+            },
+          };
+      }
       if (step.ruleId === 'standard.ready') {
         return { ...next, standardRecording: answer === 'Ready' ? 'ready' : 'skipped' };
       }
@@ -327,7 +344,26 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
         typeof data?.['protocol'] === 'string'
         ? { ...next, ambiguityResolved: true, selectedProtocol: data['protocol'] }
         : next;
-    case 'subscribe_and_record':
+    case 'subscribe_and_record': {
+      if (step.stage === 'proprietary') {
+        const level = PROPRIETARY_LEVELS.find(
+          (level) => step.ruleId === `proprietary.record.${level}`,
+        );
+        if (!level) return next;
+        const recording =
+          data?.['interrupted'] !== true && typeof data?.['recordingId'] === 'string'
+            ? {
+                status: 'recorded' as const,
+                id: data['recordingId'],
+                count: Number(data['count']),
+                seconds: Number((step.input as { seconds: number }).seconds),
+              }
+            : { status: 'failed' as const };
+        return {
+          ...next,
+          proprietaryRecordings: { ...state.proprietaryRecordings, [level]: recording },
+        };
+      }
       return {
         ...next,
         standardRecordingId: typeof data?.['recordingId'] === 'string' ? data['recordingId'] : null,
@@ -338,6 +374,7 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
             ? 'recorded'
             : 'attempted',
       };
+    }
     case 'decode_standard': {
       const key =
         step.ruleId === 'standard.confirm-incline' ? 'inclineConfirmation' : 'speedConfirmation';

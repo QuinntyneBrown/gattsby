@@ -6,22 +6,19 @@ import { CONTROL_RULES } from './rules/control.rules';
 import { FIND_RULES } from './rules/find.rules';
 import { IDENTIFY_RULES } from './rules/identify.rules';
 import { PREPARE_RULES } from './rules/prepare.rules';
+import { PROPRIETARY_RULES } from './rules/proprietary.rules';
 import { STANDARD_RULES } from './rules/standard.rules';
 import type { RuleContext, StageRule } from './stage-rule';
 
-// The Proprietary path joins the playbook in journey 13.
 const RULES: Readonly<Partial<Record<Stage, readonly StageRule[]>>> = {
   prepare: PREPARE_RULES,
   find: FIND_RULES,
   identify: IDENTIFY_RULES,
   standard: STANDARD_RULES,
+  proprietary: PROPRIETARY_RULES,
   control: CONTROL_RULES,
   conclude: CONCLUDE_RULES,
 };
-
-export function isBuiltStage(stage: Stage): boolean {
-  return stage in RULES;
-}
 
 /**
  * The next step: the first rule of the current stage that applies, moving through the later stages

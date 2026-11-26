@@ -338,6 +338,15 @@ test.describe('Identify a standard machine', () => {
 
       await investigation.choose('Show all nearby devices');
 
+      for (const title of [
+        'Keep the rower idle, then tap Ready',
+        'Row at an easy pace, then tap Ready',
+        'Row a little faster, then tap Ready',
+      ]) {
+        await investigation.waitForPrompt(title);
+        await investigation.choose('Skip');
+      }
+
       const verdict = new VerdictPage(page);
       await expect(verdict.title).toHaveText('Needs a missing tool');
       await expect(verdict.missingToolRequests).toHaveText(['Identify this device’s protocol']);

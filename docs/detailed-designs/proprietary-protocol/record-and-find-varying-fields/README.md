@@ -78,14 +78,18 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
    `request_action` with `needsReady: true`, then one `subscribe_and_record` with that label (FR-028
    AC1). The idle baseline and two levels make the three ordered recordings that
    `correlate_with_action` needs (see the guess-field-encodings design).
-4. The treadmill wording is the mock's ("Walk slowly, then tap Ready"). The wording for bikes,
-   rowers and cross-trainers is knowledge-base data, `<TO SUPPLY>`.
+4. The idle, slow and fast prompts all wait for Ready. Treadmill, bike and rower prompts name the
+   action the person can take at a comfortable pace. Other devices use a general effort prompt.
 5. "Skip" on a level records nothing for it. When fewer than two recordings remain, the analysis
    cannot run and the agent is told `INSUFFICIENT_DATA`.
 6. After the last level, any characteristic with no value in any recording is recorded as *silent*
    (FR-028 AC2). When every characteristic is silent, the unlock-vendor-data-safely design applies.
 7. Recordings longer than 120 seconds are refused (NFR-005); a recording is persisted in batches as
    it runs.
+8. The chooser may request a documented vendor service UUID as an optional service. The
+   [Concept2 PM5 specification](https://cms.concept2.com/sites/default/files/2026-03/Concept2%20PM%20CSAFE%20Communication%20Definition.pdf)
+   supplies the rower service UUID. The simulator supplies synthetic packets for the comparison
+   tests. The actual investigation uses the notifications that Chrome grants access to.
 
 ### Comparison algorithm (`VaryingBytesFinder`)
 

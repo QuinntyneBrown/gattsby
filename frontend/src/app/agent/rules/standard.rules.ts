@@ -29,7 +29,7 @@ const STANDARD_PATHS = {
   },
 } as const;
 
-function standardPath(ctx: RuleContext) {
+export function standardPath(ctx: RuleContext) {
   if (!ctx.state.connected) return undefined;
   const profile = decidedCandidate(ctx);
   if (!profile || !profile.deviceType || !(profile.deviceType in STANDARD_PATHS)) {

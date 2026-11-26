@@ -52,7 +52,7 @@ import type { FeedEntry } from './feed-entry';
 import { LOOP_CONFIG } from './loop-config';
 import type { ModelDecider } from './model-decider';
 import { ModelFailureRun } from './model-failure-run';
-import { checklistOptions, isBuiltStage, nextOutcome } from './playbook-rules';
+import { checklistOptions, nextOutcome } from './playbook-rules';
 import { PromptChannel } from './prompt-channel';
 import type { PausedInvestigation } from './paused-investigation';
 import type { RuleAction } from './rule-outcome';
@@ -175,7 +175,7 @@ export class PlaybookOrchestrator {
       stage,
       name: STAGE_NAMES[stage],
       state: (index < current
-        ? isBuiltStage(stage) || stage === 'conclude'
+        ? this.steps().some((step) => step.stage === stage)
           ? 'done'
           : 'skipped'
         : index === current

@@ -23,6 +23,7 @@ export class NotificationRecorder {
     recordingId: string,
     seconds: number,
     signal: AbortSignal,
+    keepSubscriptions = true,
   ) {
     let count = 0;
     let decodeErrors = 0;
@@ -60,7 +61,7 @@ export class NotificationRecorder {
       recording = true;
       const interrupted = await this.wait(seconds, ble, signal);
       if (interrupted) this.confirmation.discardBaseline();
-      if (signal.aborted) await Promise.all(stops.map((stop) => stop()));
+      if (signal.aborted || !keepSubscriptions) await Promise.all(stops.map((stop) => stop()));
       return {
         count,
         decodeErrors,
