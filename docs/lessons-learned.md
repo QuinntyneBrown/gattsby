@@ -405,3 +405,21 @@ None; this is the first entry.
 - Apply the no-interruption lesson from journey 11. Hold the Reload action during the
   investigation and recheck the current route on a tap. Reload after the verdict only when
   the person requests it.
+
+## Journey 18 — Unlock vendor data safely
+
+- Check public vendor documentation for a live subscription before adding a write. Movesense
+  documents the target, payload and response prefix. A name match helps identify the vendor.
+  The exposed service and characteristics, the silent recording and one approval gate the write.
+- Apply the approval lesson from journey 8. Consume the token against the current connection,
+  characteristic and bytes, and attach provenance to the raw write. A matching data packet
+  must follow the write before the profile lists the handshake.
+- Apply the evidence lesson from journey 14. Preserve the reported GATT reason and link its raw
+  event to the missing-tool request. A protected characteristic is excluded from further probes.
+- Apply the import lesson from journey 16. Version the expanded record format, and retain the
+  earlier versions when opening files from the same device.
+- Advance the fake clock after each reconnect attempt becomes visible. The GATT refusal and the
+  next delay are scheduled asynchronously, so advancing one long interval can miss a later delay.
+- Run the offline acceptance path with an explicitly unavailable model and follow the whole
+  checklist. This proves the cache supports a complete investigation without depending on the
+  provision or timing of an on-device model.

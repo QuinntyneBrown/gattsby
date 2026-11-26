@@ -62,7 +62,7 @@ export class ImportService {
     candidate: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<ImportOutcome> {
-    checkVersion(candidate['formatVersion'], ['1.0', '1.1']);
+    checkVersion(candidate['formatVersion'], ['1.0', '1.1', '1.2']);
     const { default: validate } = await import('../../schemas/generated/investigation-record-1.js');
     if (!validate(candidate))
       throw new ImportError(

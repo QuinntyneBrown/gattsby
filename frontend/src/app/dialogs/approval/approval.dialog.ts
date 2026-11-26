@@ -54,10 +54,22 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
             <span class="bytes__label">Will send</span>
             <span class="bytes__value">{{ characteristic() }} ← {{ hex() }}</span>
           </div>
+          @if (request().expectedData) {
+            <div class="bytes">
+              <span class="bytes__label">Expected</span>
+              <span class="bytes__value">{{ request().expectedData }}</span>
+            </div>
+          }
           <div class="bytes">
             <span class="bytes__label">Risk</span>
             <span class="bytes__value">{{ request().risk }}</span>
           </div>
+          @if (request().sourceTitle) {
+            <div class="bytes">
+              <span class="bytes__label">Source</span>
+              <span class="bytes__value">{{ request().sourceTitle }}</span>
+            </div>
+          }
           @if (request().isMotion) {
             <p class="dialog__warn">
               Stand clear of the machine and locate its physical stop key or button.
@@ -118,7 +130,10 @@ export class ApprovalDialog {
   }
 
   protected characteristic(): string {
-    return `Fitness Machine Control Point (${shortUuid(this.request().characteristic)})`;
+    return (
+      this.request().characteristicLabel ??
+      `Fitness Machine Control Point (${shortUuid(this.request().characteristic)})`
+    );
   }
 
   protected hex(): string {

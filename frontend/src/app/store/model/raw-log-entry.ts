@@ -24,6 +24,7 @@ export interface RawLogEntry {
   readonly direction: 'in' | 'out';
   readonly hex: string;
   readonly approvalId?: string;
+  readonly source?: string;
   readonly detail?: string;
   readonly decoded?: readonly DecodedMetric[];
   readonly decodeError?: string;

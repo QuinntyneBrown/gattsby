@@ -1,8 +1,10 @@
+import { ProtectedGattError } from '../../ble/protected-gatt-error';
 import { DecodeError, type DecodedValue } from '../../knowledge-base/decoders/decoder';
 import { decodeSupportedRange } from '../../knowledge-base/decoders/supported-range.decoder';
 import { supportedSpeedRangeDecoder } from '../../knowledge-base/decoders/supported-speed-range.decoder';
 import { canonicalUuid } from '../../knowledge-base/uuid';
 import { entry } from '../tool-definition';
+import { isProtected, recordProtected } from '../protected-characteristic';
 import { ToolError } from '../tool-error';
 import { fail, ok } from '../tool-result';
 
@@ -58,6 +60,8 @@ export const readSupportedRangesTool = entry<Record<string, never>, unknown>({
     const evidence: string[] = [];
     async function read(uuid: string, decode: (bytes: Uint8Array) => DecodedValue) {
       if (ctx.signal.aborted) throw new ToolError('ABORTED', 'The read was stopped.');
+      if (isProtected(ctx.verdictFacts().observations, uuid))
+        throw new ToolError('PRECONDITION_FAILED', 'The characteristic is protected.');
       const name = ctx.kb.nameOf(uuid) ?? uuid;
       try {
         const packet = await ctx.ble.read(FITNESS_MACHINE, uuid);
@@ -74,15 +78,7 @@ export const readSupportedRangesTool = entry<Record<string, never>, unknown>({
         });
         return decoded.value;
       } catch (error) {
-        if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
-          ctx.raiseMissingTool({
-            capabilityKey: `encrypted-read:${uuid}`,
-            source: 'encrypted',
-            title: `Read the protected ${name}`,
-            reason: 'The device requires authentication or encryption.',
-            evidence: [],
-          });
-        }
+        if (error instanceof ProtectedGattError) evidence.push(...recordProtected(ctx, error));
         throw error;
       }
     }

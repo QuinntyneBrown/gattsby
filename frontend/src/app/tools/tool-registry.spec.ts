@@ -22,6 +22,7 @@ const MVP_TOOLS = [
   'baseline_vs_activity',
   'decode_standard',
   'assess_reachability',
+  'vendor_signature_lookup',
   'find_varying_bytes',
   'request_control',
   'send_command',

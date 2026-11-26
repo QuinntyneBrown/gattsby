@@ -15,6 +15,10 @@ export const CHECKLIST_LABELS: Readonly<Record<string, { label: string; purpose:
     label: 'Match known profiles',
     purpose: 'Compare what the device exposes with known protocols.',
   },
+  replay_known_handshake: {
+    label: 'Review the data subscription',
+    purpose: 'See the documented request and approve it if you want the device to send data.',
+  },
   read_supported_ranges: {
     label: 'Read supported ranges',
     purpose: 'Read the features and ranges reported by the machine.',

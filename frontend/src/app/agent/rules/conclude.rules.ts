@@ -18,6 +18,8 @@ export function verdictSummary(kind: VerdictKind, facts: VerdictFacts): string {
         ? `Identified as ${protocol} from its services${maker ? ' and Device Information' : ''}. No metric has been confirmed with live data yet.`
         : 'Some fields were decoded, but not enough to name a known protocol.';
     case 'needsMissingTool':
+      if (facts.missingToolRequests.some(({ sources }) => sources?.includes('encrypted')))
+        return 'I connected, but the device protected some data. The missing-tool request shows where access was refused.';
       return facts.everConnected
         ? 'I connected, but what it exposes isn’t in my knowledge base, so I couldn’t decode it.'
         : 'The scans and checks did not establish why the device was unreachable.';

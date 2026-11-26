@@ -11,6 +11,7 @@ import { disconnectTool } from './connection/disconnect.tool';
 import { requestControlTool } from './control/request-control.tool';
 import { sendCommandTool } from './control/send-command.tool';
 import { checkCommandEffectTool } from './control/check-command-effect.tool';
+import { replayKnownHandshakeTool } from './control/replay-known-handshake.tool';
 import { checkCapabilitiesTool } from './environment/check-capabilities.tool';
 import { enumerateGattTool } from './inspection/enumerate-gatt.tool';
 import { matchKnownProfilesTool } from './inspection/match-known-profiles.tool';
@@ -21,6 +22,7 @@ import { subscribeAndRecordTool } from './listening/subscribe-and-record.tool';
 import { baselineVsActivityTool } from './listening/baseline-vs-activity.tool';
 import { decodeStandardTool } from './analysis/decode-standard.tool';
 import { assessReachabilityTool } from './analysis/assess-reachability.tool';
+import { vendorSignatureLookupTool } from './analysis/vendor-signature-lookup.tool';
 import { findVaryingBytesTool } from './analysis/find-varying-bytes.tool';
 import { correlateWithActionTool } from './analysis/correlate-with-action.tool';
 import { detectFramingTool } from './analysis/detect-framing.tool';
@@ -55,6 +57,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   baselineVsActivityTool,
   decodeStandardTool,
   assessReachabilityTool,
+  vendorSignatureLookupTool,
   findVaryingBytesTool,
   correlateWithActionTool,
   guessFieldEncodingTool,
@@ -62,6 +65,7 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   requestControlTool,
   sendCommandTool,
   checkCommandEffectTool,
+  replayKnownHandshakeTool,
   askUserTool,
   requestActionTool,
   updateHypothesisTool,

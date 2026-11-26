@@ -181,6 +181,7 @@
         "FR-010",
         "FR-023",
         "FR-027",
+        "FR-032",
         "FR-040",
         "FR-055",
         "FR-062"
@@ -190,7 +191,8 @@
         "loading",
         "error",
         "success",
-        "partial"
+        "partial",
+        "handshake"
       ],
       "not_applicable": {
         "empty": "A profile always has an identity and a verdict; empty sections say so in place."

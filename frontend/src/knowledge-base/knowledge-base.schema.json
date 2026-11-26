@@ -276,7 +276,43 @@
         },
         "decoders": { "type": "array" },
         "safeLimits": { "type": "array" },
-        "handshakes": { "type": "array" }
+        "handshakes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "purpose",
+              "service",
+              "command",
+              "data",
+              "bytes",
+              "dataPrefix",
+              "source"
+            ],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "purpose": { "$ref": "#/$defs/text" },
+              "service": { "$ref": "#/$defs/uuid" },
+              "command": { "$ref": "#/$defs/uuid" },
+              "data": { "$ref": "#/$defs/uuid" },
+              "bytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 64,
+                "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+              },
+              "dataPrefix": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+              },
+              "source": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "encoding-ranges": {

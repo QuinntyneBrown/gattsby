@@ -107,7 +107,7 @@ export function buildProfile(
       : null,
     metrics,
     features,
-    handshake: null,
+    handshake: state.requiredHandshake,
     quirks,
     undetermined,
     verdict: {

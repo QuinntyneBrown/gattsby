@@ -8,10 +8,12 @@ import {
 } from '../analysis/reachability-checks';
 import type { GattServiceInfo } from '../ble/gatt-layout';
 import type { SupportedRange } from '../knowledge-base/supported-range';
+import type { VendorMatch } from '../knowledge-base/vendor-match';
 import type { ReadableMetric } from '../outcome/readable-metric';
 import type { Stage } from '../store/model/stage';
 import type { Step } from '../store/model/step';
 import type { ControlEffect } from '../store/model/control-effect';
+import type { DeviceProfile } from '../store/model/device-profile';
 import type { DeviceInformation } from './device-information';
 import type { ProfileCandidate } from './profile-candidate';
 import { PROPRIETARY_LEVELS, type ProprietaryLevel } from './proprietary-levels';
@@ -52,6 +54,9 @@ export interface DecisionState {
   readonly unreachable: readonly string[];
   readonly deviceInfo: DeviceInformation | 'absent' | null;
   readonly candidates: readonly ProfileCandidate[] | null;
+  readonly vendorMatches: readonly VendorMatch[] | null;
+  readonly handshakeAttempted: boolean;
+  readonly requiredHandshake: DeviceProfile['handshake'];
   readonly ambiguityResolved: boolean;
   readonly selectedProtocol: string | null;
   readonly reads: readonly string[];
@@ -110,6 +115,9 @@ export const INITIAL_STATE: DecisionState = {
   unreachable: [],
   deviceInfo: null,
   candidates: null,
+  vendorMatches: null,
+  handshakeAttempted: false,
+  requiredHandshake: null,
   ambiguityResolved: false,
   selectedProtocol: null,
   reads: [],
@@ -160,7 +168,8 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
   if (
     step.status === 'interrupted' &&
     step.tool !== 'send_command' &&
-    step.tool !== 'request_control'
+    step.tool !== 'request_control' &&
+    step.tool !== 'replay_known_handshake'
   )
     return next;
   const data = step.result.ok ? (step.result.data as Record<string, unknown>) : null;
@@ -321,6 +330,18 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       return step.result.ok
         ? { ...next, candidates: data?.['candidates'] as ProfileCandidate[] }
         : next;
+    case 'vendor_signature_lookup':
+      return { ...next, vendorMatches: (data?.['matches'] as VendorMatch[] | undefined) ?? [] };
+    case 'replay_known_handshake':
+      return {
+        ...next,
+        handshakeAttempted: true,
+        requiredHandshake:
+          data?.['dataStarted'] === true
+            ? (data['handshake'] as DeviceProfile['handshake'])
+            : state.requiredHandshake,
+        proprietaryRecordings: data?.['dataStarted'] === true ? {} : state.proprietaryRecordings,
+      };
     case 'read_characteristic': {
       const input = step.input as { characteristic: string };
       return { ...next, reads: [...state.reads, input.characteristic] };

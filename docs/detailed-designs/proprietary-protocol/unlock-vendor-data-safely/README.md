@@ -14,8 +14,7 @@ It never guesses keys, replays captured authentication or forces pairing.
 **vendor handshake** — initialisation sequence a vendor's own app sends to start a device's data,
 held in the knowledge base with its purpose, its bytes and a public source
 
-**handshake step** — one write of a handshake: a characteristic, the exact bytes and an optional
-delay before the next step
+**handshake step** — the documented data-subscription write, with its characteristic and exact bytes
 
 **protected characteristic** — characteristic whose read, notification or write failed for
 insufficient authentication, authorization or encryption during this investigation
@@ -25,8 +24,8 @@ knowledge-base command or handshake step its bytes came from
 
 The handshake proposal appears on the Investigation page as an approval prompt in the Approve a
 command dialog (`docs/mocks/dialogs/approval/default.html`, with busy, confirmed and failed states).
-No mock draws a handshake in that dialog yet: a `handshake` state listing each step's purpose and
-bytes is `<TO SUPPLY>` before implementation. The protected path ends on the Verdict page, state
+The `handshake` state shows the purpose, exact bytes, expected data and source for the one write.
+The protected path ends on the Verdict page, state
 `missing-tool` (`docs/mocks/pages/verdict/missing-tool.html`): "Needs a missing tool", "Decrypt
 Kingsmith FE00 packets", "I didn't try to get around it." The request is then listed on the Missing
 tools page (`docs/mocks/pages/missing-tools/default.html`).
@@ -34,69 +33,36 @@ tools page (`docs/mocks/pages/missing-tools/default.html`).
 FR-033 is MVP; the handshake (FR-032, TOOL-023) is P2. The approval gate itself is the
 approve-a-command design; this design adds what is specific to handshakes and to protected data.
 
+### Vendor choice
+
+The first handshake subscribes to the live accelerometer on a compatible Movesense GATT
+SensorData device. It uses the vendor's published subscription example and ends when Gattsby
+disconnects. The write target and notification characteristic must both be exposed in the current
+connection. A name or company identifier can identify the vendor and cannot authorize a write.
+The company identifier is sourced from the Bluetooth SIG. [Movesense GATT SensorData Protocol](https://www.movesense.com/docs/esw/gatt_sensordata_protocol/) · [Bluetooth SIG Assigned Numbers](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1711447219034)
+
 ## Description
 
-The design introduces these building blocks in the Angular (pending ADR 0001) workspace under
-`frontend/src/app/`:
+A vendor signature compares the advertised name, exposed UUIDs and manufacturer ID with the
+sourced knowledge base. The Proprietary path offers one subscription when every recording
+characteristic was covered by a silent baseline and exactly one documented subscription
+matches the exposed layout. The playbook owns the write.
 
-- **`PlaybookRules`** (`agent/playbook-rules.ts`) — at the Proprietary stage, proposes
-  `replay_known_handshake` only when `vendor_signature_lookup` returned a match with `hasHandshake`,
-  and every recorded characteristic is *silent* (see the record-and-find-varying-fields design).
-- **`ActionValidator`** (`agent/action-validator.ts`) — refuses a `replay_known_handshake` whose
-  `handshakeId` is not in the knowledge base for that `vendor` with `INVALID_INPUT`, before any
-  approval prompt. It refuses a call when no vendor match exists, or the device is not connected,
-  with `PRECONDITION_FAILED`, and after emergency stop with `EMERGENCY_STOPPED`. It refuses any call
-  that targets a protected characteristic.
-- **`replayKnownHandshakeTool`** (`tools/control/replay-known-handshake.tool.ts`) — the
-  `replay_known_handshake` tool, safety class `write`, group Control. Its input schema is `{ vendor,
-  handshakeId }` with no other property, so it cannot carry bytes. It looks up the steps in the
-  knowledge base, writes them in order with their tokens, then listens for data.
-- **`ApprovalGate`**, **`ApprovalDialog`**, **`ApprovalLedger`** (`agent/approval-gate.ts`,
-  `dialogs/approval/approval.dialog.ts`, `ble/approval-ledger.ts`) — the approval of the
-  approve-a-command design. For a handshake the `ApprovalRequest` lists every step with its
-  characteristic and bytes, and the purpose from the knowledge base. On "Send" the gate issues one
-  `ApprovalToken` per step from that one approval, each bound to its characteristic and bytes.
-- **`WebBluetoothBleLayer`** (`ble/web-bluetooth-ble-layer.ts`) — writes each step after consuming
-  its token. It maps an ATT error for insufficient authentication (`0x05`), insufficient authorization
-  (`0x08`), insufficient encryption key size (`0x0C`) or insufficient encryption (`0x0F`) to
-  `AUTH_REQUIRED`. How Chrome 148 reports each of these as a `DOMException` is `<TO SUPPLY>` and
-  shall be checked on each supported platform.
-- **`RawTrafficLog`** (`ble/raw-traffic-log.ts`) — stores each write with its `approvalId` and
-  `source` (`handshake:{vendor}/{handshakeId}#{step}` or `command:{id}`): the write provenance.
-- **`AuthRefusalGuard`** (`agent/auth-refusal-guard.ts`) — watches every result envelope. On
-  `AUTH_REQUIRED` it adds the characteristic to the investigation's protected set, records an
-  observation, and asks `MissingToolRecorder` to record a request. `ActionValidator` consults it.
-- **`MissingToolRecorder`** (`outcome/missing-tool-recorder.ts`) — records and merges the request
-  (see the record-missing-tool-requests design).
-- **`KnowledgeBase`** (`knowledge-base/knowledge-base.ts`) — `handshakes` from
-  `frontend/src/knowledge-base/vendors/*.json`. Each entry holds `id`, `vendor`, `purpose`, `steps`,
-  `isMotion` and `source`. Validation at build fails an entry with no source (FR-068 AC2, A-11).
-- **`ProfileBuilder`** (`outcome/profile-builder.ts`) — lists the handshake under "required
-  handshake" when it started the data (FR-032 AC2).
+The tool accepts a vendor and handshake ID. Approval shows the purpose, exact bytes, expected
+notification and source. Its token binds the bytes, characteristic, device and connection to
+one write. The BLE layer checks the target and bytes against the knowledge base again before
+consuming the token. Emergency stop revokes the token and aborts the probe.
 
-### Handshake rules
+The tool subscribes before the write to capture the first data packet. A packet with the
+documented prefix and payload within ten seconds establishes that data started. The tool
+releases its temporary listener, and the playbook repeats the level recordings. The profile
+lists the vendor, characteristic, bytes and source. The investigation links the approved write
+and notification to the observation. The playbook offers the subscription once per
+investigation.
 
-1. Only a handshake from the knowledge base can be sent. No tool input carries bytes, and no code
-   path builds write bytes from recorded traffic or model output. A captured or guessed sequence
-   cannot be expressed (TOOL-023).
-2. An unknown `handshakeId` is refused with `INVALID_INPUT` and nothing is written (TOOL-023 AC1).
-3. The prompt shows what the handshake is for and every byte it sends, and nothing is written until
-   the person taps "Send" (FR-032 AC1, FR-034). "Don't send" returns `APPROVAL_DENIED`, and the same
-   call is refused for the next 3 steps (see the approve-a-command design).
-4. A handshake that the knowledge base marks `isMotion` carries the stand-clear check (FR-035).
-   Handshakes that only start data do not.
-5. Steps are written in order, with each step's `delayMs` from the knowledge base. A write that
-   fails returns `GATT_ERROR`. The remaining steps are not sent, their tokens are revoked, and the
-   summary lists what was sent.
-6. Emergency stop during the sequence revokes every token, so the next step is refused with
-   `EMERGENCY_STOPPED` (see the emergency-stop design).
-7. After the last step, the tool listens for 10 seconds, the default recording length (A-09). The
-   subscriptions stay enabled from the recordings. `dataStarted` is true when any
-   previously silent characteristic sends a value in that time.
-8. When data starts, the playbook repeats the level recordings, and the profile records the
-   handshake as required, with its source and the step as evidence (FR-032 AC2).
-9. A handshake is proposed at most once per investigation. A failed or fruitless handshake is
-   evidence for the verdict, not a reason to try variations.
+The BLE layer maps explicit GATT protection errors, including Chromium's not-paired error,
+to `AUTH_REQUIRED`. The tools record the refusal with its raw GATT entry, raise a missing-tool
+request and exclude the characteristic from further probes. [Chromium Web Bluetooth error mapping](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/third_party/blink/renderer/modules/bluetooth/bluetooth_error.cc)
 
 ### Protected data rules
 
@@ -109,27 +75,24 @@ The design introduces these building blocks in the Angular (pending ADR 0001) wo
 3. Gattsby never calls a pairing or bonding API. Web Bluetooth exposes none, and the design adds
    none. The operating system may show its own pairing prompt when a protected characteristic is
    read. That prompt belongs to the operating system: Gattsby records the error the read returns and
-   does not retry. Behaviour per platform is `<TO SUPPLY>`.
+   does not retry. Hardware verification of platform prompts remains open.
 4. A payload that arrives but looks scrambled, such as data whose packet length tracks the belt
    speed while no field correlates, is judged by the agent from the analysis results. The agent
    raises the request with `request_missing_tool`, and no tool exists that could attempt decryption.
-   A deterministic test for scrambled payloads is `<TO SUPPLY>`.
+   Byte patterns alone do not establish encryption. The acceptance test covers an explicit GATT protection error.
 5. The investigation continues on other characteristics. The verdict is *Needs a missing tool* when
    the protected data blocked the investigation's progress (see the issue-the-verdict design).
 
 ### Write provenance check (FR-033 AC2)
 
 Every write entry in the raw log carries an `approvalId` and a `source`. The `source` resolves to a
-knowledge-base command or handshake step whose bytes equal the entry's `hex`. The acceptance suite
-runs this check over each spec's raw log, beside the approve-a-command design's check that each
-write follows its approval. Any write without a matching approval and source fails the spec.
+knowledge-base command or handshake step whose bytes equal the entry's `hex`. The acceptance suite checks the vendor write and its export against their approved bytes. The existing Playwright guard checks approval for every write.
 
 ### Data shapes
 
 | Type | Fields |
 |---|---|
-| `VendorHandshake` | `id`, `vendor`, `purpose`, `steps: HandshakeStep[]`, `isMotion`, `source` |
-| `HandshakeStep` | `service`, `characteristic`, `bytes` (hex), `withResponse`, `delayMs?` |
+| `VendorHandshake` | `id`, `purpose`, `service`, `command`, `data`, `bytes`, `dataPrefix`, `source` |
 | `HandshakeResult` | `sent: string[]` (hex), `dataStarted` |
 | `ProtectedCharacteristic` | `uuid`, `code` (`AUTH_REQUIRED`), `attError?`, `stepId`, `rawLogId` |
 | `WriteProvenance` | `approvalId`, `source` |

@@ -2,6 +2,7 @@
 // written by scripts/validate-knowledge-base.ts. Every UUID is lowercase 128-bit.
 import type { CommandDefinition } from './command-definition';
 import type { ControlLimits } from './control-limits';
+import type { VendorHandshake } from './vendor-handshake';
 import type { ExpectedRange } from '../analysis/expected-range';
 
 export type GattProperty = 'read' | 'write' | 'writeWithoutResponse' | 'notify' | 'indicate';
@@ -41,10 +42,12 @@ export interface KbVendor {
   readonly id: string;
   readonly brand: string;
   readonly machineTypes: readonly DeviceType[];
-  readonly services: readonly { readonly uuid: string; readonly name: string }[];
-  readonly characteristics: readonly { readonly uuid: string; readonly name?: string }[];
-  readonly namePatterns: readonly { readonly pattern: string; readonly prefix?: string }[];
-  readonly manufacturerIds: readonly { readonly id: number }[];
+  readonly services: readonly { uuid: string; name: string; source?: string }[];
+  readonly characteristics: readonly { uuid: string; name?: string; source?: string }[];
+  readonly namePatterns: readonly { pattern: string; prefix?: string; source?: string }[];
+  readonly manufacturerIds: readonly { id: number; source?: string }[];
+  readonly sources?: Readonly<Record<string, { title: string; reference: string }>>;
+  readonly handshakes?: readonly VendorHandshake[];
 }
 
 export interface KbBlocklistEntry {

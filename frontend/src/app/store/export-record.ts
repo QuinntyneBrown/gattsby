@@ -43,7 +43,7 @@ export async function buildRecordExport(
   void profileNotes;
   const payload = {
     kind: 'gattsby.investigation-record',
-    formatVersion: '1.1',
+    formatVersion: '1.2',
     kbVersion,
     appVersion,
     exportedAt: iso(Date.now()),

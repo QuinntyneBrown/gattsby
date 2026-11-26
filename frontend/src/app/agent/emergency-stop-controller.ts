@@ -48,6 +48,7 @@ export class EmergencyStopController {
         standClearConfirmed: false,
         request: {
           tool: 'emergency_stop',
+          provenance: `command:${commandId}`,
           title: commandId === 'stop' ? 'Emergency stop' : 'Reset the FTMS session',
           detail: 'The person tapped Emergency stop.',
           risk: 'Stops the test',

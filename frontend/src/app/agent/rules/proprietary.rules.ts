@@ -5,11 +5,15 @@ import {
   proprietaryInstruction,
 } from '../proprietary-levels';
 import { standardPath } from './standard.rules';
+import { isProtected } from '../../tools/protected-characteristic';
+import { knownDataSubscriptions } from '../vendor-data-subscription';
 
-export function proprietaryCharacteristics({ state, kb }: RuleContext): string[] {
+export function proprietaryCharacteristics({ state, kb, facts }: RuleContext): string[] {
   const characteristics = (state.layout ?? []).flatMap(({ characteristics }) =>
     characteristics.filter(
-      ({ properties }) => properties.includes('notify') || properties.includes('indicate'),
+      ({ uuid, properties }) =>
+        !isProtected(facts.observations, uuid) &&
+        (properties.includes('notify') || properties.includes('indicate')),
     ),
   );
   return [...new Set(characteristics.map(({ uuid }) => uuid))].sort(
@@ -65,6 +69,23 @@ function framingInput(ctx: RuleContext) {
 }
 
 export const PROPRIETARY_RULES: readonly StageRule[] = [
+  {
+    id: 'proprietary.data-subscription',
+    stage: 'proprietary',
+    when: (ctx) => dataSubscription(ctx) !== null,
+    then: (ctx) => {
+      const { vendor, handshake } = dataSubscription(ctx)!;
+      return decided(
+        'proprietary.data-subscription',
+        'proprietary',
+        'replay_known_handshake',
+        { vendor: vendor.id, handshakeId: handshake.id },
+        {
+          text: `The device stayed silent. ${vendor.brand} documents a request to subscribe to its live data.`,
+        },
+      );
+    },
+  },
   {
     id: 'proprietary.record-level',
     stage: 'proprietary',
@@ -164,3 +185,12 @@ export const PROPRIETARY_RULES: readonly StageRule[] = [
       decided('proprietary.framing', 'proprietary', 'detect_framing', framingInput(ctx)!),
   },
 ];
+
+function dataSubscription(ctx: RuleContext) {
+  const idle = ctx.state.proprietaryRecordings.idle;
+  if (!needsProprietary(ctx) || idle?.status !== 'recorded' || idle.count !== 0) return null;
+  const count = proprietaryCharacteristics(ctx).length;
+  if (count === 0 || count > 8) return null;
+  const subscriptions = knownDataSubscriptions(ctx.state, ctx.kb, ctx.facts.observations);
+  return subscriptions.length === 1 ? subscriptions[0] : null;
+}

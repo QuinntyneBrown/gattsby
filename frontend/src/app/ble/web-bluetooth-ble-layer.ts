@@ -5,8 +5,10 @@ import type { NotificationDecoding } from '../store/model/notification-decoding'
 import type { AdvertisementSample } from '../store/model/advertisement-sample';
 import { canonicalUuid } from '../knowledge-base/uuid';
 import { FTMS_CONTROL_POINT, FTMS_SERVICE } from '../knowledge-base/ftms-control-point';
+import { KnowledgeBase } from '../knowledge-base/knowledge-base';
 import { Clock } from '../shared/clock';
 import { ToolError } from '../tools/tool-error';
+import { ProtectedGattError } from './protected-gatt-error';
 import type { BleAvailability } from './ble-availability';
 import { ApprovalLedger } from './approval-ledger';
 import { BleLayer, type ReadResult } from './ble-layer';
@@ -58,6 +60,7 @@ export class WebBluetoothBleLayer extends BleLayer {
   private readonly clock = inject(Clock);
   private readonly log = inject(RawTrafficLog);
   private readonly approvals = inject(ApprovalLedger);
+  private readonly knowledgeBase = inject(KnowledgeBase);
   private readonly devices = new Map<string, BluetoothDevice>();
   private readonly services = new Map<string, BluetoothRemoteGATTService>();
   private readonly subscriptions = new Map<string, GattSubscription>();
@@ -383,15 +386,20 @@ export class WebBluetoothBleLayer extends BleLayer {
       return { bytes, entryId };
     } catch (error) {
       this.requireSameConnection(connection);
-      this.log.append({
+      const refusal = this.gattError(error);
+      const uuid = canonicalUuid(characteristic);
+      const entryId = this.log.append({
         kind: 'read',
         direction: 'in',
         service: canonicalUuid(service),
-        uuid: canonicalUuid(characteristic),
+        uuid,
         hex: '',
-        detail: errorName(error),
+        detail: refusal.code === 'AUTH_REQUIRED' ? refusal.message : errorName(error),
       });
-      throw this.gattError(error);
+      if (refusal.code === 'AUTH_REQUIRED') {
+        throw new ProtectedGattError(uuid, refusal.message, entryId);
+      }
+      throw refusal;
     }
   }
 
@@ -451,7 +459,19 @@ export class WebBluetoothBleLayer extends BleLayer {
       }
       return stop;
     } catch (error) {
-      throw this.gattError(error);
+      const refusal = this.gattError(error);
+      if (refusal.code === 'AUTH_REQUIRED') {
+        const entryId = this.log.append({
+          kind: 'notification',
+          direction: 'in',
+          service: serviceUuid,
+          uuid,
+          hex: '',
+          detail: refusal.message,
+        });
+        throw new ProtectedGattError(uuid, refusal.message, entryId);
+      }
+      throw refusal;
     }
   }
 
@@ -462,18 +482,30 @@ export class WebBluetoothBleLayer extends BleLayer {
     approvalId: string,
   ): Promise<string> {
     this.requireConnected();
+    const connection = this.state();
     const serviceUuid = canonicalUuid(service);
     const uuid = canonicalUuid(characteristic);
     if (serviceUuid !== FTMS_SERVICE || uuid !== FTMS_CONTROL_POINT) {
-      throw new ToolError(
-        'PRECONDITION_FAILED',
-        'This characteristic is not a known write target.',
+      this.approvals.ensureOpen();
+      const kb = await this.knowledgeBase.load();
+      this.requireSameConnection(connection);
+      const known = kb.vendors.some(({ handshakes }) =>
+        handshakes?.some(
+          (subscription) =>
+            subscription.service === serviceUuid &&
+            subscription.command === uuid &&
+            subscription.bytes.length === bytes.length &&
+            subscription.bytes.every((value, index) => value === bytes[index]),
+        ),
       );
+      if (!known || kb.isBlocklisted(uuid, 'writes'))
+        throw new ToolError('PRECONDITION_FAILED', 'This is not a known data subscription.');
     }
     const handle = this.services.get(serviceUuid);
     const deviceId = this.device!.id;
     const connectedAt = this.state().connectedAt!;
     if (!handle) throw new ToolError('SERVICE_NOT_PERMITTED', 'The browser hides that service.');
+    let entryId: string | undefined;
     try {
       const target = await handle.getCharacteristic(uuid);
       if (!target.properties.write)
@@ -482,19 +514,39 @@ export class WebBluetoothBleLayer extends BleLayer {
       if (this.device?.id !== deviceId || this.state().connectedAt !== connectedAt)
         throw new ToolError('NOT_CONNECTED', 'The connection changed.');
       const payload = new Uint8Array(bytes);
-      this.approvals.consume(approvalId, deviceId, connectedAt, serviceUuid, uuid, payload);
-      const entryId = this.log.append({
+      const approval = this.approvals.consume(
+        approvalId,
+        deviceId,
+        connectedAt,
+        serviceUuid,
+        uuid,
+        payload,
+      );
+      entryId = this.log.append({
         kind: 'write',
         direction: 'out',
         service: serviceUuid,
         uuid,
         hex: toHex(payload),
         approvalId,
+        ...(approval.provenance && { source: approval.provenance }),
       });
       await target.writeValueWithResponse(payload);
       return entryId;
     } catch (error) {
-      throw this.gattError(error);
+      const refusal = this.gattError(error);
+      if (refusal.code !== 'AUTH_REQUIRED') throw refusal;
+      const failure =
+        entryId ??
+        this.log.append({
+          kind: 'read',
+          direction: 'in',
+          service: serviceUuid,
+          uuid,
+          hex: '',
+          detail: refusal.message,
+        });
+      throw new ProtectedGattError(uuid, refusal.message, failure);
     }
   }
 
@@ -553,6 +605,13 @@ export class WebBluetoothBleLayer extends BleLayer {
     if (error instanceof ToolError) return error;
     const name = errorName(error);
     const message = error instanceof Error ? error.message : String(error);
+    if (
+      /\b(?:GATT Error: Not paired|GATT operation not authorized|insufficient (?:authentication|authorization|encryption))\b/i.test(
+        message,
+      )
+    ) {
+      return new ToolError('AUTH_REQUIRED', message);
+    }
     switch (name) {
       case 'NotFoundError':
       case 'NotSupportedError':
