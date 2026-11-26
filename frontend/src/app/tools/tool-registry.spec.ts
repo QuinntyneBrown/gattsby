@@ -9,6 +9,7 @@ const MVP_TOOLS = [
   'scan_all_devices',
   'report_candidate_names',
   'power_cycle_match',
+  'pick_resume_device',
   'connect',
   'reconnect',
   'disconnect',

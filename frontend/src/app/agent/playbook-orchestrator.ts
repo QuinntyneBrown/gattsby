@@ -5,6 +5,7 @@ import { ApprovalLedger } from '../ble/approval-ledger';
 import { RawTrafficLog } from '../ble/raw-traffic-log';
 import type { Capabilities } from '../environment/capabilities';
 import { CapabilityDetector } from '../environment/capability-detector';
+import { ModeSelector } from '../environment/mode-selector';
 import { KnowledgeBase } from '../knowledge-base/knowledge-base';
 import { hasFtmsControlPoint } from '../knowledge-base/ftms-control-point';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
@@ -95,6 +96,7 @@ export class PlaybookOrchestrator {
   readonly recovery = inject(ConnectionSupervisor);
   private readonly log = inject(RawTrafficLog);
   private readonly capabilities = inject(CapabilityDetector);
+  private readonly modeSelector = inject(ModeSelector);
   private readonly clock = inject(Clock);
   private readonly config = inject(LOOP_CONFIG);
   private readonly checklistDecider = inject(ChecklistDecider);
@@ -123,6 +125,7 @@ export class PlaybookOrchestrator {
   private refusedFinishes = 0;
   private stepStartedAt: number | null = null;
   private repeatStep: (() => Promise<boolean>) | null = null;
+  private restoreBaselineOnReconnect = false;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -233,18 +236,18 @@ export class PlaybookOrchestrator {
   });
 
   /** Loads the investigation and runs it, or shows it as it was left (FR-060). */
-  async open(id: string): Promise<void> {
-    await this.load(id).catch((error: unknown) => this.fault(error));
+  async open(id: string, resume = false): Promise<void> {
+    await this.load(id, resume).catch((error: unknown) => this.fault(error));
   }
 
-  private async load(id: string): Promise<void> {
+  private async load(id: string, resume: boolean): Promise<void> {
     this.kbSignal.set(await this.knowledgeBase.load());
     let record = await this.store.get(id);
     this.tracker = new HypothesisTracker(id);
     this.tracker.restore(record.hypotheses);
     if (
       !record.investigation.verdict &&
-      record.steps.length > 0 &&
+      (record.steps.length > 0 || resume) &&
       record.investigation.status === 'running'
     ) {
       await this.store.recover(id);
@@ -263,15 +266,24 @@ export class PlaybookOrchestrator {
       this.statusSignal.set('concluded');
       return;
     }
-    if (record.investigation.status !== 'running') {
+    if (this.leaving) return;
+    if (resume && record.investigation.status === 'paused') {
+      const modeChange = await this.resumeMode(record.investigation);
+      if (this.leaving) {
+        this.releaseModel();
+        return;
+      }
+      this.investigationSignal.set(await this.store.reactivate(id, modeChange));
+    }
+    if (this.investigation()?.status !== 'running') {
       this.statusSignal.set('paused');
       return;
     }
-    this.modelSession = this.modelSessions.take(id);
+    this.modelSession ??= this.modelSessions.take(id);
     this.approvalLedger.begin();
     if (record.investigation.emergencyStoppedAt !== undefined) this.approvalLedger.lock();
     this.statusSignal.set('running');
-    this.log.begin(id, 0);
+    this.log.begin(id, resume ? await this.store.nextRawSequence(id) : 0);
     const watcher = this.ble.disconnected.subscribe((event) => {
       if (
         event.intentional ||
@@ -290,10 +302,64 @@ export class PlaybookOrchestrator {
       this.abort.abort();
     });
     try {
+      if (resume && this.state().everConnected) {
+        this.restoreBaselineOnReconnect = !!this.state().standardRecordingId;
+        await this.restoreDeviceAccess(id);
+      }
       await this.loop();
     } finally {
       watcher.unsubscribe();
     }
+  }
+
+  private async resumeMode(record: Investigation): Promise<ModeChange | undefined> {
+    if (record.mode !== 'agent') return undefined;
+    const prefersAgent = await this.modeSelector.prefersAgent();
+    const capabilities = await this.capabilities.detect({ model: prefersAgent });
+    if (this.modeSelector.select(capabilities, prefersAgent) === 'agent') {
+      this.modelSession = await this.modelSessions.create();
+      if (this.modelSession) return undefined;
+    }
+    return {
+      from: 'agent',
+      to: 'checklist',
+      reason: 'sessionFailed',
+      at: this.clock.now(),
+      stage: record.stage,
+      step: record.lastCommittedStep,
+      rejectedActionIds: [],
+    };
+  }
+
+  private async restoreDeviceAccess(id: string): Promise<void> {
+    const device = this.state().device;
+    if (!device) return;
+    const stage = this.investigation()!.stage;
+    await this.runStep(id, {
+      tool: 'get_permitted_devices',
+      input: {},
+      stage,
+      ruleId: 'connection.resume-permission',
+    });
+    const result = this.steps().at(-1)?.result;
+    let permitted =
+      !!result?.ok &&
+      (result.data as { devices: { deviceId: string }[] }).devices.some(
+        ({ deviceId }) => deviceId === device.deviceId,
+      );
+    let retry = false;
+    while (!permitted && !this.leaving && !this.concludeNow) {
+      await this.runStep(id, {
+        tool: 'pick_resume_device',
+        input: { retry },
+        stage,
+        ruleId: 'connection.resume-selection',
+      });
+      permitted = !!this.steps().at(-1)?.result.ok;
+      retry = true;
+    }
+    if (permitted && !this.leaving && !this.concludeNow)
+      this.recovery.resuming(device.deviceId, device.name, this.clock.now());
   }
 
   /** Stops the loop at once (personStop or emergencyStop) and concludes with what is known. */
@@ -462,7 +528,7 @@ export class PlaybookOrchestrator {
         const reason = checkStop(
           {
             steps: this.steps().filter(
-              (step) => step.status !== 'interrupted' && step.tool !== 'reconnect',
+              (step) => step.status !== 'interrupted' && !isConnectionRecoveryStep(step.tool),
             ).length,
             noProgressRun: this.noProgressRun,
           },
@@ -488,10 +554,40 @@ export class PlaybookOrchestrator {
     });
     if (this.leaving || this.concludeNow) return;
     const connected = !!this.steps().at(-1)?.result.ok;
+    if (connected && this.restoreBaselineOnReconnect) {
+      this.restoreBaselineOnReconnect = false;
+      await this.restoreSavedBaseline(id);
+      if (this.leaving || this.concludeNow) return;
+    }
     this.recovery.complete(connected);
     if (!connected) {
       const retry = await this.recovery.waitForRetry(this.abort.signal);
       if (!retry && !this.leaving && !this.concludeNow) this.stop('personStop');
+    }
+  }
+
+  private async restoreSavedBaseline(id: string): Promise<void> {
+    const state = this.state();
+    if (!state.standardRecordingId) return;
+    const packets = await this.store.recordedPackets(id, state.standardRecordingId);
+    if (!packets) return;
+    const uuids = new Set(
+      packets.flatMap((packet) => (packet.uuid && packet.decoded ? [packet.uuid] : [])),
+    );
+    const sources = (state.layout ?? []).flatMap(({ uuid: service, characteristics }) =>
+      characteristics
+        .filter(({ uuid }) => uuids.has(uuid))
+        .map(({ uuid }) => ({ service, uuid, decoder: this.kbSignal()!.decoderFor(uuid) })),
+    );
+    try {
+      await this.notificationRecorder.restoreBaseline(
+        this.ble,
+        sources,
+        packets,
+        this.abort.signal,
+      );
+    } catch (error) {
+      if (!this.leaving && !this.concludeNow && !(error instanceof ToolError)) throw error;
     }
   }
 
@@ -665,7 +761,7 @@ export class PlaybookOrchestrator {
     const allObservations = [...this.observations(), ...observations];
     const fresh = observations.filter((o) => !this.observationKeys.has(keyOf(o)));
     fresh.forEach((o) => this.observationKeys.add(keyOf(o)));
-    if (action.tool !== 'reconnect' && !dropped)
+    if (!isConnectionRecoveryStep(action.tool) && !dropped)
       this.noProgressRun = fresh.length > 0 ? 0 : this.noProgressRun + 1;
     const hypothesis = this.tracker!.rescore(
       n,
@@ -768,6 +864,9 @@ export class PlaybookOrchestrator {
       },
     });
     this.steps.update((steps) => [...steps, step]);
+    this.investigationSignal.update(
+      (record) => record && { ...record, stage: step.stage, lastCommittedStep: step.n },
+    );
     this.observations.set(allObservations);
     this.requests.update((r) => [...r, ...requests]);
     if (hypothesis) this.hypotheses.update((h) => [...h, hypothesis]);
@@ -859,6 +958,10 @@ export class PlaybookOrchestrator {
 
 function keyOf(o: Observation): string {
   return `${o.kind}|${o.subject}|${o.value}`;
+}
+
+function isConnectionRecoveryStep(tool: string): boolean {
+  return tool === 'reconnect' || tool === 'get_permitted_devices' || tool === 'pick_resume_device';
 }
 
 function askOf(action: RuleAction): { text: string; why: string | null } | null {

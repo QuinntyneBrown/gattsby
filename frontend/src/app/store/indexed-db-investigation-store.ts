@@ -173,6 +173,41 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return recovered;
   }
 
+  async reactivate(
+    id: string,
+    modeChange?: NonNullable<Investigation['modeChanges']>[number],
+  ): Promise<Investigation> {
+    let resumed: Investigation | null = null;
+    await this.write(['investigations'], 'strict', (tx) => {
+      const store = tx.objectStore('investigations');
+      const get = store.get(id);
+      get.onsuccess = () => {
+        const current = get.result as Investigation | undefined;
+        if (!current || current.verdict || current.status !== 'paused') return;
+        resumed = {
+          ...current,
+          status: 'running',
+          interruptedAt: null,
+          ...(modeChange && {
+            mode: modeChange.to,
+            modeChanges: [...(current.modeChanges ?? []), modeChange],
+          }),
+        };
+        store.put(resumed);
+      };
+    });
+    if (!resumed) throw new StoreError('NOT_FOUND', 'No paused investigation with that id.');
+    return resumed;
+  }
+
+  async nextRawSequence(id: string): Promise<number> {
+    const db = await this.open();
+    const cursor = await request(
+      db.transaction('rawLog').objectStore('rawLog').openCursor(investigationRange(id), 'prev'),
+    );
+    return cursor ? (cursor.value as RawLogEntry).seq + 1 : 0;
+  }
+
   async get(id: string): Promise<InvestigationRecord> {
     const db = await this.open();
     const names = ['investigations', 'steps', 'observations', 'hypotheses', 'missingToolRequests'];

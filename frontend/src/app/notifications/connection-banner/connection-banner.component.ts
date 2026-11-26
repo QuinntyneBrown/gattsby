@@ -21,25 +21,38 @@ import type { ReconnectBannerState } from '../../agent/reconnect-banner-state';
         @switch (state().kind) {
           @case ('warning') {
             <p class="alert__title">
-              @if (state().recordingSeconds !== null) {
+              @if (state().resumingDevice; as deviceName) {
+                Reconnecting to <bdi>{{ deviceName }}</bdi>…
+              } @else if (state().recordingSeconds !== null) {
                 Connection dropped {{ state().recordingSeconds }} s into the recording.
               } @else {
                 Connection dropped.
               }
             </p>
-            <p>
-              Reconnecting, attempt {{ state().attempt }} of 3. I’ll repeat this step and ignore the
-              partial data.
-            </p>
+            @if (state().resumingDevice) {
+              <p>
+                Attempt {{ state().attempt }} of 3. The investigation will continue from where you
+                left off.
+              </p>
+            } @else {
+              <p>
+                Reconnecting, attempt {{ state().attempt }} of 3. I’ll repeat this step and ignore
+                the partial data.
+              </p>
+            }
           }
           @case ('success') {
             <p class="alert__title">
               Reconnected after {{ state().attempt }} {{ state().attempt === 1 ? 'try' : 'tries' }}.
             </p>
-            <p>
-              Repeating the step that was interrupted. Its partial data is saved and left out of
-              analysis.
-            </p>
+            @if (state().resumingDevice) {
+              <p>Continuing where you left off.</p>
+            } @else {
+              <p>
+                Repeating the step that was interrupted. Its partial data is saved and left out of
+                analysis.
+              </p>
+            }
           }
           @case ('danger') {
             <p class="alert__title">Couldn’t reconnect after 3 tries.</p>

@@ -3,9 +3,12 @@ import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { PromptChannel } from '../../agent/prompt-channel';
 import type { BleLayer } from '../../ble/ble-layer';
 import type { DecodedMetric } from '../../knowledge-base/decoders/decoded-metric';
+import type { Decoder } from '../../knowledge-base/decoders/decoder';
+import type { NotificationDecoding } from '../../store/model/notification-decoding';
 import { LiveMetrics } from '../../live/live-metrics';
 import { Clock } from '../../shared/clock';
 import type { RecordingSource } from './recording-source';
+import type { RawLogEntry } from '../../store/model/raw-log-entry';
 
 @Injectable()
 export class NotificationRecorder {
@@ -37,7 +40,7 @@ export class NotificationRecorder {
         const stats = byCharacteristic[index];
         stops.push(
           await ble.subscribe(service, uuid, ({ bytes, entryId, t }) => {
-            if (signal.aborted || this.prompts.idle()) return undefined;
+            if ((recording && signal.aborted) || this.prompts.idle()) return undefined;
             const inWindow = recording && t <= deadline;
             const capture = inWindow ? { recordingId } : {};
             if (inWindow) {
@@ -46,21 +49,9 @@ export class NotificationRecorder {
               stats.lengths.add(bytes.length);
             }
             if (!decoder) return capture;
-            try {
-              const fields = decoder.decode(bytes).value;
-              if (!Array.isArray(fields)) return capture;
-              const metrics = fields as readonly DecodedMetric[];
-              this.live.update(metrics, uuid, t);
-              this.confirmation.sample(metrics, entryId, t, inWindow);
-              return { ...capture, decoded: metrics };
-            } catch (error) {
-              if (inWindow) decodeErrors++;
-              return {
-                ...capture,
-                decodeError:
-                  error instanceof Error ? error.message : 'The notification could not be decoded.',
-              };
-            }
+            const decoded = this.decode(decoder, uuid, bytes, entryId, t, inWindow);
+            if (inWindow && decoded.decodeError) decodeErrors++;
+            return { ...capture, ...decoded };
           }),
         );
       }
@@ -87,6 +78,48 @@ export class NotificationRecorder {
       throw error;
     } finally {
       recording = false;
+    }
+  }
+
+  async restoreBaseline(
+    ble: BleLayer,
+    sources: readonly RecordingSource[],
+    packets: readonly RawLogEntry[],
+    signal: AbortSignal,
+  ): Promise<void> {
+    this.confirmation.discardBaseline();
+    for (const packet of packets) {
+      if (packet.decoded) this.confirmation.sample(packet.decoded, packet.id, packet.t, true);
+    }
+    for (const { service, uuid, decoder } of sources) {
+      signal.throwIfAborted();
+      if (!decoder) continue;
+      await ble.subscribe(service, uuid, ({ bytes, entryId, t }) =>
+        this.prompts.idle() ? undefined : this.decode(decoder, uuid, bytes, entryId, t, false),
+      );
+    }
+  }
+
+  private decode(
+    decoder: Decoder,
+    uuid: string,
+    bytes: Uint8Array,
+    entryId: string,
+    at: number,
+    inWindow: boolean,
+  ): NotificationDecoding {
+    try {
+      const fields = decoder.decode(bytes).value;
+      if (!Array.isArray(fields)) return {};
+      const metrics = fields as readonly DecodedMetric[];
+      this.live.update(metrics, uuid, at);
+      this.confirmation.sample(metrics, entryId, at, inWindow);
+      return { decoded: metrics };
+    } catch (error) {
+      return {
+        decodeError:
+          error instanceof Error ? error.message : 'The notification could not be decoded.',
+      };
     }
   }
 

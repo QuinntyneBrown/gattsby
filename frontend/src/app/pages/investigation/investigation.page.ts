@@ -427,6 +427,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
 })
 export class InvestigationPage implements OnInit, OnDestroy {
   readonly id = input.required<string>();
+  readonly resume = input<string>();
   protected readonly orchestrator = inject(PlaybookOrchestrator);
   protected readonly prompts = inject(PromptChannel);
   private readonly live = inject(LiveMetrics);
@@ -498,7 +499,7 @@ export class InvestigationPage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.orchestrator.open(this.id()).then(() => {
+    void this.orchestrator.open(this.id(), this.resume() === 'true').then(() => {
       const investigation = this.orchestrator.investigation();
       this.savedNote.set({
         location: investigation?.location ?? '',

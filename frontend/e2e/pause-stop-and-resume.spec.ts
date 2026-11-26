@@ -72,3 +72,72 @@ test('keeps the investigation when the person stays and saves it when they leave
   expect(fakeBluetooth.calls()).toContain('disconnect');
   expect(await stored.investigation(id)).toMatchObject({ status: 'paused', verdict: null });
 });
+
+for (const getDevices of [true, false]) {
+  test.describe(getDevices ? 'Chrome remembers the device' : 'Chrome needs a new selection', () => {
+    test.use({
+      bluetooth: {
+        devices: [devices.treadmill.id],
+        chooser: [{ pick: devices.treadmill.id }],
+        permittedCandidates: getDevices ? [devices.treadmill.id] : [],
+        permittedDevicesUnavailable: !getDevices,
+      },
+    });
+
+    // Given an interrupted investigation, when the person resumes from Home, Gattsby
+    // reconnects to the original device before asking the question it was about to ask.
+    test('resumes an interrupted investigation and keeps its recorded evidence', async ({
+      page,
+      fakeBluetooth,
+    }) => {
+      await page.clock.install();
+      const { home, investigation } = await identify(page);
+      const id = investigation.id();
+      const records = new StoredRecords(page);
+      const earlier = await records.steps(id);
+      const raw = await records.rawLog(id);
+      await home.goto();
+      await home.resumeInvestigation('HZN-T202-4F1A').click();
+      if (!getDevices) await investigation.choose('Find the device');
+      await expect(investigation.connectionBanner).toContainText('Reconnecting to');
+      await page.clock.runFor(1_200);
+      await expect(investigation.answer('Ready')).toBeVisible();
+      expect(investigation.id()).toBe(id);
+      const steps = await records.steps(id);
+      expect(steps.slice(0, earlier.length)).toEqual(earlier);
+      expect(steps.slice(earlier.length).map(({ tool }) => tool)).toContain('reconnect');
+      expect((await records.rawLog(id)).slice(0, raw.length)).toEqual(raw);
+      expect(fakeBluetooth.calls().filter((name) => name === 'connect')).toHaveLength(2);
+      expect(fakeBluetooth.requestDeviceOptions()).toHaveLength(getDevices ? 1 : 2);
+      expect(fakeBluetooth.writes()).toEqual([]);
+    });
+
+    if (getDevices) {
+      test('restores saved baseline data and live readings on resume', async ({
+        page,
+        fakeBluetooth,
+      }) => {
+        await page.clock.install();
+        const { home, investigation } = await identify(page);
+        const id = investigation.id();
+        const records = new StoredRecords(page);
+        await fakeBluetooth.setEffort(1);
+        await investigation.choose('Ready');
+        await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+        await page.clock.runFor(10_200);
+        await expect(investigation.answer('Done')).toBeVisible();
+        const earlier = await records.recordings(id);
+        await home.goto();
+        await home.resumeInvestigation('HZN-T202-4F1A').click();
+        await expect(investigation.connectionBanner).toContainText('Reconnecting to');
+        await fakeBluetooth.setEffort(1);
+        await page.clock.runFor(1_200);
+        await expect(investigation.answer('Done')).toBeVisible();
+        await page.clock.runFor(1_100);
+        await expect(investigation.liveMetric('Speed')).toContainText('3.0');
+        expect(await records.recordings(id)).toEqual(earlier);
+        expect(fakeBluetooth.writes()).toEqual([]);
+      });
+    }
+  });
+}
