@@ -7,7 +7,9 @@ import { ModeSelector } from '../../environment/mode-selector';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { Investigation } from '../../store/model/investigation';
 import { STAGE_NAMES } from '../../agent/stage-names';
+import type { DeviceProfile } from '../../store/model/device-profile';
 import { BrandComponent } from '../../ui/brand/brand.component';
+import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.component';
 import { MissingToolsService } from '../../outcome/missing-tools.service';
 
 // The Home page (docs/mocks/pages/home/empty.html and default.html). "Identify a device" creates
@@ -15,7 +17,7 @@ import { MissingToolsService } from '../../outcome/missing-tools.service';
 // devices, past investigations and missing-tool requests join with journeys 11, 4, 15 and 14.
 @Component({
   selector: 'g-home-page',
-  imports: [BrandComponent, DatePipe, RouterLink],
+  imports: [BrandComponent, DatePipe, RouterLink, VerdictMarkComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -46,6 +48,9 @@ import { MissingToolsService } from '../../outcome/missing-tools.service';
     </header>
     <main id="main" class="page page--reading" tabindex="-1">
       <section style="padding-top: var(--space-8)">
+        @if (dataDeleted()) {
+          <p role="status">Data deleted from this device.</p>
+        }
         @if (returning()) {
           <h1 class="hero__title">What are we looking at today?</h1>
           <p class="lead">Treadmill, bike, rower, strap or trainer — switch it on and start.</p>
@@ -108,6 +113,45 @@ import { MissingToolsService } from '../../outcome/missing-tools.service';
           }
         </section>
       }
+      @if (profiles().length) {
+        <section aria-label="Saved devices" style="margin-top: var(--space-6)">
+          <div class="group__head">
+            <h2>Saved devices</h2>
+            <a class="btn btn--ghost" routerLink="/profiles" aria-label="View all saved devices"
+              >View all</a
+            >
+          </div>
+          <ul class="rows">
+            @for (profile of profiles(); track profile.id) {
+              <li>
+                <a class="row" [routerLink]="['/profiles', profile.id]">
+                  <g-verdict-mark [kind]="profile.verdict.kind" />
+                  <span class="row__body">
+                    <span class="row__title"
+                      ><bdi>{{ profile.identity.displayName }}</bdi></span
+                    >
+                    <span class="row__meta">{{ profile.verdict.label }}</span>
+                  </span>
+                  <svg class="icon row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+      @if (returning()) {
+        <a class="row" routerLink="/investigations" style="margin-top: var(--space-6)">
+          <span class="row__body">
+            <span class="row__title">Past investigations</span>
+            <span class="row__meta">{{ investigationCount() }} on this device</span>
+          </span>
+          <svg class="icon row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      }
       @if (returning() && openMissingTools() !== null) {
         <a class="row" routerLink="/missing-tools" style="margin-top: var(--space-6)">
           <span class="row__body">
@@ -133,7 +177,10 @@ export class HomePage implements OnInit {
   private readonly missingTools = inject(MissingToolsService);
   private readonly router = inject(Router);
   protected readonly returning = signal(false);
+  protected readonly dataDeleted = signal(false);
+  protected readonly investigationCount = signal(0);
   protected readonly resumable = signal<readonly Investigation[]>([]);
+  protected readonly profiles = signal<readonly DeviceProfile[]>([]);
   protected readonly stageNames = STAGE_NAMES;
   protected readonly starting = signal(false);
   protected readonly failed = signal(false);
@@ -141,9 +188,19 @@ export class HomePage implements OnInit {
   protected readonly openMissingTools = signal<number | null>(null);
 
   ngOnInit(): void {
+    const navigation = this.router.currentNavigation() ?? this.router.lastSuccessfulNavigation();
+    if (navigation?.extras.info === 'local-data-deleted') {
+      this.dataDeleted.set(true);
+      return;
+    }
+    void this.store.listProfiles(4).then(
+      (profiles) => this.profiles.set(profiles),
+      () => undefined,
+    );
     void this.store.list().then(
       (investigations) => {
         this.returning.set(investigations.length > 0);
+        this.investigationCount.set(investigations.length);
         this.resumable.set(investigations.filter((row) => !row.verdict));
         if (investigations.length) {
           void this.missingTools.list().then(

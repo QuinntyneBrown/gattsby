@@ -367,3 +367,16 @@ None; this is the first entry.
 - A repeated request can have useful new evidence. Normalise its key, keep the first ID and
   merge the new reason and evidence in the reporting step's transaction. Across investigations,
   count distinct investigations, even when a request was repeated within one.
+
+## Journey 15 — Browse and delete history
+
+- Apply the paused-investigation lesson from journey 11. Stopped records reopen at their verdict,
+  and the resumption link for interrupted records retains the original investigation ID.
+- Put single-record deletion in one transaction. Live writers check that the investigation still
+  exists, so a stale tab cannot recreate its packet or step rows after deletion.
+- Wait for IndexedDB to delete the database before reporting success. Home skips its first read
+  after deletion so it does not immediately recreate the database. The acceptance test checks
+  the browser's database inventory as well as the empty Home page.
+- Apply the quota lesson from journey 13. Before storage fills, show the browser's estimate.
+  At quota, the existing Leave confirmation lets the person visit History after stopping the
+  recording and keeping the earlier evidence.

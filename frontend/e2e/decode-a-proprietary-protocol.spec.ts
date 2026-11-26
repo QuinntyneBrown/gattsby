@@ -9,7 +9,9 @@ import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { refuseNextRecordingCommit } from './fixtures/verdict-quota';
 import { HomePage } from './pages/home.page';
+import { HistoryPage } from './pages/history.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { LeaveInvestigationDialogPage } from './pages/leave-investigation.dialog.page';
 import { VerdictPage } from './pages/verdict.page';
 
 const dataUuid = 'ce060031-43e5-11e4-916c-0800200c9a66';
@@ -241,6 +243,9 @@ test('stops listening before the recording window ends when a packet flush exhau
   await investigation.waitForPrompt('Storage is full');
   expect(fakeBluetooth.calls()).toContain('stopNotifications');
   expect(await new StoredRecords(page).recordings(investigation.id())).toEqual([]);
+  await investigation.freeUpSpace.click({ timeout: 4_000 });
+  await new LeaveInvestigationDialogPage(page).choose('Leave and disconnect');
+  await expect(new HistoryPage(page).title).toBeVisible();
 });
 
 // Given only one usable level, when the person tries a quick baseline and one

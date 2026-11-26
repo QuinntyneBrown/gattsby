@@ -19,6 +19,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/readiness/readiness.page').then((m) => m.ReadinessPage),
   },
   {
+    path: 'investigations',
+    pathMatch: 'full',
+    title: 'Past investigations · Gattsby',
+    loadComponent: () => import('./pages/history/history.page').then((m) => m.HistoryPage),
+  },
+  {
     path: 'investigations/:id',
     canMatch: [investigationExists],
     canDeactivate: [leaveInvestigation],
@@ -36,6 +42,12 @@ export const routes: Routes = [
     path: 'investigations/:id/evidence',
     title: 'Evidence · Gattsby',
     loadComponent: () => import('./pages/evidence/evidence.page').then((m) => m.EvidencePage),
+  },
+  {
+    path: 'profiles',
+    pathMatch: 'full',
+    title: 'Saved devices · Gattsby',
+    loadComponent: () => import('./pages/profiles/profiles.page').then((m) => m.ProfilesPage),
   },
   {
     path: 'profiles/:id',

@@ -16,6 +16,15 @@ export class ReadinessSession {
     }
   }
 
+  reset(): void {
+    this.preference.set(null);
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      // The in-memory choice was cleared.
+    }
+  }
+
   private restore(): 'agent' | 'checklist' | null {
     try {
       const value = sessionStorage.getItem(SESSION_KEY);

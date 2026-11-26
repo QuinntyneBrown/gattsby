@@ -20,6 +20,7 @@ import {
 import { buildProfile } from '../outcome/profile-builder';
 import { verdictLabel, type VerdictFacts } from '../outcome/verdict-builder';
 import { Clock } from '../shared/clock';
+import { storageWarningPercent } from '../shared/format-storage';
 import { InvestigationStore } from '../store/investigation-store';
 import { PendingVerdict } from '../store/pending-verdict';
 import { StoreError } from '../store/store-error';
@@ -79,6 +80,7 @@ interface PendingStep {
 }
 
 const MAX_REFUSED_FINISHES = 2;
+const STORAGE_CHECK_INTERVAL = 30_000;
 const RUNNING_DETAIL = 'Read-only, takes about a second. Nothing for you to do.';
 
 // Runs the playbook: observe → decide → act, one step at a time (apply-heuristics-first,
@@ -138,6 +140,8 @@ export class PlaybookOrchestrator {
   readonly pauseDetails = this.pauseSignal.asReadonly();
   private resumingPause = false;
   private retryRecording: (() => void) | null = null;
+  private storageCheckedAt = -Infinity;
+  readonly storageWarning = signal<number | null>(null);
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -301,6 +305,7 @@ export class PlaybookOrchestrator {
     if (this.leaving) return;
     this.log.begin(id, sequence);
     this.statusSignal.set('running');
+    this.checkStorageUse();
     await this.beginLoop(id, resume);
   }
 
@@ -1065,6 +1070,7 @@ export class PlaybookOrchestrator {
       (record) => record && { ...record, stage: step.stage, lastCommittedStep: step.n },
     );
     this.observations.set(allObservations);
+    this.checkStorageUse();
     this.requests.update((r) => applyMissingToolUpdates(r, requests));
     if (hypothesis) this.hypotheses.update((h) => [...h, hypothesis]);
     if (modePatch) {
@@ -1151,6 +1157,19 @@ export class PlaybookOrchestrator {
       error instanceof ToolDefect || error instanceof Error ? error.message : String(error),
     );
     console.warn('Gattsby stopped the investigation after an unexpected error:', error);
+  }
+
+  private checkStorageUse(): void {
+    const now = this.clock.now();
+    if (this.storageWarning() !== null || now - this.storageCheckedAt < STORAGE_CHECK_INTERVAL)
+      return;
+    this.storageCheckedAt = now;
+    void this.store.usage().then(
+      (usage) => {
+        if (!this.leaving) this.storageWarning.set(storageWarningPercent(usage));
+      },
+      () => undefined,
+    );
   }
 
   private releaseModel(): void {

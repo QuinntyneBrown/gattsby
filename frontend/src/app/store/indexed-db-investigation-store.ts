@@ -13,6 +13,9 @@ import type { InvestigationPhoto } from './model/investigation-photo';
 import type { InvestigationNote } from './model/investigation-note';
 import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
+import type { MissingToolListEntry } from './model/missing-tool-list-entry';
+import type { MissingToolRequest } from './model/missing-tool-request';
+import type { LocalDataCounts } from './model/local-data-counts';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
@@ -22,12 +25,22 @@ import { validateNote } from './validate-note';
 
 const RECORD_FORMAT = 1;
 const EXPORT_PAGE_SIZE = 2000;
+const INVESTIGATION_ROWS = [
+  'steps',
+  'rawLog',
+  'recordings',
+  'observations',
+  'hypotheses',
+  'photos',
+  'missingToolRequests',
+];
 
 // The investigation store on IndexedDB (save-as-the-investigation-runs design). Every write
 // resolves on the transaction's `complete` event, never on a request's `success`.
 @Injectable()
 export class IndexedDbInvestigationStore extends InvestigationStore {
   private database: Promise<IDBDatabase> | null = null;
+  private deletion: Promise<void> | null = null;
 
   async create(init: NewInvestigation): Promise<Investigation> {
     const investigation: Investigation = {
@@ -64,23 +77,45 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       'missingToolRequests',
     ];
     await this.write(stores, 'strict', (tx) => {
-      tx.objectStore('steps').put(commit.step);
-      commit.rawLog.forEach((entry) => tx.objectStore('rawLog').put(entry));
-      commit.recordings.forEach((recording) => tx.objectStore('recordings').put(recording));
-      commit.observations.forEach((o) => tx.objectStore('observations').put(o));
-      if (commit.hypothesis) tx.objectStore('hypotheses').put(commit.hypothesis);
-      commit.missingToolRequests.forEach((r) => tx.objectStore('missingToolRequests').put(r));
-      this.patch(tx, commit.investigationId, {
-        ...commit.investigationPatch,
-        lastCommittedStep: commit.step.n,
-      });
+      const investigations = tx.objectStore('investigations');
+      const current = investigations.get(commit.investigationId);
+      current.onsuccess = () => {
+        if (!current.result) {
+          refuse(tx, new StoreError('NOT_FOUND', 'This investigation was deleted.'));
+          return;
+        }
+        tx.objectStore('steps').put(commit.step);
+        commit.rawLog.forEach((entry) => tx.objectStore('rawLog').put(entry));
+        commit.recordings.forEach((recording) => tx.objectStore('recordings').put(recording));
+        commit.observations.forEach((o) => tx.objectStore('observations').put(o));
+        if (commit.hypothesis) tx.objectStore('hypotheses').put(commit.hypothesis);
+        commit.missingToolRequests.forEach((r) => tx.objectStore('missingToolRequests').put(r));
+        investigations.put({
+          ...current.result,
+          ...commit.investigationPatch,
+          lastCommittedStep: commit.step.n,
+        });
+      };
     });
   }
 
   async flushRawLog(entries: readonly RawLogEntry[]): Promise<void> {
     if (entries.length === 0) return;
-    await this.write(['rawLog'], 'relaxed', (tx) => {
-      entries.forEach((entry) => tx.objectStore('rawLog').put(entry));
+    const byInvestigation = new Map<string, RawLogEntry[]>();
+    for (const entry of entries) {
+      const group = byInvestigation.get(entry.investigationId) ?? [];
+      group.push(entry);
+      byInvestigation.set(entry.investigationId, group);
+    }
+    await this.write(['investigations', 'rawLog'], 'relaxed', (tx) => {
+      const investigations = tx.objectStore('investigations');
+      const log = tx.objectStore('rawLog');
+      for (const [id, rows] of byInvestigation) {
+        const current = investigations.getKey(id);
+        current.onsuccess = () => {
+          if (current.result !== undefined) rows.forEach((entry) => log.put(entry));
+        };
+      }
     });
   }
 
@@ -250,6 +285,49 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return (all as Investigation[]).reverse();
   }
 
+  async delete(id: string): Promise<void> {
+    await this.write(['investigations', 'profiles', ...INVESTIGATION_ROWS], 'strict', (tx) => {
+      const keys = investigationRange(id);
+      for (const name of INVESTIGATION_ROWS) tx.objectStore(name).delete(keys);
+      const profiles = tx.objectStore('profiles');
+      const profile = profiles.index('byInvestigation').getKey(id);
+      profile.onsuccess = () => {
+        if (profile.result !== undefined) profiles.delete(profile.result);
+      };
+      tx.objectStore('investigations').delete(id);
+    });
+  }
+
+  deleteAll(onBlocked?: () => void): Promise<void> {
+    this.deletion ??= this.deleteDatabase(onBlocked).finally(() => {
+      this.deletion = null;
+    });
+    return this.deletion;
+  }
+
+  private async deleteDatabase(onBlocked?: () => void): Promise<void> {
+    const database = await this.database?.catch(() => null);
+    this.database = null;
+    database?.close();
+    await new Promise<void>((resolve, reject) => {
+      const deletion = indexedDB.deleteDatabase(DATABASE_NAME);
+      deletion.onsuccess = () => resolve();
+      deletion.onerror = () =>
+        reject(new StoreError('STORAGE_UNAVAILABLE', 'Chrome could not delete the stored data.'));
+      deletion.onblocked = () => onBlocked?.();
+    });
+  }
+
+  async localDataCounts(): Promise<LocalDataCounts> {
+    const db = await this.open();
+    const names = ['investigations', 'profiles', 'photos'];
+    const tx = db.transaction(names);
+    const [investigations, profiles, photos] = await Promise.all(
+      names.map((name) => request(tx.objectStore(name).count())),
+    );
+    return { investigations, profiles, photos };
+  }
+
   async getInvestigation(id: string): Promise<Investigation> {
     const db = await this.open();
     const row = await request(
@@ -386,6 +464,26 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return request(store.count(investigationRange(id)));
   }
 
+  async listProfiles(limit?: number): Promise<DeviceProfile[]> {
+    const db = await this.open();
+    const { default: validate } = await import('../../schemas/generated/device-profile-1.js');
+    const index = db.transaction('profiles').objectStore('profiles').index('byCreatedAt');
+    return new Promise((resolve, reject) => {
+      const profiles: DeviceProfile[] = [];
+      const scan = index.openCursor(null, 'prev');
+      scan.onerror = () => reject(scan.error);
+      scan.onsuccess = () => {
+        const cursor = scan.result;
+        if (!cursor || (limit !== undefined && profiles.length >= limit)) {
+          resolve(profiles);
+          return;
+        }
+        if (validate(cursor.value)) profiles.push(cursor.value as DeviceProfile);
+        cursor.continue();
+      };
+    });
+  }
+
   async getProfile(id: string): Promise<DeviceProfile> {
     const db = await this.open();
     const row = await request(db.transaction('profiles').objectStore('profiles').get(id));
@@ -462,9 +560,9 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     };
   }
 
-  async requestPersistence(): Promise<boolean> {
+  async requestPersistence(tryAgain = false): Promise<boolean> {
     const asked = await this.setting('persistenceRequested');
-    if (asked) return (await this.setting('persistenceGranted')) === true;
+    if (asked && !tryAgain) return (await this.setting('persistenceGranted')) === true;
     const granted = (await navigator.storage?.persist?.().catch(() => false)) ?? false;
     await this.write(['settings'], 'strict', (tx) => {
       tx.objectStore('settings').put({ key: 'persistenceRequested', value: true });
@@ -528,6 +626,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
   }
 
   private open(): Promise<IDBDatabase> {
+    if (this.deletion) return this.deletion.then(() => this.open());
     this.database ??= new Promise<IDBDatabase>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new StoreError('STORAGE_UNAVAILABLE', 'Chrome didn’t answer.')),
@@ -544,7 +643,12 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       open.onupgradeneeded = (event) => upgrade(open.result, event.oldVersion);
       open.onsuccess = () => {
         clearTimeout(timer);
-        resolve(open.result);
+        const database = open.result;
+        database.onversionchange = () => {
+          database.close();
+          this.database = null;
+        };
+        resolve(database);
       };
       open.onerror = () => {
         clearTimeout(timer);
@@ -582,5 +686,3 @@ function refuse(tx: IDBTransaction, error: StoreError): void {
   (tx as IDBTransaction & { gattsbyRefusal?: StoreError }).gattsbyRefusal = error;
   tx.abort();
 }
-import type { MissingToolListEntry } from './model/missing-tool-list-entry';
-import type { MissingToolRequest } from './model/missing-tool-request';
