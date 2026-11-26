@@ -68,6 +68,14 @@ list costs the same for a 30-minute investigation as for a short one.
 Each delete control has an accessible name that names the row ("Delete the investigation of
 Concept2 RowErg, Sat 14 Nov"). Device names are rendered as text (NFR-013).
 
+The History page shows the browser's storage usage and quota. An unavailable estimate is
+identified as such. Home shows the number of past investigations and the four most recent
+device profiles. Saved devices opens the profile list, searches identity and protocol text, and
+filters by device type. The profile list reads the `byCreatedAt` index newest first.
+
+Records stay on the device until the person deletes them or Chrome evicts site data. Gattsby
+applies no automatic retention limit (OQ-10).
+
 ### Deleting one investigation
 
 1. The dialog reads `Delete “Domyos T540C”?` and "This deletes the investigation from Wed 28 Oct with

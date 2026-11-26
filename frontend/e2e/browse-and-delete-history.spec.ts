@@ -2,14 +2,39 @@
 import { finishTreadmill } from './fixtures/finish-treadmill';
 import { expect, test } from './fixtures/gattsby-test';
 import { devices } from './fixtures/scripted-ids';
+import { DeviceProfilePage } from './pages/device-profile.page';
 import { HistoryPage } from './pages/history.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
 import { StopInvestigationDialogPage } from './pages/stop-investigation.dialog.page';
+import { SavedDevicesPage } from './pages/saved-devices.page';
 import { VerdictPage } from './pages/verdict.page';
 
 test.use({
   bluetooth: { devices: [devices.treadmill.id], chooser: [{ pick: devices.treadmill.id }] },
+});
+
+// Given a saved FTMS profile, when the person searches saved devices, matching
+// profiles open locally and an unmatched query offers Clear search.
+test('filters saved devices by name, protocol and device type', async ({ page, fakeBluetooth }) => {
+  await finishTreadmill(page, fakeBluetooth);
+  const home = new HomePage(page);
+  await home.goto();
+  await home.savedDevices.click({ timeout: 4_000 });
+  const saved = new SavedDevicesPage(page);
+  await expect(saved.title).toBeVisible();
+  await expect(saved.profile(devices.treadmill.name)).toBeVisible();
+  await saved.search.fill('unknown-model');
+  await expect(saved.noResults).toBeVisible();
+  await expect(saved.profile(devices.treadmill.name)).toHaveCount(0);
+  await saved.clearSearch.click();
+  await saved.filter('Spin bike').click();
+  await expect(saved.noResults).toBeVisible();
+  await saved.filter('Treadmill').click();
+  await saved.search.fill('ftms');
+  await saved.profile(devices.treadmill.name).click();
+  await expect(new DeviceProfilePage(page).verdict).toBeVisible();
+  expect(fakeBluetooth.writes()).toEqual([]);
 });
 
 // Given a completed investigation and a newer one stopped in Prepare, when the

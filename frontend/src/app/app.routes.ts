@@ -44,6 +44,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/evidence/evidence.page').then((m) => m.EvidencePage),
   },
   {
+    path: 'profiles',
+    pathMatch: 'full',
+    title: 'Saved devices · Gattsby',
+    loadComponent: () => import('./pages/profiles/profiles.page').then((m) => m.ProfilesPage),
+  },
+  {
     path: 'profiles/:id',
     title: 'Device profile · Gattsby',
     loadComponent: () =>

@@ -31,6 +31,7 @@ export abstract class InvestigationStore {
   abstract getInvestigation(id: string): Promise<Investigation>;
   abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
   abstract list(): Promise<Investigation[]>;
+  abstract listProfiles(limit?: number): Promise<import('./model/device-profile').DeviceProfile[]>;
   abstract listMissingTools(): Promise<MissingToolListEntry[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
   abstract rawLogCount(id: string): Promise<number>;

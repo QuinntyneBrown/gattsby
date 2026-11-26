@@ -13,6 +13,8 @@ import type { InvestigationPhoto } from './model/investigation-photo';
 import type { InvestigationNote } from './model/investigation-note';
 import type { DeviceProfile } from './model/device-profile';
 import type { InvestigationRecord } from './model/investigation-record';
+import type { MissingToolListEntry } from './model/missing-tool-list-entry';
+import type { MissingToolRequest } from './model/missing-tool-request';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { Recording } from './model/recording';
 import type { StepCommit } from './model/step-commit';
@@ -386,6 +388,26 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     return request(store.count(investigationRange(id)));
   }
 
+  async listProfiles(limit?: number): Promise<DeviceProfile[]> {
+    const db = await this.open();
+    const { default: validate } = await import('../../schemas/generated/device-profile-1.js');
+    const index = db.transaction('profiles').objectStore('profiles').index('byCreatedAt');
+    return new Promise((resolve, reject) => {
+      const profiles: DeviceProfile[] = [];
+      const scan = index.openCursor(null, 'prev');
+      scan.onerror = () => reject(scan.error);
+      scan.onsuccess = () => {
+        const cursor = scan.result;
+        if (!cursor || (limit !== undefined && profiles.length >= limit)) {
+          resolve(profiles);
+          return;
+        }
+        if (validate(cursor.value)) profiles.push(cursor.value as DeviceProfile);
+        cursor.continue();
+      };
+    });
+  }
+
   async getProfile(id: string): Promise<DeviceProfile> {
     const db = await this.open();
     const row = await request(db.transaction('profiles').objectStore('profiles').get(id));
@@ -582,5 +604,3 @@ function refuse(tx: IDBTransaction, error: StoreError): void {
   (tx as IDBTransaction & { gattsbyRefusal?: StoreError }).gattsbyRefusal = error;
   tx.abort();
 }
-import type { MissingToolListEntry } from './model/missing-tool-list-entry';
-import type { MissingToolRequest } from './model/missing-tool-request';
