@@ -23,7 +23,12 @@ export interface LanguageModelSessionApi {
   measureInputUsage?(input: string): Promise<number>;
   clone(options?: { signal?: AbortSignal }): Promise<LanguageModelSessionApi>;
   prompt(
-    input: string,
+    input:
+      | string
+      | readonly {
+          role: 'user';
+          content: readonly ({ type: 'text'; value: string } | { type: 'image'; value: Blob })[];
+        }[],
     options?: { signal?: AbortSignal; responseConstraint?: object },
   ): Promise<string>;
   destroy(): void;

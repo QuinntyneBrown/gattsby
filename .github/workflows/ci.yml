@@ -60,7 +60,8 @@ jobs:
       # Critical paths cover the app shell, readiness, identification, live FTMS confirmation,
       # profile export, agent and checklist, FTMS control, device matching, reconnect, stop,
       # reachability, proprietary packet evidence, verdict evidence, history, profile import
-      # a full investigation served offline, and a protected characteristic with no repeat probe.
+      # a full investigation served offline, a protected characteristic with no repeat probe,
+      # and a camera plate read with the person's confirmed correction.
       - name: Run the critical behaviour specs
         run: npm run e2e:critical
 

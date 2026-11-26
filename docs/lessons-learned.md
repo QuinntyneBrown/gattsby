@@ -423,3 +423,14 @@ None; this is the first entry.
 - Run the offline acceptance path with an explicitly unavailable model and follow the whole
   checklist. This proves the cache supports a complete investigation without depending on the
   provision or timing of an on-device model.
+
+## Journey 19 — Read a model plate photo
+
+- Apply the attachment lesson from journey 16. Re-encode the photo before reading it. Keep the
+  JPEG and the model's suggestion in memory until the person confirms the fields. Commit the
+  attachment and observations together and link the confirmed fields to the saved photo.
+- A canvas stream provides a browser video frame in Chromium without a real camera, and tracks
+  when permission is requested and the camera is released. Verify the selected-file path with
+  a separate JPEG containing synthetic GPS and camera metadata.
+- Treat image input as a separate model capability. Typing remains available with an
+  unavailable model, a refused camera permission or an unreadable photo.

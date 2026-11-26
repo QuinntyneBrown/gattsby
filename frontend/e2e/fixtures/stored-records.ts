@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { DecodedMetric } from '../../src/app/knowledge-base/decoders/decoded-metric';
 import type { MissingToolRequest } from '../../src/app/store/model/missing-tool-request';
+import type { InvestigationPhoto } from '../../src/app/store/model/investigation-photo';
 
 // Reads what Gattsby committed to IndexedDB, as a spec's evidence that a step was saved (FR-007,
 // FR-060). It opens the database read-only from the page and never writes to it.
@@ -87,8 +88,12 @@ export class StoredRecords {
   }
 
   async photoCount(id: string): Promise<number> {
-    const photos = await this.readAll<{ investigationId: string }>('photos');
-    return photos.filter(({ investigationId }) => investigationId === id).length;
+    return (await this.photos(id)).length;
+  }
+
+  async photos(id: string): Promise<InvestigationPhoto[]> {
+    const photos = await this.readAll<InvestigationPhoto>('photos');
+    return photos.filter(({ investigationId }) => investigationId === id);
   }
 
   async databasePresent(): Promise<boolean> {

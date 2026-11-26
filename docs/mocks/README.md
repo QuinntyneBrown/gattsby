@@ -174,21 +174,21 @@ Legend: ✅ mock exists · ➖ not applicable (reason in manifest) · ❌ missin
 
 ### Dialogs
 
-| Screen | default | busy | invalid | confirmed | failed | stop | request-control | handshake | paused | released | unavailable | success | confirm | blocked | Requirements |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Approve a command (`approval`) | [✅](dialogs/approval/default.html) | [✅](dialogs/approval/busy.html) | ➖ | [✅](dialogs/approval/confirmed.html) | [✅](dialogs/approval/failed.html) | [✅](dialogs/approval/stop.html) | [✅](dialogs/approval/request-control.html) | [✅](dialogs/approval/handshake.html) |  |  |  |  |  |  | `FR-032`, `FR-033`, `FR-034`, `FR-035`, `FR-036`, `FR-037`, `FR-038`, `FR-039`, `NFR-018` |
-| Emergency stop (`emergency-stop`) | [✅](dialogs/emergency-stop/default.html) | [✅](dialogs/emergency-stop/busy.html) | ➖ |  | [✅](dialogs/emergency-stop/failed.html) |  |  |  |  |  |  |  |  |  | `FR-039` |
-| Unexpected response (`unexpected-effect`) | [✅](dialogs/unexpected-effect/default.html) | ➖ | ➖ |  |  |  |  |  |  |  |  |  |  |  | `FR-038`, `FR-039` |
-| Still there? / Paused (`still-there`) | [✅](dialogs/still-there/default.html) | ➖ | ➖ |  |  |  |  |  | [✅](dialogs/still-there/paused.html) | [✅](dialogs/still-there/released.html) |  |  |  |  | `FR-009`, `FR-051` |
-| Investigation options (`investigation-menu`) | [✅](dialogs/investigation-menu/default.html) | ➖ | ➖ |  |  |  |  |  |  |  |  |  |  |  | `FR-009`, `FR-010`, `FR-022`, `FR-056` |
-| Add a note or the location (`add-note`) | [✅](dialogs/add-note/default.html) | ➖ | [✅](dialogs/add-note/invalid.html) |  |  |  |  |  |  |  |  |  |  |  | `FR-010` |
-| Read the model plate (`photo-read`) | [✅](dialogs/photo-read/default.html) | [✅](dialogs/photo-read/busy.html) | [✅](dialogs/photo-read/invalid.html) |  |  |  |  |  |  |  | [✅](dialogs/photo-read/unavailable.html) |  |  |  | `FR-022`, `NFR-017` |
-| Stop the investigation (`stop-investigation`) | [✅](dialogs/stop-investigation/default.html) | [✅](dialogs/stop-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  |  | `FR-009`, `FR-018` |
-| Leave the investigation (`leave-investigation`) | [✅](dialogs/leave-investigation/default.html) | [✅](dialogs/leave-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  |  | `FR-018`, `FR-060` |
-| Export (`export`) | [✅](dialogs/export/default.html) | [✅](dialogs/export/busy.html) | ➖ |  |  |  |  |  |  |  |  | [✅](dialogs/export/success.html) |  |  | `FR-062`, `FR-063`, `NFR-012` |
-| Import (`import`) | [✅](dialogs/import/default.html) | [✅](dialogs/import/busy.html) | [✅](dialogs/import/invalid.html) |  | [✅](dialogs/import/failed.html) |  |  |  |  |  |  | [✅](dialogs/import/success.html) |  |  | `FR-064`, `NFR-015` |
-| Delete an investigation (`delete-investigation`) | [✅](dialogs/delete-investigation/default.html) | [✅](dialogs/delete-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  |  | `FR-061` |
-| Delete all data (`delete-all-data`) | [✅](dialogs/delete-all-data/default.html) | [✅](dialogs/delete-all-data/busy.html) | [✅](dialogs/delete-all-data/invalid.html) |  |  |  |  |  |  |  |  |  | [✅](dialogs/delete-all-data/confirm.html) | [✅](dialogs/delete-all-data/blocked.html) | `FR-065` |
+| Screen | default | busy | invalid | confirmed | failed | stop | request-control | handshake | paused | released | capture | camera | unavailable | success | confirm | blocked | Requirements |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Approve a command (`approval`) | [✅](dialogs/approval/default.html) | [✅](dialogs/approval/busy.html) | ➖ | [✅](dialogs/approval/confirmed.html) | [✅](dialogs/approval/failed.html) | [✅](dialogs/approval/stop.html) | [✅](dialogs/approval/request-control.html) | [✅](dialogs/approval/handshake.html) |  |  |  |  |  |  |  |  | `FR-032`, `FR-033`, `FR-034`, `FR-035`, `FR-036`, `FR-037`, `FR-038`, `FR-039`, `NFR-018` |
+| Emergency stop (`emergency-stop`) | [✅](dialogs/emergency-stop/default.html) | [✅](dialogs/emergency-stop/busy.html) | ➖ |  | [✅](dialogs/emergency-stop/failed.html) |  |  |  |  |  |  |  |  |  |  |  | `FR-039` |
+| Unexpected response (`unexpected-effect`) | [✅](dialogs/unexpected-effect/default.html) | ➖ | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-038`, `FR-039` |
+| Still there? / Paused (`still-there`) | [✅](dialogs/still-there/default.html) | ➖ | ➖ |  |  |  |  |  | [✅](dialogs/still-there/paused.html) | [✅](dialogs/still-there/released.html) |  |  |  |  |  |  | `FR-009`, `FR-051` |
+| Investigation options (`investigation-menu`) | [✅](dialogs/investigation-menu/default.html) | ➖ | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-009`, `FR-010`, `FR-022`, `FR-056` |
+| Add a note or the location (`add-note`) | [✅](dialogs/add-note/default.html) | ➖ | [✅](dialogs/add-note/invalid.html) |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-010` |
+| Read the model plate (`photo-read`) | [✅](dialogs/photo-read/default.html) | [✅](dialogs/photo-read/busy.html) | [✅](dialogs/photo-read/invalid.html) |  |  |  |  |  |  |  | [✅](dialogs/photo-read/capture.html) | [✅](dialogs/photo-read/camera.html) | [✅](dialogs/photo-read/unavailable.html) |  |  |  | `FR-022`, `NFR-017` |
+| Stop the investigation (`stop-investigation`) | [✅](dialogs/stop-investigation/default.html) | [✅](dialogs/stop-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-009`, `FR-018` |
+| Leave the investigation (`leave-investigation`) | [✅](dialogs/leave-investigation/default.html) | [✅](dialogs/leave-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-018`, `FR-060` |
+| Export (`export`) | [✅](dialogs/export/default.html) | [✅](dialogs/export/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  | [✅](dialogs/export/success.html) |  |  | `FR-062`, `FR-063`, `NFR-012` |
+| Import (`import`) | [✅](dialogs/import/default.html) | [✅](dialogs/import/busy.html) | [✅](dialogs/import/invalid.html) |  | [✅](dialogs/import/failed.html) |  |  |  |  |  |  |  |  | [✅](dialogs/import/success.html) |  |  | `FR-064`, `NFR-015` |
+| Delete an investigation (`delete-investigation`) | [✅](dialogs/delete-investigation/default.html) | [✅](dialogs/delete-investigation/busy.html) | ➖ |  |  |  |  |  |  |  |  |  |  |  |  |  | `FR-061` |
+| Delete all data (`delete-all-data`) | [✅](dialogs/delete-all-data/default.html) | [✅](dialogs/delete-all-data/busy.html) | [✅](dialogs/delete-all-data/invalid.html) |  |  |  |  |  |  |  |  |  |  |  | [✅](dialogs/delete-all-data/confirm.html) | [✅](dialogs/delete-all-data/blocked.html) | `FR-065` |
 
 ### Notifications
 

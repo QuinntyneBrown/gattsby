@@ -12,6 +12,7 @@ import type { Step } from '../store/model/step';
 import type { Verdict } from '../store/model/verdict';
 import { ToolDefect } from '../agent/tool-executor';
 import { profileFeatures } from './profile-features';
+import { confirmedPlate } from '../photo/confirmed-plate';
 
 export function buildProfile(
   investigation: Investigation,
@@ -64,6 +65,8 @@ export function buildProfile(
   });
   const advertisedName = state.device?.name ?? investigation.deviceName;
   const deviceInfo = state.deviceInfo === 'absent' ? null : state.deviceInfo;
+  const plate = confirmedPlate(observations);
+  const plateValue = (subject: string) => plate.get(subject)?.value;
   const service = kb.services.find((entry) => entry.shortName === hypothesis?.protocol);
   const features = profileFeatures(kb, state, steps, observations);
   const profile: DeviceProfile = {
@@ -77,16 +80,19 @@ export function buildProfile(
       displayName: clip(advertisedName || deviceInfo?.model || 'Unnamed device'),
       advertisedName: optionalText(advertisedName),
       deviceType: optionalText(hypothesis?.deviceType ?? state.machineType),
-      maker: optionalText(deviceInfo?.manufacturer ?? hypothesis?.maker),
-      model: optionalText(deviceInfo?.model ?? hypothesis?.model),
+      maker: optionalText(
+        deviceInfo?.manufacturer ?? plateValue('manufacturer') ?? hypothesis?.maker,
+      ),
+      model: optionalText(deviceInfo?.model ?? plateValue('model') ?? hypothesis?.model),
       firmware: optionalText(deviceInfo?.firmware),
-      evidence: retainEvidence(
-        steps
+      evidence: retainEvidence([
+        ...steps
           .filter(
             (step) => step.result.ok && ['scan_devices', 'read_device_info'].includes(step.tool),
           )
           .map((step) => step.id),
-      ),
+        ...Array.from(plate.values(), ({ id }) => id),
+      ]),
     },
     services: {
       advertised: uniqueUuids(state.device?.advertisedServices ?? []),
