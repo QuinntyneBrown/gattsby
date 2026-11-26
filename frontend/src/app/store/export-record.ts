@@ -105,7 +105,10 @@ function withPendingVerdict(
     steps: [...record.steps, pending.step],
     observations: [...record.observations, ...pending.observations],
     hypotheses: pending.hypothesis ? [...record.hypotheses, pending.hypothesis] : record.hypotheses,
-    missingToolRequests: [...record.missingToolRequests, ...pending.missingToolRequests],
+    missingToolRequests: applyMissingToolUpdates(
+      record.missingToolRequests,
+      pending.missingToolRequests,
+    ),
   };
 }
 
@@ -148,3 +151,4 @@ function invalidRecord(validator: typeof validateRecord): StoreError {
   console.warn('Gattsby record export validation failed.', first?.instancePath, first?.keyword);
   return new StoreError('EXPORT_UNAVAILABLE', 'The investigation record did not validate.');
 }
+import { applyMissingToolUpdates } from '../outcome/merge-missing-tool-requests';

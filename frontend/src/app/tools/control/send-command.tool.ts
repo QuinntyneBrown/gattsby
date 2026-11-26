@@ -135,6 +135,7 @@ function prepareCommand(input: SendCommandInput, ctx: ToolContext): ApprovalRequ
   if (!limits) {
     ctx.raiseMissingTool({
       capabilityKey: `control-limits:${deviceType ?? 'unknown'}`,
+      source: 'noSafeLimit',
       title: 'Safe command limits for this machine',
       reason: 'The knowledge base does not have a conservative test command for this device type.',
       evidence: [],

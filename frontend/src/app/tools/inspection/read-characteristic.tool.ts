@@ -72,6 +72,7 @@ export const readCharacteristicTool = entry<ReadCharacteristicInput, ReadCharact
       if (error instanceof ToolError && error.code === 'AUTH_REQUIRED') {
         const id = ctx.raiseMissingTool({
           capabilityKey: `encrypted-read:${input.characteristic}`,
+          source: 'encrypted',
           title: `Read the protected ${name}`,
           reason:
             'The device asks for authentication or encryption that Gattsby does not have, and Gattsby never tries to bypass it.',

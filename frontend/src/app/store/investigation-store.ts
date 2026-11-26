@@ -5,6 +5,7 @@ import type { RawLogEntry } from './model/raw-log-entry';
 import type { StepCommit } from './model/step-commit';
 import type { Stage } from './model/stage';
 import type { ModeChange } from './model/mode-change';
+import type { MissingToolListEntry } from './model/missing-tool-list-entry';
 import type { VerdictCommit } from './model/verdict-commit';
 
 // The contract of the investigation store, the only code that touches IndexedDB
@@ -29,7 +30,9 @@ export abstract class InvestigationStore {
   abstract getInvestigation(id: string): Promise<Investigation>;
   abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;
   abstract list(): Promise<Investigation[]>;
+  abstract listMissingTools(): Promise<MissingToolListEntry[]>;
   abstract rawLog(id: string): Promise<RawLogEntry[]>;
+  abstract rawLogCount(id: string): Promise<number>;
   abstract rawLogPages(id: string): AsyncIterable<RawLogEntry[]>;
   abstract rawLogSizeEstimate(id: string): Promise<number>;
   abstract recordings(id: string): Promise<import('./model/recording').Recording[]>;

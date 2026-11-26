@@ -8,6 +8,7 @@ import { InvestigationStore } from './investigation-store';
 import type { DeviceProfile } from './model/device-profile';
 import type { VerdictCommit } from './model/verdict-commit';
 import { StoreError } from './store-error';
+import type { MissingToolGroup } from '../outcome/missing-tool-group';
 
 @Injectable({ providedIn: 'root' })
 export class ExportService {
@@ -54,6 +55,42 @@ export class ExportService {
     const name = exportFileName(profile.identity.displayName, startedAt, 'record');
     signal.throwIfAborted();
     this.save(blob, name);
+    return name;
+  }
+
+  async exportMissingTools(
+    groups: readonly MissingToolGroup[],
+    kbVersion: string,
+  ): Promise<string> {
+    const { default: validate } =
+      await import('../../schemas/generated/missing-tool-requests-1.js');
+    const exportedAt = new Date().toISOString();
+    const payload = {
+      kind: 'gattsby.missing-tool-requests',
+      formatVersion: '1.0',
+      kbVersion,
+      exportedAt,
+      requests: groups.map((group) => ({
+        capability: group.capability,
+        capabilityKey: group.capabilityKey,
+        status: group.status,
+        count: group.count,
+        firstRaisedAt: new Date(group.firstRaisedAt).toISOString(),
+        stages: group.stages,
+        sources: group.sources,
+        reasons: group.reasons,
+        investigations: group.investigations.map(({ id, deviceName, raisedAt, evidence }) => ({
+          id,
+          deviceName,
+          raisedAt: new Date(raisedAt).toISOString(),
+          evidence,
+        })),
+      })),
+    };
+    if (!validate(payload))
+      throw new StoreError('EXPORT_UNAVAILABLE', 'The missing-tool requests couldn’t be exported.');
+    const name = `missing-tools-${exportedAt.slice(0, 10)}.gattsby.json`;
+    this.save(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), name);
     return name;
   }
 

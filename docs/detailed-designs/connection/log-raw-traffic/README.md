@@ -111,6 +111,11 @@ Web Bluetooth reports notifications and indications through the same event. The 
 Every entry's `hex` and `detail`, and every UUID or name it carries, is rendered as text, never as
 HTML (NFR-013).
 
+The Evidence page merges committed raw packets with saved tool results, answers, approvals and
+hypothesis versions by timestamp. It reads the raw log in bounded batches and shows 100 entries
+at a time. All, Sent, Received, You and Agent operate over the selected evidence or the full
+timeline.
+
 ### Tests that prove it
 
 An acceptance spec runs the fake `navigator.bluetooth` at 50 notifications per second on 4

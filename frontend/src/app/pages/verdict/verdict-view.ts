@@ -7,6 +7,7 @@ export interface VerdictItem {
   readonly key: string;
   readonly value: string;
   readonly tag: ObservationTag | null;
+  readonly evidenceId?: string;
 }
 
 // What the Verdict page shows, from the stored record (issue-the-verdict design, "What the Verdict
@@ -14,6 +15,7 @@ export interface VerdictItem {
 export interface VerdictView {
   readonly meta: string;
   readonly protocol: string;
+  readonly hypothesisId?: string;
   readonly readable: readonly VerdictItem[];
   readonly observed: readonly VerdictItem[];
   readonly undetermined: readonly VerdictItem[];
@@ -93,12 +95,20 @@ export function verdictView(
     ? (assessment.data as ReachabilityAssessment | null)?.likelyCauses
     : null;
   const heldByOther = Array.isArray(causes) && causes.includes('held by another central');
-  return { meta, protocol, readable, observed, undetermined, heldByOther };
+  return {
+    meta,
+    protocol,
+    hypothesisId: hypothesis?.id,
+    readable,
+    observed,
+    undetermined,
+    heldByOther,
+  };
 }
 
-function verdictItem(observation: { text: string; tag: ObservationTag }): VerdictItem {
+function verdictItem(observation: { id: string; text: string; tag: ObservationTag }): VerdictItem {
   const [key, ...rest] = observation.text.split(': ');
-  return { key, value: rest.join(': '), tag: observation.tag };
+  return { key, value: rest.join(': '), tag: observation.tag, evidenceId: observation.id };
 }
 
 function capitalise(text: string): string {

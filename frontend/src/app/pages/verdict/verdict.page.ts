@@ -30,6 +30,12 @@ import { verdictView, type VerdictView } from './verdict-view';
     :host {
       display: contents;
     }
+    .group__items--observed li > a {
+      grid-column: 1 / -1;
+      grid-row: 3;
+      justify-self: start;
+      margin-block: 0;
+    }
   `,
   template: `
     <div class="app app--fixed">
@@ -40,6 +46,11 @@ import { verdictView, type VerdictView } from './verdict-view';
           </svg>
         </a>
         <span class="appbar__titles"></span>
+        @if (record()) {
+          <a class="btn btn--ghost" [routerLink]="['/investigations', id(), 'evidence']">
+            Evidence
+          </a>
+        }
         @if (record()?.investigation?.profileId; as profileId) {
           <a
             class="btn btn--ghost"
@@ -99,6 +110,14 @@ import { verdictView, type VerdictView } from './verdict-view';
                   <dt>Protocol</dt>
                   <dd>{{ view()?.protocol }}</dd>
                 </dl>
+                @if (view()?.hypothesisId; as hypothesisId) {
+                  <a
+                    class="btn btn--ghost"
+                    [routerLink]="['/investigations', id(), 'evidence']"
+                    [queryParams]="{ ref: hypothesisId }"
+                    >Hypothesis evidence</a
+                  >
+                }
               }
               @if (verdict.kind === 'notConnectable') {
                 <section class="group">
@@ -120,7 +139,15 @@ import { verdictView, type VerdictView } from './verdict-view';
                 <section class="tool-card" [attr.aria-labelledby]="request.id">
                   <p class="tool-card__eyebrow">Missing-tool request raised</p>
                   <h2 class="tool-card__title" [id]="request.id">{{ request.title }}</h2>
-                  <p class="tool-card__text">{{ request.reason }}</p>
+                  @for (reason of request.reasons ?? [request.reason]; track reason) {
+                    <p class="tool-card__text">{{ reason }}</p>
+                  }
+                  <a
+                    [routerLink]="['/investigations', id(), 'evidence']"
+                    [queryParams]="{ ref: request.id }"
+                    >Evidence</a
+                  >
+                  <a class="btn btn--ghost" routerLink="/missing-tools">See all requests</a>
                 </section>
               }
               @if (view()?.readable?.length) {
@@ -134,6 +161,11 @@ import { verdictView, type VerdictView } from './verdict-view';
                           ><bdi>{{ item.value }}</bdi></span
                         >
                         <g-confidence-badge word="confirmed" />
+                        <a
+                          [routerLink]="['/investigations', id(), 'evidence']"
+                          [queryParams]="{ ref: item.evidenceId }"
+                          >Evidence</a
+                        >
                       </li>
                     }
                   </ul>
@@ -150,6 +182,11 @@ import { verdictView, type VerdictView } from './verdict-view';
                         <span class="conf">{{
                           feature.status === 'claimedOnly' ? 'claimed only' : feature.status
                         }}</span>
+                        <a
+                          [routerLink]="['/investigations', id(), 'evidence']"
+                          [queryParams]="{ ref: feature.evidence }"
+                          >Evidence</a
+                        >
                       </li>
                     }
                   </ul>
@@ -167,6 +204,13 @@ import { verdictView, type VerdictView } from './verdict-view';
                         >
                         @if (item.tag) {
                           <g-confidence-badge [word]="item.tag" />
+                        }
+                        @if (item.evidenceId) {
+                          <a
+                            [routerLink]="['/investigations', id(), 'evidence']"
+                            [queryParams]="{ ref: item.evidenceId }"
+                            >Evidence</a
+                          >
                         }
                       </li>
                     }

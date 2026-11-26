@@ -32,6 +32,10 @@ export class VerdictPage {
     return this.page.getByRole('link', { name: 'Open device profile' });
   }
 
+  evidenceFor(group: string, key: string): Locator {
+    return this.item(group, key).getByRole('link', { name: 'Evidence', exact: true });
+  }
+
   get exportProfile(): Locator {
     return this.page.getByRole('button', { name: 'Export profile' });
   }

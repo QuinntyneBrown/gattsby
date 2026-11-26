@@ -12,6 +12,7 @@ import type { Stage } from '../store/model/stage';
 import type { Recording } from '../store/model/recording';
 import type { RawLogEntry } from '../store/model/raw-log-entry';
 import type { MissingToolRequest } from '../store/model/missing-tool-request';
+import type { MissingToolSource } from '../store/model/missing-tool-source';
 import type { VerdictFacts } from '../outcome/verdict-builder';
 import type { HypothesisProposer } from './meta/update-hypothesis.tool';
 import type { NotificationRecorder } from './listening/notification-recorder';
@@ -20,7 +21,7 @@ import type { ControlPointExchange } from './control/control-point-exchange';
 export type NewMissingToolRequest = Pick<
   MissingToolRequest,
   'capabilityKey' | 'title' | 'reason' | 'evidence'
->;
+> & { readonly source?: MissingToolSource };
 
 // What a tool may use while it runs (return-a-result-envelope design). The context hands out
 // evidence IDs and collects them, so the envelope carries every ID the call created.

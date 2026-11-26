@@ -2,6 +2,7 @@ import { entry } from '../tool-definition';
 import { fail, ok } from '../tool-result';
 import type { AgentAction } from '../../model/agent-action';
 import { STAGES } from '../../store/model/stage';
+import { missingToolKey } from '../../outcome/merge-missing-tool-requests';
 
 type RequestInput = Omit<Extract<AgentAction, { type: 'request_missing_tool' }>, 'type'>;
 
@@ -41,21 +42,22 @@ export const requestMissingTool = entry<RequestInput, { requestId: string; merge
   async run(input, ctx) {
     const title = input.capability.trim();
     const reason = input.reason.trim();
-    if (!title || !reason || input.evidence.some((id) => !ctx.hypotheses.resolves(id))) {
+    const capabilityKey = missingToolKey(title);
+    if (!capabilityKey || !reason || input.evidence.some((id) => !ctx.hypotheses.resolves(id))) {
       return fail(
         'INVALID_INPUT',
         'A missing-tool request needs a name, a reason and valid evidence.',
       );
     }
-    const capabilityKey = title.replace(/\s+/g, ' ').toLowerCase();
     const merged = ctx
       .verdictFacts()
-      .missingToolRequests.some((item) => item.capabilityKey === capabilityKey);
+      .missingToolRequests.some((item) => missingToolKey(item.capabilityKey) === capabilityKey);
     const requestId = ctx.raiseMissingTool({
       capabilityKey,
       title,
       reason,
       evidence: input.evidence,
+      source: 'agent',
     });
     return ok(merged ? 'Missing tool already recorded.' : 'Missing tool recorded.', {
       requestId,

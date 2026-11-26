@@ -400,9 +400,9 @@ test.describe('The model reports a missing tool twice', () => {
         {
           action: {
             type: 'request_missing_tool',
-            capability: 'Console data decoder',
+            capability: 'Ｃonsole   data decoder!',
             reason: 'The console service still has an unknown format.',
-            evidence: ['s-7'],
+            evidence: ['s-6'],
           },
         },
         {
@@ -417,7 +417,7 @@ test.describe('The model reports a missing tool twice', () => {
     },
   });
 
-  test('keeps one request and reuses its evidence ID', async ({ page }) => {
+  test('keeps one request with the reasons and evidence from both reports', async ({ page }) => {
     const investigation = await beginTreadmill(page);
     await investigation.choose('Find the device');
     await investigation.waitForPrompt('Is there another name on the console?');
@@ -437,7 +437,12 @@ test.describe('The model reports a missing tool twice', () => {
       expect.objectContaining({
         id: 'm-1',
         title: 'Console data decoder',
-        evidence: ['s-7'],
+        evidence: expect.arrayContaining(['s-7', 's-6']),
+        reasons: [
+          'The console service has an unknown format.',
+          'The console service still has an unknown format.',
+        ],
+        occurrences: 2,
       }),
     ]);
   });

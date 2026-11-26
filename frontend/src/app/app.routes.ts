@@ -33,6 +33,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/verdict/verdict.page').then((m) => m.VerdictPage),
   },
   {
+    path: 'investigations/:id/evidence',
+    title: 'Evidence · Gattsby',
+    loadComponent: () => import('./pages/evidence/evidence.page').then((m) => m.EvidencePage),
+  },
+  {
     path: 'profiles/:id',
     title: 'Device profile · Gattsby',
     loadComponent: () =>
@@ -42,6 +47,12 @@ export const routes: Routes = [
     path: 'settings',
     title: 'Settings · Gattsby',
     loadComponent: () => import('./pages/settings/settings.page').then((m) => m.SettingsPage),
+  },
+  {
+    path: 'missing-tools',
+    title: 'Missing tools · Gattsby',
+    loadComponent: () =>
+      import('./pages/missing-tools/missing-tools.page').then((m) => m.MissingToolsPage),
   },
   {
     path: '**',

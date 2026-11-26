@@ -35,6 +35,7 @@ export const watchAdvertisementsTool = entry<
     if (!ctx.state.advertisementsAvailable) {
       ctx.raiseMissingTool({
         capabilityKey: 'watch-advertisements',
+        source: 'capabilityUnavailable',
         title: 'Watch Bluetooth advertisements',
         reason: 'This browser does not expose advertisement watching.',
         evidence: [],
