@@ -27,6 +27,11 @@ const OBSERVED = new Set([
   'held-by-other',
   'connection-quirk',
   'reachability',
+  'varying-field',
+  'silent',
+  'not-recorded',
+  'candidate-encoding',
+  'framing',
 ]);
 
 export function verdictView(

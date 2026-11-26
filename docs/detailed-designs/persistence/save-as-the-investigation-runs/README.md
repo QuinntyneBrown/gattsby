@@ -120,11 +120,13 @@ treats an uncommitted step as saved.
    the space Chrome allows it. Export old investigations, then delete them." with "Open past
    investigations", at most once per investigation.
 3. **Quota failure.** When a transaction aborts with `QuotaExceededError`, the store rejects with
-   `STORAGE_FULL` and nothing from that step is stored. The orchestrator pauses the loop, unsubscribes
-   every notification (recording stops), keeps the pending commit in memory for "Try saving again"
-   and for "Export full record", and shows a danger toast that tells the person to export and delete
-   old investigations (NFR-008 AC1). Its wording for a step is provisional; the mocks show the
-   wording for a note.
+   `STORAGE_FULL`. During a recording, either a failed packet flush or a refused step commit
+   stops notifications. The store removes only the failed step's provisional packets. The dock
+   shows "Storage is full" and leaves all preceding steps and recordings readable. "Record again"
+   starts a fresh recording of the same level. "Stop" opens the existing confirmation and
+   concludes with the saved evidence. The History link for freeing space arrives with journey 15.
+   A refused verdict commit keeps the exportable result in memory for "Try saving again" and
+   "Export full record".
 4. **Showing use in the history.** NFR-008 asks for storage use in the history. The Past
    investigations mock shows only the count ("8 on this device · newest first"); Settings shows the
    full line. The history's storage line waits on a mock update, `<TO SUPPLY>`.

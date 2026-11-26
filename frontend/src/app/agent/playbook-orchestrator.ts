@@ -52,7 +52,7 @@ import type { FeedEntry } from './feed-entry';
 import { LOOP_CONFIG } from './loop-config';
 import type { ModelDecider } from './model-decider';
 import { ModelFailureRun } from './model-failure-run';
-import { checklistOptions, isBuiltStage, nextOutcome } from './playbook-rules';
+import { checklistOptions, nextOutcome } from './playbook-rules';
 import { PromptChannel } from './prompt-channel';
 import type { PausedInvestigation } from './paused-investigation';
 import type { RuleAction } from './rule-outcome';
@@ -62,7 +62,7 @@ import { executeTool, ToolDefect } from './tool-executor';
 import { validateToolAction } from './validate-tool-action';
 
 export type OrchestratorStatus =
-  'loading' | 'running' | 'paused' | 'concluding' | 'concluded' | 'error';
+  'loading' | 'running' | 'paused' | 'storage-full' | 'concluding' | 'concluded' | 'error';
 
 export type StageState = 'done' | 'now' | 'to do' | 'skipped';
 
@@ -132,6 +132,7 @@ export class PlaybookOrchestrator {
   private readonly pauseSignal = signal<PausedInvestigation | null>(null);
   readonly pauseDetails = this.pauseSignal.asReadonly();
   private resumingPause = false;
+  private retryRecording: (() => void) | null = null;
 
   private readonly investigationSignal = signal<Investigation | null>(null);
   private readonly steps = signal<readonly Step[]>([]);
@@ -162,7 +163,7 @@ export class PlaybookOrchestrator {
     () => this.pending()?.action.stage ?? this.choosingStage() ?? this.state().stage,
   );
   readonly recording = computed(
-    () => this.status() === 'running' && this.pending()?.action.tool === 'subscribe_and_record',
+    () => this.status() === 'running' && isRecordingTool(this.pending()?.action.tool),
   );
   readonly mode = computed(() => this.investigationSignal()?.mode ?? 'agent');
   readonly modeChange = computed(() => this.investigationSignal()?.modeChanges?.at(-1) ?? null);
@@ -175,7 +176,7 @@ export class PlaybookOrchestrator {
       stage,
       name: STAGE_NAMES[stage],
       state: (index < current
-        ? isBuiltStage(stage) || stage === 'conclude'
+        ? this.steps().some((step) => step.stage === stage)
           ? 'done'
           : 'skipped'
         : index === current
@@ -312,16 +313,16 @@ export class PlaybookOrchestrator {
         this.leaving ||
         this.concludeNow ||
         this.recovery.drop ||
-        this.status() !== 'running' ||
+        (this.status() !== 'running' && this.status() !== 'storage-full') ||
         !this.state().everConnected
       )
         return;
       const recordingSeconds =
-        this.pending()?.action.tool === 'subscribe_and_record' && this.stepStartedAt !== null
+        isRecordingTool(this.pending()?.action.tool) && this.stepStartedAt !== null
           ? Math.floor((event.at - this.stepStartedAt) / 1_000)
           : null;
       this.recovery.dropped(event, recordingSeconds);
-      this.abort.abort();
+      if (this.status() === 'running') this.abort.abort();
     });
     try {
       if (restorePermission && this.state().everConnected) {
@@ -459,7 +460,8 @@ export class PlaybookOrchestrator {
   /** Stops the loop at once (personStop or emergencyStop) and concludes with what is known. */
   stop(reason: 'personStop' | 'emergencyStop'): void {
     const paused = this.status() === 'paused' && !!this.pauseDetails();
-    if ((!paused && this.status() !== 'running') || this.stopReason === 'emergencyStop') return;
+    const active = this.status() === 'running' || this.status() === 'storage-full';
+    if ((!paused && !active) || this.stopReason === 'emergencyStop') return;
     this.stopReason = reason;
     this.concludeNow = true;
     if (reason === 'personStop') this.approvalLedger.lock();
@@ -477,6 +479,26 @@ export class PlaybookOrchestrator {
       void this.store.latchEmergencyStop(id, event.tappedAt).catch(() => undefined);
     }
     if (paused) void this.resumePaused();
+  }
+
+  recordAgain(): void {
+    this.retryRecording?.();
+  }
+
+  private waitForRecordingRetry(signal: AbortSignal): Promise<boolean> {
+    if (signal.aborted) return Promise.resolve(false);
+    this.statusSignal.set('storage-full');
+    return new Promise((resolve) => {
+      const finish = (retry: boolean) => {
+        signal.removeEventListener('abort', abort);
+        this.retryRecording = null;
+        this.statusSignal.set('running');
+        resolve(retry);
+      };
+      const abort = () => finish(false);
+      this.retryRecording = () => finish(true);
+      signal.addEventListener('abort', abort, { once: true });
+    });
   }
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
@@ -758,7 +780,8 @@ export class PlaybookOrchestrator {
         handedOut.push(recording.id);
         return recording.id;
       },
-      recordedPackets: (recordingId) => this.store.recordedPackets(id, recordingId),
+      recordings: () => this.store.recordings(id),
+      recordedPackets: (recordingId, limit) => this.store.recordedPackets(id, recordingId, limit),
       raiseMissingTool: (r: NewMissingToolRequest) => {
         const existing = [...this.requests(), ...requests].find(
           (x) => x.capabilityKey === r.capabilityKey,
@@ -778,6 +801,7 @@ export class PlaybookOrchestrator {
     };
     let result: ToolResult<unknown>;
     let approval: ApprovalDecision | undefined;
+    const quota = isRecordingTool(action.tool) ? new AbortController() : null;
     if (refusal) {
       result = fail(refusal.code, refusal.message);
     } else if (!tool) {
@@ -785,16 +809,22 @@ export class PlaybookOrchestrator {
     } else if (!tool.stages.includes(action.stage)) {
       result = fail('NOT_ALLOWED_AT_STAGE', `${action.tool} is not allowed at ${action.stage}.`);
     } else {
-      result = await executeTool(
-        tool,
-        action.input,
-        ctx,
-        () => handedOut,
-        this.approvalGate,
-        (decision) => {
-          approval = decision;
-        },
-      );
+      if (quota) this.log.onQuotaFailure(() => quota.abort());
+      try {
+        result = await executeTool(
+          tool,
+          action.input,
+          quota ? { ...ctx, signal: AbortSignal.any([signal, quota.signal]) } : ctx,
+          () => handedOut,
+          this.approvalGate,
+          (decision) => {
+            approval = decision;
+          },
+        );
+        await this.log.settle();
+      } finally {
+        if (quota) this.log.onQuotaFailure(null);
+      }
     }
     this.stepStartedAt = null;
     if (this.leaving) return true;
@@ -861,9 +891,6 @@ export class PlaybookOrchestrator {
     const newState = applyStep(state, step);
     const allObservations = [...this.observations(), ...observations];
     const fresh = observations.filter((o) => !this.observationKeys.has(keyOf(o)));
-    fresh.forEach((o) => this.observationKeys.add(keyOf(o)));
-    if (!isConnectionRecoveryStep(action.tool) && !dropped)
-      this.noProgressRun = fresh.length > 0 ? 0 : this.noProgressRun + 1;
     const hypothesis = this.tracker!.rescore(
       n,
       newState,
@@ -875,6 +902,7 @@ export class PlaybookOrchestrator {
         ? (action.input as unknown as UpdateHypothesisInput)
         : undefined,
     );
+    await this.log.settle();
     const rawLog = this.log.takePending();
 
     if (action.tool === 'finish' && result.ok) {
@@ -896,7 +924,12 @@ export class PlaybookOrchestrator {
       await (this.stopRelease ?? this.ble.disconnect());
       rawLog.push(...this.log.takePending());
       const referenced = [
-        ...new Set(newState.readableMetrics.flatMap((metric) => metric.evidence)),
+        ...new Set([
+          ...newState.readableMetrics.flatMap((metric) => metric.evidence),
+          ...allObservations
+            .filter(({ kind }) => ['varying-field', 'candidate-encoding', 'framing'].includes(kind))
+            .flatMap(({ evidence }) => evidence.filter((entry) => entry.startsWith('r-'))),
+        ]),
       ];
       const storedEvidence = await this.store.rawEvidence(id, referenced);
       const profile = buildProfile(
@@ -949,21 +982,44 @@ export class PlaybookOrchestrator {
       mode: modeChange.to,
       modeChanges: [...(this.investigationSignal()?.modeChanges ?? []), modeChange],
     };
-    await this.store.commitStep({
-      investigationId: id,
-      step,
-      rawLog,
-      recordings,
-      observations,
-      hypothesis,
-      missingToolRequests: requests,
-      investigationPatch: {
-        stage: action.stage,
-        modelConsultations: this.modelConsultations,
-        ...modePatch,
-        ...(newState.device?.name !== undefined ? { deviceName: newState.device.name } : {}),
-      },
-    });
+    try {
+      if (quota?.signal.aborted) throw new StoreError('STORAGE_FULL', 'Storage is full.');
+      await this.store.commitStep({
+        investigationId: id,
+        step,
+        rawLog,
+        recordings,
+        observations,
+        hypothesis,
+        missingToolRequests: requests,
+        investigationPatch: {
+          stage: action.stage,
+          modelConsultations: this.modelConsultations,
+          ...modePatch,
+          ...(newState.device?.name !== undefined ? { deviceName: newState.device.name } : {}),
+        },
+      });
+    } catch (error) {
+      if (
+        !(error instanceof StoreError) ||
+        error.code !== 'STORAGE_FULL' ||
+        !isRecordingTool(action.tool)
+      )
+        throw error;
+      this.pending.set(null);
+      this.tracker!.restore(this.hypotheses());
+      await this.ble.suspendSubscriptions();
+      await this.log.settle();
+      this.log.takePending();
+      await this.store.discardProvisionalPackets(id, n);
+      if (await this.waitForRecordingRetry(signal)) {
+        this.repeatStep = () => this.runStep(id, action, modelDecision, refusal, chosenByPerson);
+      }
+      return this.leaving;
+    }
+    fresh.forEach((observation) => this.observationKeys.add(keyOf(observation)));
+    if (!isConnectionRecoveryStep(action.tool) && !dropped)
+      this.noProgressRun = fresh.length > 0 ? 0 : this.noProgressRun + 1;
     this.steps.update((steps) => [...steps, step]);
     this.investigationSignal.update(
       (record) => record && { ...record, stage: step.stage, lastCommittedStep: step.n },
@@ -1065,6 +1121,10 @@ export class PlaybookOrchestrator {
 
 function keyOf(o: Observation): string {
   return `${o.kind}|${o.subject}|${o.value}`;
+}
+
+function isRecordingTool(tool: string | undefined): boolean {
+  return tool === 'subscribe_and_record' || tool === 'baseline_vs_activity';
 }
 
 function isConnectionRecoveryStep(tool: string): boolean {

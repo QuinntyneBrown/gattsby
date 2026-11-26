@@ -1,5 +1,6 @@
 import type { ChosenDevice } from '../ble/chosen-device';
 import type { ReachabilityAssessment } from '../analysis/reachability-assessment';
+import type { FieldCandidate } from '../analysis/field-candidate';
 import {
   REACHABILITY_CHECKS,
   type ReachabilityCheck,
@@ -13,6 +14,8 @@ import type { Step } from '../store/model/step';
 import type { ControlEffect } from '../store/model/control-effect';
 import type { DeviceInformation } from './device-information';
 import type { ProfileCandidate } from './profile-candidate';
+import { PROPRIETARY_LEVELS, type ProprietaryLevel } from './proprietary-levels';
+import type { ProprietaryRecording } from './proprietary-recording';
 
 export interface ScanAttempt {
   readonly mode: 'filtered' | 'acceptAll';
@@ -59,6 +62,12 @@ export interface DecisionState {
   readonly machineFeatureEvidence: readonly string[];
   readonly standardRecording: 'pending' | 'ready' | 'skipped' | 'recorded' | 'attempted';
   readonly standardRecordingId: string | null;
+  readonly proprietaryRecordings: Readonly<Partial<Record<ProprietaryLevel, ProprietaryRecording>>>;
+  readonly proprietaryCompared: boolean;
+  readonly proprietaryRanking: readonly FieldCandidate[] | null;
+  readonly proprietaryEncodingAttempted: boolean;
+  readonly proprietaryFramingAttempted: boolean;
+  readonly proprietaryQuickComparison: 'ready' | 'done' | null;
   readonly speedAction: number | 'skipped' | null;
   readonly speedConfirmation: 'confirmed' | 'notConfirmed' | 'reported' | null;
   readonly readableMetrics: readonly ReadableMetric[];
@@ -111,6 +120,12 @@ export const INITIAL_STATE: DecisionState = {
   machineFeatureEvidence: [],
   standardRecording: 'pending',
   standardRecordingId: null,
+  proprietaryRecordings: {},
+  proprietaryCompared: false,
+  proprietaryRanking: null,
+  proprietaryEncodingAttempted: false,
+  proprietaryFramingAttempted: false,
+  proprietaryQuickComparison: null,
   speedAction: null,
   speedConfirmation: null,
   readableMetrics: [],
@@ -173,6 +188,19 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
   switch (step.tool) {
     case 'assess_reachability':
       return { ...next, reachability: data as unknown as ReachabilityAssessment | null };
+    case 'find_varying_bytes':
+      return { ...next, proprietaryCompared: true };
+    case 'correlate_with_action':
+      return {
+        ...next,
+        proprietaryRanking: (data?.['ranked'] as FieldCandidate[] | undefined) ?? [],
+      };
+    case 'guess_field_encoding':
+      return { ...next, proprietaryEncodingAttempted: true };
+    case 'detect_framing':
+      return { ...next, proprietaryFramingAttempted: true };
+    case 'baseline_vs_activity':
+      return { ...next, proprietaryQuickComparison: 'done' };
     case 'check_capabilities':
       return {
         ...next,
@@ -201,6 +229,24 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
       }
       return next;
     case 'request_action':
+      if (step.stage === 'proprietary') {
+        if (step.ruleId === 'proprietary.quick-ready')
+          return {
+            ...next,
+            proprietaryQuickComparison: typeof data?.['readyAt'] === 'number' ? 'ready' : 'done',
+          };
+        const level = PROPRIETARY_LEVELS.find(
+          (level) => step.ruleId === `proprietary.ready.${level}`,
+        );
+        if (level)
+          return {
+            ...next,
+            proprietaryRecordings: {
+              ...state.proprietaryRecordings,
+              [level]: { status: answer === 'Ready' ? 'ready' : 'skipped' },
+            },
+          };
+      }
       if (step.ruleId === 'standard.ready') {
         return { ...next, standardRecording: answer === 'Ready' ? 'ready' : 'skipped' };
       }
@@ -327,7 +373,26 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
         typeof data?.['protocol'] === 'string'
         ? { ...next, ambiguityResolved: true, selectedProtocol: data['protocol'] }
         : next;
-    case 'subscribe_and_record':
+    case 'subscribe_and_record': {
+      if (step.stage === 'proprietary') {
+        const level = PROPRIETARY_LEVELS.find(
+          (level) => step.ruleId === `proprietary.record.${level}`,
+        );
+        if (!level) return next;
+        const recording =
+          data?.['interrupted'] !== true && typeof data?.['recordingId'] === 'string'
+            ? {
+                status: 'recorded' as const,
+                id: data['recordingId'],
+                count: Number(data['count']),
+                seconds: Number((step.input as { seconds: number }).seconds),
+              }
+            : { status: 'failed' as const };
+        return {
+          ...next,
+          proprietaryRecordings: { ...state.proprietaryRecordings, [level]: recording },
+        };
+      }
       return {
         ...next,
         standardRecordingId: typeof data?.['recordingId'] === 'string' ? data['recordingId'] : null,
@@ -338,6 +403,7 @@ export function applyStep(state: DecisionState, step: Step): DecisionState {
             ? 'recorded'
             : 'attempted',
       };
+    }
     case 'decode_standard': {
       const key =
         step.ruleId === 'standard.confirm-incline' ? 'inclineConfirmation' : 'speedConfirmation';

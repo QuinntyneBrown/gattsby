@@ -17,6 +17,8 @@ export abstract class InvestigationStore {
   abstract latchEmergencyStop(id: string, at: number): Promise<void>;
   /** Writes raw log entries of a step still running; they stay provisional until it commits. */
   abstract flushRawLog(entries: readonly RawLogEntry[]): Promise<void>;
+  /** Removes only the raw rows of a recording whose step failed to commit. */
+  abstract discardProvisionalPackets(id: string, stepN: number): Promise<void>;
   /** Writes the verdict and the final step together; refuses a second verdict. */
   abstract commitVerdict(commit: VerdictCommit): Promise<void>;
   /** Drops what an interrupted step left and marks the investigation paused (NFR-007). */
@@ -39,6 +41,7 @@ export abstract class InvestigationStore {
   abstract recordedPackets(
     investigationId: string,
     recordingId: string,
+    limitPerCharacteristic?: number,
   ): Promise<RawLogEntry[] | null>;
   /** Whether storage opens, and how much of the quota is used; prompts for nothing. */
   abstract usage(): Promise<{

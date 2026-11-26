@@ -279,6 +279,29 @@
         "handshakes": { "type": "array" }
       }
     },
+    "encoding-ranges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "byMachineType"],
+      "properties": {
+        "kind": { "const": "encoding-ranges" },
+        "byMachineType": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/deviceType" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["metric", "unit", "min", "max"],
+            "properties": {
+              "metric": { "$ref": "#/$defs/text" },
+              "unit": { "$ref": "#/$defs/text" },
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
     "brand-suggestions": {
       "type": "object",
       "additionalProperties": false,

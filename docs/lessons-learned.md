@@ -342,3 +342,17 @@ None; this is the first entry.
   reachability assessment for the verdict and keep the transport uncertain if a check was unanswered.
 - Verify both outcomes of the third scan. When the person finds the device, the existing Identify
   path still runs. When they cannot, the verdict links all three scan events and the checks.
+
+## Journey 13 — Decode a proprietary protocol
+
+- Apply the service permission lesson from journey 2. Chrome exposes only granted services. A
+  documented service UUID lets the app listen even when it lacks a decoder. The simulator's
+  packet format is synthetic, so its fitted encoding and checksum establish no vendor protocol.
+- Compare captures by characteristic and packet length. Keep counter bytes separate and save
+  representative packet IDs from each level. Report correlation, encoding and framing as
+  candidates until the readings themselves can be confirmed.
+- Apply the transaction lesson from journey 4 and the recording lesson from journey 10. Quota can
+  fail during a packet flush or during the final commit. Stop notifications, discard only the
+  failed step's provisional packets and resume recording only on "Record again".
+- Exercise the same proprietary fixture with and without an on-device model. The checklist
+  reaches the same partial verdict without making a model call or a Bluetooth write.

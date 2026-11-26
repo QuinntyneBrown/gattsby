@@ -31,6 +31,13 @@ export function buildProfile(
   ];
   const undetermined: DeviceProfile['undetermined'][number][] = [];
   const quirks: DeviceProfile['quirks'][number][] = [];
+  for (const observation of observations) {
+    if (['varying-field', 'candidate-encoding', 'framing'].includes(observation.kind))
+      quirks.push({
+        text: clip(observation.text, 280),
+        evidence: retainEvidence([observation.id, ...observation.evidence]),
+      });
+  }
   const metrics = state.readableMetrics.flatMap((metric): DeviceProfile['metrics'][number][] => {
     const evidence = retainEvidence(metric.evidence);
     if (!evidence.length) {

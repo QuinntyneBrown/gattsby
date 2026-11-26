@@ -63,10 +63,11 @@ describe('RawTrafficLog (FR-073, NFR-005)', () => {
     expect(latest[0].seq).toBe(50);
   });
 
-  it('flushes a full batch at once and the rest after the interval', () => {
+  it('flushes a full batch at once and the rest after the interval', async () => {
     for (let i = 0; i < FLUSH_BATCH + 1; i++) notification();
     expect(flushed).toHaveLength(1);
     expect(flushed[0]).toHaveLength(FLUSH_BATCH);
+    await log.settle();
     clock.advance(500);
     expect(flushed).toHaveLength(2);
     expect(log.takePending()).toEqual([]);

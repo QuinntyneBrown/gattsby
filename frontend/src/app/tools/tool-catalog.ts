@@ -18,8 +18,13 @@ import { readCharacteristicTool } from './inspection/read-characteristic.tool';
 import { readDeviceInfoTool } from './inspection/read-device-info.tool';
 import { readSupportedRangesTool } from './inspection/read-supported-ranges.tool';
 import { subscribeAndRecordTool } from './listening/subscribe-and-record.tool';
+import { baselineVsActivityTool } from './listening/baseline-vs-activity.tool';
 import { decodeStandardTool } from './analysis/decode-standard.tool';
 import { assessReachabilityTool } from './analysis/assess-reachability.tool';
+import { findVaryingBytesTool } from './analysis/find-varying-bytes.tool';
+import { correlateWithActionTool } from './analysis/correlate-with-action.tool';
+import { detectFramingTool } from './analysis/detect-framing.tool';
+import { guessFieldEncodingTool } from './analysis/guess-field-encoding.tool';
 import { finishTool } from './meta/finish.tool';
 import { requestMissingTool } from './meta/request-missing-tool.tool';
 import { updateHypothesisTool } from './meta/update-hypothesis.tool';
@@ -47,8 +52,13 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   matchKnownProfilesTool,
   readSupportedRangesTool,
   subscribeAndRecordTool,
+  baselineVsActivityTool,
   decodeStandardTool,
   assessReachabilityTool,
+  findVaryingBytesTool,
+  correlateWithActionTool,
+  guessFieldEncodingTool,
+  detectFramingTool,
   requestControlTool,
   sendCommandTool,
   checkCommandEffectTool,

@@ -158,7 +158,7 @@ import { verdictView, type VerdictView } from './verdict-view';
               @if (view()?.observed?.length) {
                 <section class="group">
                   <div class="group__head"><h2>Observed</h2></div>
-                  <ul class="group__items">
+                  <ul class="group__items group__items--observed">
                     @for (item of view()!.observed; track $index) {
                       <li>
                         <span class="group__k">{{ item.key }}</span>

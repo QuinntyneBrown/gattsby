@@ -15,6 +15,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
+import { PROPRIETARY_LEVELS, type ProprietaryLevel } from '../../agent/proprietary-levels';
 import { ApprovalGate } from '../../agent/approval-gate';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
 import { ControlTelemetry } from '../../agent/control-telemetry';
@@ -179,6 +180,27 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
         </section>
         <section class="inv__prompt dock" aria-labelledby="prompt-title" aria-live="polite">
           @switch (orchestrator.status()) {
+            @case ('storage-full') {
+              <div class="dock__inner" role="alert">
+                <h2 class="prompt__title" id="prompt-title">Storage is full</h2>
+                <p class="prompt__detail">
+                  Recording stopped. Everything before it is saved and readable. Export and delete
+                  old investigations to make room, then record again.
+                </p>
+                <div class="prompt__actions">
+                  <button
+                    class="btn btn--primary btn--lg"
+                    type="button"
+                    (click)="orchestrator.recordAgain()"
+                  >
+                    Record again
+                  </button>
+                  <button class="btn btn--lg" type="button" (click)="stopOpen.set(true)">
+                    Stop
+                  </button>
+                </div>
+              </div>
+            }
             @case ('paused') {
               <div class="dock__inner">
                 <p class="prompt__eyebrow">Interrupted</p>
@@ -313,6 +335,17 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
               </p>
             }
           </section>
+          @if (orchestrator.stage() === 'proprietary') {
+            <section>
+              <h2 class="section-title">Recordings</h2>
+              <dl class="kv kv--narrow">
+                @for (level of recordingLevels; track level) {
+                  <dt>{{ level[0].toUpperCase() + level.slice(1) }}</dt>
+                  <dd>{{ recordingLabel(level) }}</dd>
+                }
+              </dl>
+            </section>
+          }
           <section>
             <h2 class="section-title">Device</h2>
             <dl class="kv">
@@ -467,6 +500,7 @@ export class InvestigationPage implements OnInit, OnDestroy {
   protected readonly noteError = signal<{ title: string; message: string } | null>(null);
 
   protected readonly loading = computed(() => this.orchestrator.status() === 'loading');
+  protected readonly recordingLevels = PROPRIETARY_LEVELS;
   protected readonly connected = computed(
     () => this.orchestrator.connection().status === 'connected',
   );
@@ -588,6 +622,27 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   protected respond(response: PromptCardResponse): void {
     this.prompts.respond(response);
+  }
+
+  protected recordingLabel(level: ProprietaryLevel): string {
+    const recording = this.orchestrator.state().proprietaryRecordings[level];
+    switch (recording?.status) {
+      case 'recorded':
+        return `${recording.seconds} s · ${recording.count} packets`;
+      case 'ready':
+        return 'Recording';
+      case 'skipped':
+        return 'Skipped';
+      case 'failed':
+        return 'No recording';
+      default:
+        return this.prompts.current()?.title &&
+          this.recordingLevels.find(
+            (level) => !this.orchestrator.state().proprietaryRecordings[level],
+          ) === level
+          ? 'Waiting for Ready'
+          : '—';
+    }
   }
 
   protected openNote(): void {

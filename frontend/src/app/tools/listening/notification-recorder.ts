@@ -9,6 +9,7 @@ import { LiveMetrics } from '../../live/live-metrics';
 import { Clock } from '../../shared/clock';
 import type { RecordingSource } from './recording-source';
 import type { RawLogEntry } from '../../store/model/raw-log-entry';
+import type { PacketSample } from '../../analysis/packet-sample';
 
 @Injectable()
 export class NotificationRecorder {
@@ -23,6 +24,8 @@ export class NotificationRecorder {
     recordingId: string,
     seconds: number,
     signal: AbortSignal,
+    keepSubscriptions = true,
+    onSample?: (sample: PacketSample) => void,
   ) {
     let count = 0;
     let decodeErrors = 0;
@@ -47,6 +50,7 @@ export class NotificationRecorder {
               count++;
               stats.count++;
               stats.lengths.add(bytes.length);
+              onSample?.({ uuid, bytes, id: entryId });
             }
             if (!decoder) return capture;
             const decoded = this.decode(decoder, uuid, bytes, entryId, t, inWindow);
@@ -60,7 +64,7 @@ export class NotificationRecorder {
       recording = true;
       const interrupted = await this.wait(seconds, ble, signal);
       if (interrupted) this.confirmation.discardBaseline();
-      if (signal.aborted) await Promise.all(stops.map((stop) => stop()));
+      if (signal.aborted || !keepSubscriptions) await Promise.all(stops.map((stop) => stop()));
       return {
         count,
         decodeErrors,

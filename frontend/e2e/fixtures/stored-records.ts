@@ -44,6 +44,7 @@ export interface StoredRecording {
   readonly investigationId: string;
   readonly id: string;
   readonly label: string;
+  readonly level?: number;
   readonly characteristics: readonly string[];
   readonly seconds: number;
   readonly valueCount: number;

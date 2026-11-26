@@ -761,6 +761,11 @@
           "label": {
             "type": "string"
           },
+          "level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
           "characteristics": {
             "type": "array",
             "items": {

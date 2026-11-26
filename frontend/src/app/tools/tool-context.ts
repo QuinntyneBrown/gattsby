@@ -49,7 +49,11 @@ export interface ToolContext {
   observe(observation: NewObservation): string;
   /** Commits a recording with its tool step. Returns the recording's evidence ID. */
   saveRecording(recording: Omit<Recording, 'investigationId' | 'stepN'>): string;
-  recordedPackets(recordingId: string): Promise<RawLogEntry[] | null>;
+  recordings(): Promise<readonly Recording[]>;
+  recordedPackets(
+    recordingId: string,
+    limitPerCharacteristic?: number,
+  ): Promise<RawLogEntry[] | null>;
   /** Records a missing-tool request and returns its `m-` evidence ID. */
   raiseMissingTool(request: NewMissingToolRequest): string;
 }

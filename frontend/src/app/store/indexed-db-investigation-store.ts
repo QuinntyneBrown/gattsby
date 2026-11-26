@@ -84,6 +84,23 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     });
   }
 
+  async discardProvisionalPackets(id: string, stepN: number): Promise<void> {
+    await this.write(['investigations', 'rawLog'], 'strict', (tx) => {
+      const request = tx.objectStore('investigations').get(id);
+      request.onsuccess = () => {
+        const current = request.result as Investigation | undefined;
+        if (!current || current.lastCommittedStep >= stepN) return;
+        const log = tx.objectStore('rawLog');
+        log.index('byStep').openKeyCursor(IDBKeyRange.only([id, stepN])).onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursor | null>).result;
+          if (!cursor) return;
+          log.delete(cursor.primaryKey);
+          cursor.continue();
+        };
+      };
+    });
+  }
+
   async latchEmergencyStop(id: string, at: number): Promise<void> {
     await this.write(['investigations'], 'strict', (tx) => {
       this.patch(tx, id, { emergencyStoppedAt: at });
@@ -355,6 +372,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
   async recordedPackets(
     investigationId: string,
     recordingId: string,
+    limitPerCharacteristic?: number,
   ): Promise<RawLogEntry[] | null> {
     const db = await this.open();
     const tx = db.transaction(['recordings', 'rawLog'], 'readonly');
@@ -362,9 +380,37 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
       tx.objectStore('recordings').get([investigationId, recordingId]),
     )) as Recording | undefined;
     if (!recording) return null;
-    const rows = (await request(
-      tx.objectStore('rawLog').index('byStep').getAll([investigationId, recording.stepN]),
-    )) as RawLogEntry[];
+    const index = tx.objectStore('rawLog').index('byStep');
+    const key = [investigationId, recording.stepN];
+    if (limitPerCharacteristic !== undefined) {
+      return new Promise<RawLogEntry[]>((resolve, reject) => {
+        const rows: RawLogEntry[] = [];
+        const counts = new Map<string, number>();
+        const scan = index.openCursor(key);
+        scan.onerror = () => reject(scan.error);
+        scan.onsuccess = () => {
+          const cursor = scan.result;
+          if (!cursor) {
+            resolve(rows);
+            return;
+          }
+          const row = cursor.value as RawLogEntry;
+          if (
+            row.recordingId === recordingId &&
+            row.uuid &&
+            recording.characteristics.includes(row.uuid)
+          ) {
+            const count = counts.get(row.uuid) ?? 0;
+            if (count < limitPerCharacteristic) {
+              counts.set(row.uuid, count + 1);
+              rows.push(row);
+            }
+          }
+          cursor.continue();
+        };
+      });
+    }
+    const rows = (await request(index.getAll(key))) as RawLogEntry[];
     return rows.filter((row) => row.recordingId === recordingId);
   }
 
