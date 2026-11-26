@@ -1,0 +1,49 @@
+{
+  "kind": "command-set",
+  "protocol": "FTMS",
+  "service": "0x1826",
+  "characteristic": "0x2ad9",
+  "source": {
+    "type": "specification",
+    "title": "Bluetooth SIG Fitness Machine Service 1.0.1",
+    "reference": "https://www.bluetooth.com/specifications/specs/fitness-machine-service-1-0-1/"
+  },
+  "commands": [
+    { "id": "requestControl", "opCode": 0, "fixedBytes": [] },
+    { "id": "reset", "opCode": 1, "fixedBytes": [] },
+    {
+      "id": "setTargetSpeed",
+      "opCode": 2,
+      "claim": "Speed",
+      "metric": "speed",
+      "rangeCharacteristic": "0x2ad4",
+      "parameter": { "type": "uint16", "scale": 0.01, "unit": "km/h" }
+    },
+    {
+      "id": "setTargetIncline",
+      "opCode": 3,
+      "claim": "Inclination",
+      "metric": "incline",
+      "rangeCharacteristic": "0x2ad5",
+      "parameter": { "type": "sint16", "scale": 0.1, "unit": "%" }
+    },
+    {
+      "id": "setTargetResistance",
+      "opCode": 4,
+      "claim": "Resistance",
+      "metric": "resistance",
+      "rangeCharacteristic": "0x2ad6",
+      "parameter": { "type": "sint16", "scale": 0.1, "unit": "level" }
+    },
+    {
+      "id": "setTargetPower",
+      "opCode": 5,
+      "claim": "Power",
+      "metric": "power",
+      "rangeCharacteristic": "0x2ad8",
+      "parameter": { "type": "sint16", "scale": 1, "unit": "W" }
+    },
+    { "id": "start", "opCode": 7, "fixedBytes": [] },
+    { "id": "stop", "opCode": 8, "fixedBytes": [1] }
+  ]
+}

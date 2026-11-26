@@ -11,7 +11,7 @@ import type { RawLogEntry } from '../store/model/raw-log-entry';
 import type { Step } from '../store/model/step';
 import type { Verdict } from '../store/model/verdict';
 import { ToolDefect } from '../agent/tool-executor';
-import { claimedFeatures } from './profile-features';
+import { profileFeatures } from './profile-features';
 
 export function buildProfile(
   investigation: Investigation,
@@ -58,7 +58,7 @@ export function buildProfile(
   const advertisedName = state.device?.name ?? investigation.deviceName;
   const deviceInfo = state.deviceInfo === 'absent' ? null : state.deviceInfo;
   const service = kb.services.find((entry) => entry.shortName === hypothesis?.protocol);
-  const features = claimedFeatures(state, steps, observations);
+  const features = profileFeatures(kb, state, steps, observations);
   const profile: DeviceProfile = {
     kind: 'gattsby.device-profile',
     formatVersion: '1.0',
@@ -110,7 +110,11 @@ export function buildProfile(
       summary: clip(verdict.summary, 280),
     },
     missingToolRequests: requests.map((request) => request.id),
-    counts: { steps: verdict.stepN, packets, approvedCommands: 0 },
+    counts: {
+      steps: verdict.stepN,
+      packets,
+      approvedCommands: steps.filter((step) => step.approval?.decision === 'send').length,
+    },
   };
   if (!validate(profile)) throw new ToolDefect('finish', 'The device profile did not validate.');
   return profile;

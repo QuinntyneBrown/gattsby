@@ -1,0 +1,12 @@
+{
+  "kind": "control-limits",
+  "deviceType": "treadmill",
+  "source": { "type": "documentation", "title": "Gattsby conservative Control stage" },
+  "test": {
+    "command": "setTargetSpeed",
+    "direction": -1,
+    "maxValue": 6,
+    "minValue": 0,
+    "maxStep": 0.1
+  }
+}

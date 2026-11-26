@@ -1,3 +1,5 @@
+import type { ControlEffect } from './control-effect';
+
 export interface ApprovalRequest {
   readonly tool: string;
   readonly title: string;
@@ -10,4 +12,5 @@ export interface ApprovalRequest {
   readonly service: string;
   readonly characteristic: string;
   readonly bytes: readonly number[];
+  readonly effect?: ControlEffect;
 }

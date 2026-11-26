@@ -17,6 +17,8 @@ const MVP_TOOLS = [
   'subscribe_and_record',
   'decode_standard',
   'request_control',
+  'send_command',
+  'check_command_effect',
   'ask_user',
   'request_action',
   'update_hypothesis',

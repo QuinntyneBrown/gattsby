@@ -2,6 +2,7 @@ import type { BleLayer } from '../ble/ble-layer';
 import type { CapabilityDetector } from '../environment/capability-detector';
 import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
 import type { DecisionState } from '../agent/decision-state';
+import type { ControlTelemetry } from '../agent/control-telemetry';
 import type { ConfirmationCheck } from '../agent/confirmation-check';
 import type { PromptChannel } from '../agent/prompt-channel';
 import type { NewObservation } from '../store/model/observation';
@@ -36,6 +37,7 @@ export interface ToolContext {
   readonly signal: AbortSignal;
   readonly hypotheses: HypothesisProposer;
   readonly controlPoint: ControlPointExchange;
+  readonly controlTelemetry: ControlTelemetry;
   readonly approval?: ApprovalDecision;
   /** What the verdict is checked against, as of now. */
   verdictFacts(): VerdictFacts;

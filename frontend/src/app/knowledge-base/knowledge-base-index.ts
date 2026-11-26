@@ -9,6 +9,8 @@ import type {
   KnowledgeBaseData,
 } from './knowledge-base-data';
 import { canonicalUuid } from './uuid';
+import type { CommandDefinition } from './command-definition';
+import type { ControlLimits } from './control-limits';
 
 const BRAND_SUGGESTIONS = 5;
 
@@ -44,6 +46,16 @@ export class KnowledgeBaseIndex {
 
   get blocklist(): readonly KbBlocklistEntry[] {
     return this.data.blocklist;
+  }
+
+  command(id: string): CommandDefinition | undefined {
+    return this.data.commands.find((command) => command.id === id);
+  }
+
+  safeLimits(deviceType: string): ControlLimits | undefined {
+    return Object.hasOwn(this.data.controlLimits, deviceType)
+      ? this.data.controlLimits[deviceType]
+      : undefined;
   }
 
   /** Every standard and vendor service UUID, blocklisted ones included. */

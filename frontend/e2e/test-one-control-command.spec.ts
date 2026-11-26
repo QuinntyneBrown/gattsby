@@ -108,3 +108,108 @@ test('requests control once after approval and records the indication', async ({
     ]),
   );
 });
+
+test('approves one conservative speed step, confirms its effect and separately approves Stop @critical', async ({
+  page,
+  fakeBluetooth,
+  approvals,
+}) => {
+  const investigation = await reachControl(page, fakeBluetooth);
+  const approval = new ApprovalDialogPage(page);
+  await investigation.choose('Test control');
+  await approval.approve(approvals, treadmill.controlPoint, [0x00]);
+  await expect(approval.dialog).toContainText('Lower the target speed to 5.9 km/h?');
+  await expect(approval.send).toBeDisabled();
+  await expect(approval.dialog).toContainText('locate its physical stop key or button');
+  expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([[0x00]]);
+  await approval.standClear.check();
+  await approval.approve(approvals, treadmill.controlPoint, [0x02, 0x4e, 0x02]);
+  await investigation.waitForPrompt('Does the console show 5.9 km/h?');
+  await page.clock.runFor(1_100);
+  await investigation.choose('Yes, 5.9');
+  await expect(approval.dialog).toContainText('Stop the belt?');
+  await expect(approval.standClear).toHaveCount(0);
+  expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([[0x00], [0x02, 0x4e, 0x02]]);
+  await approval.approve(approvals, treadmill.controlPoint, [0x08, 0x01]);
+  const verdict = new VerdictPage(page);
+  await expect(verdict.title).toHaveText('Connected — FTMS');
+  await expect(verdict.item('Can control', 'Target speed')).toContainText('confirmed');
+  expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([
+    [0x00],
+    [0x02, 0x4e, 0x02],
+    [0x08, 0x01],
+  ]);
+  const records = new StoredRecords(page);
+  const writes = (await records.rawLog(investigation.id())).filter(
+    (entry) => entry.kind === 'write',
+  );
+  expect(new Set(writes.map((entry) => entry.approvalId)).size).toBe(3);
+});
+
+test('refuses the approved value if the live speed changes while the dialog is open', async ({
+  page,
+  fakeBluetooth,
+  approvals,
+}) => {
+  const investigation = await reachControl(page, fakeBluetooth);
+  const approval = new ApprovalDialogPage(page);
+  await investigation.choose('Test control');
+  await approval.approve(approvals, treadmill.controlPoint, [0x00]);
+  await expect(approval.dialog).toContainText('Lower the target speed to 5.9 km/h?');
+  await fakeBluetooth.setEffort(3);
+  await page.clock.runFor(1_200);
+  await approval.standClear.check();
+  await approval.send.click();
+  await expect(new VerdictPage(page).title).toHaveText('Connected — FTMS');
+  expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([[0x00]]);
+  expect(await new StoredRecords(page).steps(investigation.id())).toContainEqual(
+    expect.objectContaining({
+      tool: 'send_command',
+      result: expect.objectContaining({ error: expect.objectContaining({ code: 'UNSAFE_VALUE' }) }),
+    }),
+  );
+});
+
+test.describe('The FTMS bike reports resistance and its range', () => {
+  test.use({ bluetooth: { devices: [devices.bike.id], chooser: [{ pick: devices.bike.id }] } });
+
+  test('offers one resistance increment and confirms it with live evidence', async ({
+    page,
+    fakeBluetooth,
+    approvals,
+  }) => {
+    const home = new HomePage(page);
+    const investigation = new InvestigationPage(page);
+    const approval = new ApprovalDialogPage(page);
+    await home.goto();
+    await home.identify();
+    await investigation.prepare('Bike', 'Don’t know');
+    await investigation.choose('Find the device');
+    await fakeBluetooth.setEffort(1);
+    await investigation.choose('Ready');
+    await expect.poll(() => fakeBluetooth.calls()).toContain('startNotifications');
+    await page.clock.runFor(10_500);
+    await investigation.waitForPrompt('Now pedal faster.');
+    await fakeBluetooth.setEffort(2);
+    await page.clock.runFor(1_100);
+    await investigation.choose('Done');
+    await investigation.choose('Test control');
+    await approval.approve(approvals, treadmill.controlPoint, [0x00]);
+    await expect(approval.dialog).toContainText('Raise the target resistance to 4?');
+    await expect(approval.send).toBeDisabled();
+    await approval.standClear.check();
+    await approval.approve(approvals, treadmill.controlPoint, [0x04, 0x28, 0x00]);
+    await investigation.waitForPrompt('Did the resistance change?');
+    await page.clock.runFor(1_100);
+    await investigation.choose('Yes');
+    await expect(approval.dialog).toContainText('Stop the test?');
+    await approval.approve(approvals, treadmill.controlPoint, [0x08, 0x01]);
+    const verdict = new VerdictPage(page);
+    await expect(verdict.item('Can control', 'Target resistance')).toContainText('confirmed');
+    expect(fakeBluetooth.writes().map((write) => write.bytes)).toEqual([
+      [0x00],
+      [0x04, 0x28, 0x00],
+      [0x08, 0x01],
+    ]);
+  });
+});

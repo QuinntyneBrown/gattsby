@@ -11,8 +11,10 @@ import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
 import { ExportDialog } from '../../dialogs/export/export.dialog';
 import { KnowledgeBase } from '../../knowledge-base/knowledge-base';
+import { controlFeatureLabel } from '../../outcome/control-feature-label';
 import { InvestigationStore } from '../../store/investigation-store';
 import type { InvestigationRecord } from '../../store/model/investigation-record';
+import type { DeviceProfile } from '../../store/model/device-profile';
 import { PendingVerdict } from '../../store/pending-verdict';
 import { ConfidenceBadgeComponent } from '../../ui/confidence-badge/confidence-badge.component';
 import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.component';
@@ -119,6 +121,22 @@ import { verdictView, type VerdictView } from './verdict-view';
                   </ul>
                 </section>
               }
+              @if (controlFeatures().length) {
+                <section class="group">
+                  <div class="group__head"><h2>Can control</h2></div>
+                  <ul class="group__items">
+                    @for (feature of controlFeatures(); track feature.feature) {
+                      <li>
+                        <span class="group__k">{{ featureLabel(feature.feature) }}</span>
+                        <span class="group__v">{{ feature.command.opCode }}</span>
+                        <span class="conf">{{
+                          feature.status === 'claimedOnly' ? 'claimed only' : feature.status
+                        }}</span>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
               @if (view()?.observed?.length) {
                 <section class="group">
                   <div class="group__head"><h2>Observed</h2></div>
@@ -220,6 +238,8 @@ export class VerdictPage implements OnInit {
     return commit?.investigationId === this.id() ? commit : null;
   });
   protected readonly record = signal<InvestigationRecord | null>(null);
+  protected readonly controlFeatures = signal<DeviceProfile['features']>([]);
+  protected readonly featureLabel = controlFeatureLabel;
   protected readonly view = signal<VerdictView | null>(null);
   protected readonly failed = signal(false);
   protected readonly starting = signal(false);
@@ -245,6 +265,11 @@ export class VerdictPage implements OnInit {
         : record;
       this.view.set(verdictView(display, (uuid) => kb.nameOf(uuid)));
       this.record.set(record);
+      const profileId = record.investigation.profileId;
+      const profile =
+        pending?.profile ??
+        (profileId ? await this.store.getProfile(profileId).catch(() => null) : null);
+      this.controlFeatures.set(profile?.features ?? []);
     } catch {
       this.failed.set(true);
     }

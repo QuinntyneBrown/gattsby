@@ -40,6 +40,7 @@ import { fail, type ToolResult } from '../tools/tool-result';
 import { applyStep, stateFrom, type DecisionState } from './decision-state';
 import { ApprovalGate } from './approval-gate';
 import { ConfirmationCheck } from './confirmation-check';
+import { ControlTelemetry } from './control-telemetry';
 import { ChecklistDecider } from './checklist-decider';
 import { buildFeed } from './feed-builder';
 import type { FeedEntry } from './feed-entry';
@@ -83,6 +84,7 @@ export class PlaybookOrchestrator {
   private readonly approvalLedger = inject(ApprovalLedger);
   readonly approvalGate = inject(ApprovalGate);
   private readonly controlPoint = inject(ControlPointExchange);
+  private readonly controlTelemetry = inject(ControlTelemetry);
   private readonly notificationRecorder = inject(NotificationRecorder);
   private readonly confirmationCheck = inject(ConfirmationCheck);
   private readonly log = inject(RawTrafficLog);
@@ -439,6 +441,7 @@ export class PlaybookOrchestrator {
       notificationRecorder: this.notificationRecorder,
       confirmationCheck: this.confirmationCheck,
       controlPoint: this.controlPoint,
+      controlTelemetry: this.controlTelemetry,
       kb,
       prompts: this.prompts,
       capabilities: { detect: () => this.capabilities.detect({ model: this.mode() === 'agent' }) },

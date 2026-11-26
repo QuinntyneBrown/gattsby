@@ -43,6 +43,81 @@
         "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+$" }
       }
     },
+    "command-set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "protocol", "service", "characteristic", "source", "commands"],
+      "properties": {
+        "kind": { "const": "command-set" },
+        "protocol": { "const": "FTMS" },
+        "service": { "const": "0x1826" },
+        "characteristic": { "const": "0x2ad9" },
+        "source": { "$ref": "#/$defs/citation" },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "opCode"],
+            "properties": {
+              "id": {
+                "enum": [
+                  "requestControl",
+                  "reset",
+                  "setTargetSpeed",
+                  "setTargetIncline",
+                  "setTargetResistance",
+                  "setTargetPower",
+                  "start",
+                  "stop"
+                ]
+              },
+              "opCode": { "enum": [0, 1, 2, 3, 4, 5, 7, 8] },
+              "claim": { "$ref": "#/$defs/text" },
+              "metric": { "enum": ["speed", "incline", "resistance", "power"] },
+              "rangeCharacteristic": { "$ref": "#/$defs/uuid" },
+              "fixedBytes": { "type": "array", "maxItems": 1, "items": { "const": 1 } },
+              "parameter": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "scale", "unit"],
+                "properties": {
+                  "type": { "enum": ["uint16", "sint16"] },
+                  "scale": { "enum": [0.01, 0.1, 1] },
+                  "unit": { "$ref": "#/$defs/text" }
+                }
+              }
+            },
+            "dependentRequired": {
+              "parameter": ["claim", "metric", "rangeCharacteristic"]
+            }
+          }
+        }
+      }
+    },
+    "control-limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "deviceType", "source", "test"],
+      "properties": {
+        "kind": { "const": "control-limits" },
+        "deviceType": { "enum": ["treadmill", "bike", "rower", "cross-trainer"] },
+        "source": { "$ref": "#/$defs/citation" },
+        "test": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["command", "direction", "maxValue", "minValue", "maxStep"],
+          "properties": {
+            "command": { "enum": ["setTargetSpeed", "setTargetResistance"] },
+            "direction": { "enum": [-1, 1] },
+            "maxValue": { "type": "number", "exclusiveMinimum": 0 },
+            "maxStep": { "type": "number", "exclusiveMinimum": 0 },
+            "minValue": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
     "blocklist": {
       "type": "object",
       "additionalProperties": false,

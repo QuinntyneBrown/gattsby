@@ -27,9 +27,11 @@ FR-036 (`docs/mocks/README.md`, departures). A refused value shows no dialog; th
 a one-line summary in the activity feed of the Investigation page, state `control`
 (`docs/mocks/pages/investigation/control.html`).
 
-The limits themselves are not settled. The values below are assumption A-06, pending open question
-OQ-07 (who signs off the safe command limits per device type). They are data in the knowledge base,
-so a corrected value needs no code change.
+Journey 8 resolves OQ-07 for the test. It offers one downward increment of at most 0.1 km/h
+on a moving treadmill, with a target no higher than 6 km/h. An FTMS bike can offer one upward
+increment of at most one resistance level, with a target no higher than level 10. Both require a
+recent live reading and a supported range. A stationary treadmill and other device types have no
+MVP motion test. The data and build validation enforce these limits and the allowed targets.
 
 ## Description
 

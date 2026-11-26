@@ -1,86 +1,60 @@
 import type { DecisionState } from '../agent/decision-state';
+import { hasFtmsControlPoint } from '../knowledge-base/ftms-control-point';
+import type { KnowledgeBaseIndex } from '../knowledge-base/knowledge-base-index';
 import { canonicalUuid } from '../knowledge-base/uuid';
 import type { DeviceProfile } from '../store/model/device-profile';
 import type { Observation } from '../store/model/observation';
 import type { Step } from '../store/model/step';
 
-const CONTROL_POINT = canonicalUuid(0x2ad9);
-const COMMANDS = [
-  {
-    claim: 'Speed',
-    feature: 'setTargetSpeed',
-    opCode: '0x02',
-    key: 'speed',
-    uuid: 0x2ad4,
-    type: 'uint16',
-    scale: 0.01,
-    unit: 'km/h',
-  },
-  {
-    claim: 'Inclination',
-    feature: 'setTargetIncline',
-    opCode: '0x03',
-    key: 'incline',
-    uuid: 0x2ad5,
-    type: 'sint16',
-    scale: 0.1,
-    unit: '%',
-  },
-  {
-    claim: 'Resistance',
-    feature: 'setTargetResistance',
-    opCode: '0x04',
-    key: 'resistance',
-    uuid: 0x2ad6,
-    type: 'sint16',
-    scale: 0.1,
-    unit: 'level',
-  },
-  {
-    claim: 'Power',
-    feature: 'setTargetPower',
-    opCode: '0x05',
-    key: 'power',
-    uuid: 0x2ad8,
-    type: 'sint16',
-    scale: 1,
-    unit: 'W',
-  },
-] as const;
+const FEATURE_READ = canonicalUuid(0x2acc);
 
-export function claimedFeatures(
+export function profileFeatures(
+  kb: KnowledgeBaseIndex,
   state: DecisionState,
   steps: readonly Step[],
   observations: readonly Observation[],
 ): DeviceProfile['features'] {
-  const hasControlPoint = state.layout?.some((service) =>
-    service.characteristics.some((entry) => entry.uuid === CONTROL_POINT),
-  );
-  if (!hasControlPoint) return [];
+  if (!hasFtmsControlPoint(state.layout)) return [];
   const read = steps.find((step) => step.tool === 'read_supported_ranges' && step.result.ok);
-  if (!read?.result.ok) return [];
-  const data = read.result.data as {
-    targetSettingFeatures: string[];
-    ranges: Record<string, { min: number; max: number; increment: number }>;
-  };
-  return COMMANDS.filter(({ claim }) => data.targetSettingFeatures.includes(claim)).map((entry) => {
-    const source = canonicalUuid(entry.uuid);
-    const range = data.ranges[entry.key];
-    const featureRead = canonicalUuid(0x2acc);
+  if (!read) return [];
+  const request = steps.find((step) => step.tool === 'request_control');
+  const grantRefused = request?.result.ok && state.controlGrantedAt === null;
+  const commandTest = steps.find((step) => step.ruleId === 'control.test');
+  const effectCheck = steps.find((step) => step.tool === 'check_command_effect');
+  return kb.data.commands.flatMap((definition): DeviceProfile['features'] => {
+    const { id, claim, metric, parameter, characteristic, opCode, rangeCharacteristic } =
+      definition;
+    if (!claim || !metric || !parameter || !state.targetSettingFeatures.includes(claim)) return [];
+    const range = state.supportedRanges[metric];
     const evidence = observations
-      .filter((row) => row.stepN === read.n && [source, featureRead].includes(row.subject))
+      .filter(
+        (row) => row.stepN === read.n && [rangeCharacteristic, FEATURE_READ].includes(row.subject),
+      )
       .map((row) => row.id);
-    return {
-      feature: entry.feature,
-      command: {
-        characteristic: CONTROL_POINT,
-        opCode: entry.opCode,
-        parameter: { type: entry.type, scale: entry.scale, unit: entry.unit },
+    const attempted = (commandTest?.input as { command?: string } | undefined)?.command === id;
+    const tested = attempted ? state.controlTest : null;
+    let status: DeviceProfile['features'][number]['status'] = 'claimedOnly';
+    if (grantRefused || (attempted && commandTest?.result.error?.code === 'DEVICE_REJECTED'))
+      status = 'refused';
+    if (tested && state.controlEffectStatus === 'confirmed') status = 'confirmed';
+    if (grantRefused && request) evidence.push(request.id);
+    if (attempted && commandTest) evidence.push(commandTest.id);
+    if (tested && effectCheck) evidence.push(effectCheck.id);
+    return [
+      {
+        feature: id,
+        command: {
+          characteristic,
+          opCode: `0x${opCode.toString(16).toUpperCase().padStart(2, '0')}`,
+          parameter,
+        },
+        range: range && rangeCharacteristic ? { ...range, source: rangeCharacteristic } : null,
+        test: tested
+          ? { from: tested.from, to: tested.to, result: state.controlEffectStatus ?? 'notSeen' }
+          : null,
+        status,
+        evidence: [read.id, ...evidence],
       },
-      range: range ? { ...range, source } : null,
-      test: null,
-      status: 'claimedOnly',
-      evidence: [read.id, ...evidence],
-    };
+    ];
   });
 }

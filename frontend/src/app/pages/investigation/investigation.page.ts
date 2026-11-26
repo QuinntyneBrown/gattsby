@@ -17,6 +17,7 @@ import { Router, RouterLink } from '@angular/router';
 import { PlaybookOrchestrator } from '../../agent/playbook-orchestrator';
 import { ApprovalGate } from '../../agent/approval-gate';
 import { ConfirmationCheck } from '../../agent/confirmation-check';
+import { ControlTelemetry } from '../../agent/control-telemetry';
 import { ChecklistDecider } from '../../agent/checklist-decider';
 import { PromptChannel } from '../../agent/prompt-channel';
 import { AddNoteDialog } from '../../dialogs/add-note/add-note.dialog';
@@ -67,6 +68,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     ConfirmationCheck,
     ApprovalGate,
     ControlPointExchange,
+    ControlTelemetry,
     ChecklistDecider,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

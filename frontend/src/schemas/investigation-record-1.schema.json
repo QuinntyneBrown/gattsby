@@ -303,6 +303,17 @@
                   "sequence": { "type": "string" },
                   "deviceId": { "type": "string" },
                   "connectedAt": { "type": "number" },
+                  "effect": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["metric", "from", "to", "baselineId"],
+                    "properties": {
+                      "metric": { "enum": ["speed", "resistance"] },
+                      "from": { "type": "number" },
+                      "to": { "type": "number" },
+                      "baselineId": { "type": "string" }
+                    }
+                  },
                   "service": { "type": "string" },
                   "characteristic": { "type": "string" },
                   "bytes": {

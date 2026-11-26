@@ -1,5 +1,8 @@
 // The shape of the generated knowledge base (src/knowledge-base/generated/knowledge-base.json),
 // written by scripts/validate-knowledge-base.ts. Every UUID is lowercase 128-bit.
+import type { CommandDefinition } from './command-definition';
+import type { ControlLimits } from './control-limits';
+
 export type GattProperty = 'read' | 'write' | 'writeWithoutResponse' | 'notify' | 'indicate';
 
 export type DeviceType =
@@ -55,6 +58,8 @@ export interface KnowledgeBaseData {
   readonly contentHash: string;
   readonly services: readonly KbService[];
   readonly vendors: readonly KbVendor[];
+  readonly commands: readonly CommandDefinition[];
+  readonly controlLimits: Readonly<Record<string, ControlLimits>>;
   readonly blocklist: readonly KbBlocklistEntry[];
   readonly brandSuggestions: Readonly<Record<string, readonly string[]>>;
   readonly knownServiceUuids: readonly string[];

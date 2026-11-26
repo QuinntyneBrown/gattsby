@@ -1,0 +1,12 @@
+{
+  "kind": "control-limits",
+  "deviceType": "bike",
+  "source": { "type": "documentation", "title": "Gattsby conservative Control stage" },
+  "test": {
+    "command": "setTargetResistance",
+    "direction": 1,
+    "maxValue": 10,
+    "minValue": 0,
+    "maxStep": 1
+  }
+}

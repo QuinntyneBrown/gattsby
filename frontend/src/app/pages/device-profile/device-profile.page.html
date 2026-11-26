@@ -135,7 +135,7 @@
                     @for (feature of p.features; track feature.feature) {
                       <tr>
                         <td>
-                          {{ feature.feature }}
+                          {{ featureLabel(feature.feature) }}
                           <span class="data-table__rule">
                             op {{ feature.command.opCode }}
                             @if (feature.range; as range) {

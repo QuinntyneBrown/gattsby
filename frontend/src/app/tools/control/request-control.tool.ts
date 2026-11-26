@@ -1,9 +1,11 @@
+import { encodeCommand } from '../../knowledge-base/command-encoder';
 import {
   FTMS_CONTROL_POINT,
   FTMS_SERVICE,
   hasFtmsControlPoint,
 } from '../../knowledge-base/ftms-control-point';
 import { entry } from '../tool-definition';
+import { ToolError } from '../tool-error';
 import { fail, ok } from '../tool-result';
 
 export const requestControlTool = entry<Record<string, never>, unknown>({
@@ -31,20 +33,25 @@ export const requestControlTool = entry<Record<string, never>, unknown>({
     purpose: () => 'Request control of this connection',
     card: true,
   },
-  approval: (_input, ctx) => ({
-    tool: 'request_control',
-    title: 'Request control?',
-    detail:
-      'Ask this machine to let Gattsby send a command. This request does not move the device.',
-    risk: 'No motion',
-    isMotion: false,
-    sequence: 'Command 1 of 3',
-    deviceId: ctx.ble.connection().deviceId!,
-    connectedAt: ctx.ble.connection().connectedAt!,
-    service: FTMS_SERVICE,
-    characteristic: FTMS_CONTROL_POINT,
-    bytes: [0x00],
-  }),
+  approval: (_input, ctx) => {
+    const command = ctx.kb.command('requestControl');
+    if (!command)
+      throw new ToolError('UNSUPPORTED', 'Request Control is missing from the knowledge base.');
+    return {
+      tool: 'request_control',
+      title: 'Request control?',
+      detail:
+        'Ask this machine to let Gattsby send a command. This request does not move the device.',
+      risk: 'No motion',
+      isMotion: false,
+      sequence: 'Command 1 of 3',
+      deviceId: ctx.ble.connection().deviceId!,
+      connectedAt: ctx.ble.connection().connectedAt!,
+      service: FTMS_SERVICE,
+      characteristic: FTMS_CONTROL_POINT,
+      bytes: [...encodeCommand(command)],
+    };
+  },
   async run(_input, ctx) {
     if (!ctx.approval) return fail('APPROVAL_REQUIRED', 'Request Control needs its own approval.');
     const { evidence, label, result, raw } = await ctx.controlPoint.send(ctx.approval, ctx.signal);
@@ -56,6 +63,10 @@ export const requestControlTool = entry<Record<string, never>, unknown>({
       tag: 'confirmed',
       evidence,
     });
-    return ok(`Request Control: ${label} (${raw}).`, { result, raw }, [...evidence, id]);
+    return ok(
+      `Request Control: ${label} (${raw}).`,
+      { result, raw, connectedAt: ctx.approval.request.connectedAt },
+      [...evidence, id],
+    );
   },
 });

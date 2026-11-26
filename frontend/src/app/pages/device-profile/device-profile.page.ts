@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { InvestigationStarter } from '../../agent/investigation-starter';
 import { ExportDialog } from '../../dialogs/export/export.dialog';
 import { shortUuid } from '../../knowledge-base/uuid';
+import { controlFeatureLabel } from '../../outcome/control-feature-label';
 import { InvestigationStore } from '../../store/investigation-store';
 import { ConfidenceBadgeComponent } from '../../ui/confidence-badge/confidence-badge.component';
 import { VerdictMarkComponent } from '../../ui/verdict-mark/verdict-mark.component';
@@ -55,6 +56,7 @@ export class DeviceProfilePage {
   protected readonly startFailed = signal(false);
   protected readonly exporting = signal(false);
   protected readonly shortUuid = shortUuid;
+  protected readonly featureLabel = controlFeatureLabel;
   protected readonly statusWords = {
     confirmed: 'confirmed',
     likely: 'likely',

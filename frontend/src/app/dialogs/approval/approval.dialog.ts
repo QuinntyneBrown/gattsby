@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   input,
   output,
@@ -62,7 +63,12 @@ import { EmergencyStopButtonComponent } from '../../ui/emergency-stop-button/eme
               Stand clear of the machine and locate its physical stop key or button.
             </p>
             <label class="stand-clear">
-              <input type="checkbox" [disabled]="busy()" (change)="checkClear($event)" />
+              <input
+                type="checkbox"
+                [checked]="standClear()"
+                [disabled]="busy()"
+                (change)="checkClear($event)"
+              />
               I am clear and know where the stop is
             </label>
           }
@@ -99,7 +105,8 @@ export class ApprovalDialog {
   readonly connected = input(false);
   readonly decided = output<{ decision: ApprovalDecision['decision']; standClear: boolean }>();
   readonly emergencyStop = output<void>();
-  protected readonly standClear = signal(false);
+  private readonly clearedFor = signal<ApprovalRequest | null>(null);
+  protected readonly standClear = computed(() => this.clearedFor() === this.request());
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly no = viewChild.required<ElementRef<HTMLButtonElement>>('no');
 
@@ -119,7 +126,7 @@ export class ApprovalDialog {
   }
 
   protected checkClear(event: Event): void {
-    this.standClear.set((event.target as HTMLInputElement).checked);
+    this.clearedFor.set((event.target as HTMLInputElement).checked ? this.request() : null);
   }
 
   protected cancel(event: Event): void {
