@@ -37,6 +37,10 @@ export class HomePage {
     return this.page.getByRole('link', { name: 'Settings' });
   }
 
+  resumeInvestigation(name: string) {
+    return this.page.getByRole('link', { name: new RegExp(`^Resume: ${name}`) });
+  }
+
   async identify(): Promise<void> {
     await this.identifyADevice.click();
   }

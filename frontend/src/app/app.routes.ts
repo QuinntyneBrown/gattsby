@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { investigationExists } from './pages/investigation/investigation-exists.guard';
+import { leaveInvestigation } from './pages/investigation/leave-investigation.guard';
 import { readinessOnLaunch } from './pages/readiness/readiness.guard';
 
 // One lazy route per page (NFR-004; serve-offline-and-private design). The last route catches
@@ -20,6 +21,7 @@ export const routes: Routes = [
   {
     path: 'investigations/:id',
     canMatch: [investigationExists],
+    canDeactivate: [leaveInvestigation],
     title: 'Investigation · Gattsby',
     loadComponent: () =>
       import('./pages/investigation/investigation.page').then((m) => m.InvestigationPage),

@@ -32,6 +32,7 @@ import { ModeBannerComponent } from '../../notifications/mode-banner/mode-banner
 import { ConnectionBannerComponent } from '../../notifications/connection-banner/connection-banner.component';
 import { ConnectionSupervisor } from '../../agent/connection-supervisor';
 import { StopInvestigationDialog } from '../../dialogs/stop-investigation/stop-investigation.dialog';
+import { LeaveInvestigationDialog } from '../../dialogs/leave-investigation/leave-investigation.dialog';
 import { NotificationRecorder } from '../../tools/listening/notification-recorder';
 import { ControlPointExchange } from '../../tools/control/control-point-exchange';
 import { InvestigationStore } from '../../store/investigation-store';
@@ -69,6 +70,7 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
     ModeBannerComponent,
     ConnectionBannerComponent,
     StopInvestigationDialog,
+    LeaveInvestigationDialog,
   ],
   providers: [
     PlaybookOrchestrator,
@@ -379,6 +381,14 @@ import { StageTrackComponent } from '../../ui/stage-track/stage-track.component'
           (emergencyStop)="stopInEmergency()"
         />
       }
+      @if (leaveOpen()) {
+        <g-leave-investigation-dialog
+          [device]="deviceName() ?? 'Unnamed device'"
+          [busy]="leaving()"
+          (answered)="answerLeave($event)"
+          (emergencyStop)="emergencyWhileLeaving()"
+        />
+      }
       @if (noteOpen()) {
         <g-add-note-dialog
           [connected]="connected()"
@@ -433,6 +443,9 @@ export class InvestigationPage implements OnInit, OnDestroy {
   protected readonly optionsOpen = signal(false);
   protected readonly stopOpen = signal(false);
   protected readonly stopping = signal(false);
+  protected readonly leaveOpen = signal(false);
+  protected readonly leaving = signal(false);
+  private leaveAnswer: ((leave: boolean) => void) | null = null;
   protected readonly unexpectedEffect = computed(() => {
     const prompt = this.prompts.current();
     return prompt?.kind === 'control-warning' ? prompt : null;
@@ -505,6 +518,39 @@ export class InvestigationPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     void this.orchestrator.leave();
+  }
+
+  async canLeave(): Promise<boolean> {
+    const status = this.orchestrator.status();
+    if (status === 'concluded' || status === 'concluding' || status === 'loading') return true;
+    if (!this.connected()) {
+      await this.orchestrator.saveExit();
+      return true;
+    }
+    this.leaveAnswer?.(false);
+    return new Promise((resolve) => {
+      this.leaveAnswer = resolve;
+      this.leaveOpen.set(true);
+    });
+  }
+
+  protected async answerLeave(leave: boolean): Promise<void> {
+    const answer = this.leaveAnswer;
+    if (!answer || this.leaving()) return;
+    if (leave) {
+      this.leaving.set(true);
+      await this.orchestrator.saveExit();
+    }
+    this.leaveOpen.set(false);
+    this.leaving.set(false);
+    this.leaveAnswer = null;
+    answer(leave);
+  }
+
+  protected emergencyWhileLeaving(): void {
+    if (this.leaving()) return;
+    void this.answerLeave(false);
+    this.orchestrator.stop('emergencyStop');
   }
 
   protected confirmStop(): void {

@@ -3,6 +3,7 @@ import type { InvestigationNote } from './model/investigation-note';
 import type { InvestigationRecord } from './model/investigation-record';
 import type { RawLogEntry } from './model/raw-log-entry';
 import type { StepCommit } from './model/step-commit';
+import type { Stage } from './model/stage';
 import type { VerdictCommit } from './model/verdict-commit';
 
 // The contract of the investigation store, the only code that touches IndexedDB
@@ -18,7 +19,7 @@ export abstract class InvestigationStore {
   /** Writes the verdict and the final step together; refuses a second verdict. */
   abstract commitVerdict(commit: VerdictCommit): Promise<void>;
   /** Drops what an interrupted step left and marks the investigation paused (NFR-007). */
-  abstract recover(id: string): Promise<Investigation>;
+  abstract recover(id: string, stage?: Stage): Promise<Investigation>;
   abstract get(id: string): Promise<InvestigationRecord>;
   abstract getInvestigation(id: string): Promise<Investigation>;
   abstract saveNote(id: string, note: InvestigationNote): Promise<InvestigationNote>;

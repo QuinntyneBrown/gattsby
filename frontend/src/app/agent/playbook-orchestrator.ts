@@ -319,14 +319,22 @@ export class PlaybookOrchestrator {
 
   /** Leaving the page: releases the connection and the memory (FR-018, NFR-005). */
   async leave(): Promise<void> {
+    if (this.leaving) return;
     this.leaving = true;
     this.emergencyStop.leave();
     this.approvalLedger.lock();
     this.abort.abort();
     this.prompts.cancel();
     this.releaseModel();
-    this.log.clear();
     await this.ble.disconnect();
+    this.log.clear();
+  }
+
+  async saveExit(): Promise<void> {
+    const record = this.investigation();
+    const stage = this.stage();
+    await this.leave();
+    if (record && !record.verdict) await this.store.recover(record.id, stage);
   }
 
   private async loop(): Promise<void> {

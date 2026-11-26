@@ -8,6 +8,7 @@ import { devices } from './fixtures/scripted-ids';
 import { StoredRecords } from './fixtures/stored-records';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { LeaveInvestigationDialogPage } from './pages/leave-investigation.dialog.page';
 import { StopInvestigationDialogPage } from './pages/stop-investigation.dialog.page';
 import { VerdictPage } from './pages/verdict.page';
 
@@ -48,4 +49,26 @@ test('shows a confirmation before stopping and releasing the connection @critica
   const steps = await stored.steps(id);
   expect(steps.slice(0, earlier.length)).toEqual(earlier);
   expect(steps.filter((step) => step.tool === 'finish')).toHaveLength(1);
+});
+
+// Given a connected investigation, when the person confirms Leave, the device is
+// disconnected and Home offers the saved investigation at the same stage.
+test('keeps the investigation when the person stays and saves it when they leave', async ({
+  page,
+  fakeBluetooth,
+}) => {
+  const { home, investigation } = await identify(page);
+  const id = investigation.id();
+  const stored = new StoredRecords(page);
+  const dialog = new LeaveInvestigationDialogPage(page);
+  await investigation.leave.click();
+  await expect(dialog.dialog).toBeVisible();
+  await dialog.choose('Stay');
+  await expect(investigation.answer('Ready')).toBeVisible();
+  expect(fakeBluetooth.calls()).not.toContain('disconnect');
+  await investigation.leave.click();
+  await dialog.choose('Leave and disconnect');
+  await expect(home.resumeInvestigation('HZN-T202-4F1A')).toContainText('Paused at Standard path');
+  expect(fakeBluetooth.calls()).toContain('disconnect');
+  expect(await stored.investigation(id)).toMatchObject({ status: 'paused', verdict: null });
 });

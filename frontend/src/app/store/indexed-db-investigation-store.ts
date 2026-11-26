@@ -137,7 +137,7 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
     });
   }
 
-  async recover(id: string): Promise<Investigation> {
+  async recover(id: string, stage?: Investigation['stage']): Promise<Investigation> {
     let recovered: Investigation | null = null;
     await this.write(['investigations', 'rawLog', 'recordings'], 'strict', (tx) => {
       const request = tx.objectStore('investigations').get(id);
@@ -158,8 +158,13 @@ export class IndexedDbInvestigationStore extends InvestigationStore {
           };
         }
         recovered =
-          current.status === 'running'
-            ? { ...current, status: 'paused', interruptedAt: Date.now() }
+          current.status === 'running' || (current.status === 'paused' && stage !== undefined)
+            ? {
+                ...current,
+                stage: stage ?? current.stage,
+                status: 'paused',
+                interruptedAt: Date.now(),
+              }
             : current;
         tx.objectStore('investigations').put(recovered);
       };

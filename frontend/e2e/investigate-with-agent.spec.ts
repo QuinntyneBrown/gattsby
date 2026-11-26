@@ -9,6 +9,7 @@ import { StoredRecords } from './fixtures/stored-records';
 import { ExportDialogPage } from './pages/export.dialog.page';
 import { HomePage } from './pages/home.page';
 import { InvestigationPage } from './pages/investigation.page';
+import { LeaveInvestigationDialogPage } from './pages/leave-investigation.dialog.page';
 import { SettingsPage } from './pages/settings.page';
 import { VerdictPage } from './pages/verdict.page';
 import type { Page } from '@playwright/test';
@@ -374,6 +375,7 @@ test.describe('The model takes longer than ten seconds', () => {
     await expect.poll(() => fakeModel.prompts().length).toBe(1);
     const id = investigation.id();
     await investigation.leave.click();
+    await new LeaveInvestigationDialogPage(page).choose('Leave and disconnect');
     await expect.poll(() => fakeModel.calls().filter((call) => call === 'destroy').length).toBe(2);
     await page.clock.runFor(500);
     await expect(page).toHaveURL('/');
