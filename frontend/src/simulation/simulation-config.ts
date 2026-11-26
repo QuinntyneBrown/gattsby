@@ -6,6 +6,8 @@ export type ChooserStep = { readonly pick: string } | { readonly cancel: true };
 
 export interface BluetoothScript {
   readonly advertisementScanning?: boolean;
+  readonly watchAdvertisements?: boolean;
+  readonly permittedCandidates?: readonly string[];
   readonly absent?: boolean;
   readonly blocked?: boolean;
   /** Services the test's chooser grants alongside the matching filter and optional services. */

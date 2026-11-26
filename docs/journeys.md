@@ -13,7 +13,7 @@ the shared core (BLE layer, knowledge base, store).
 | 6 | Investigate with the agent | Gemini Nano chooses a validated action when the playbook is ambiguous. | 12 | 100 |
 | 7 | Investigate by checklist | Follow the same playbook step by step without a model. Proprietary-path acceptance depends on journey 13. | 4 | 90 |
 | 8 | Test one control command | Approve one low-risk FTMS command, confirm its effect and use emergency stop while connected. | 8 | 95 |
-| 9 | Pick the right device | Tell several nearby candidates apart before connecting. | 3 | 0 |
+| 9 | Pick the right device | Match the device in Chrome or use advertisements from already permitted devices. | 3 | 100 |
 | 10 | Recover a dropped connection | Detect a drop, reconnect and carry on the investigation. | 3 | 0 |
 | 11 | Pause, stop and resume | Pause or stop an investigation and resume it later. | 3 | 0 |
 | 12 | Report a non-connectable device | Explain that a Classic, ANT+, Wi-Fi or USB device is unreachable. | 2 | 0 |
@@ -25,4 +25,4 @@ the shared core (BLE layer, knowledge base, store).
 | 18 | Unlock vendor data safely | Send a known vendor unlock, never bypassing encryption or pairing. | 4 | 0 |
 | 19 | Read a model plate photo | Photograph the model plate to identify maker and model. | 5 | 0 |
 | 20 | Use the agent on a phone | Run full agent mode once phones offer an on-device model. | 5 | 0 |
-| | **Total** | | **101** | **48** |
+| | **Total** | | **101** | **51** |

@@ -21,6 +21,29 @@ export const FIND_RULES: readonly StageRule[] = [
       ),
   },
   {
+    id: 'find.report-candidates',
+    stage: 'find',
+    when: ({ state }) => !state.device && state.candidateHelp && state.reportedCandidates === null,
+    then: () => decided('find.report-candidates', 'find', 'report_candidate_names', {}),
+  },
+  {
+    id: 'find.automatic-match',
+    stage: 'find',
+    when: ({ state }) =>
+      !state.device &&
+      state.reportedCandidates !== null &&
+      state.advertisementsAvailable &&
+      !state.automaticMatchAttempted,
+    then: () => decided('find.automatic-match', 'find', 'power_cycle_match', { mode: 'automatic' }),
+  },
+  {
+    id: 'find.power-cycle',
+    stage: 'find',
+    when: ({ state }) =>
+      !state.device && state.reportedCandidates !== null && !state.powerCycleAttempted,
+    then: () => decided('find.power-cycle', 'find', 'power_cycle_match', { mode: 'guided' }),
+  },
+  {
     id: 'find.widen',
     stage: 'find',
     when: ({ state }) =>

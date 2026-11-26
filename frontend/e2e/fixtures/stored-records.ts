@@ -121,6 +121,7 @@ export class StoredRecords {
       t: number;
       uuid?: string;
       hex: string;
+      detail?: string;
       decoded?: readonly DecodedMetric[];
       decodeError?: string;
       approvalId?: string;

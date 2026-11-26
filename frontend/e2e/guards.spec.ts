@@ -176,11 +176,12 @@ test.describe('Guards', () => {
 
   test('Given a violation nobody acknowledged, when the spec ends, then the guard fails it', async ({
     page,
+    guards,
   }) => {
     test.fail(true, 'The guard must fail this spec at teardown.');
     await new HomePage(page).goto();
 
     await new Misbehaviour(page).throwUncaught();
-    await page.evaluate(() => 0);
+    await expect.poll(() => guards.kinds()).toContain('page-error');
   });
 });

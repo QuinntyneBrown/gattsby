@@ -1,5 +1,8 @@
 import { scanAllDevicesTool } from './discovery/scan-all-devices.tool';
 import { scanDevicesTool } from './discovery/scan-devices.tool';
+import { reportCandidateNamesTool } from './discovery/report-candidate-names.tool';
+import { powerCycleMatchTool } from './discovery/power-cycle-match.tool';
+import { watchAdvertisementsTool } from './discovery/watch-advertisements.tool';
 import { connectTool } from './connection/connect.tool';
 import { disconnectTool } from './connection/disconnect.tool';
 import { requestControlTool } from './control/request-control.tool';
@@ -26,6 +29,9 @@ export const TOOL_CATALOG: readonly ToolDefinition[] = [
   checkCapabilitiesTool,
   scanDevicesTool,
   scanAllDevicesTool,
+  reportCandidateNamesTool,
+  powerCycleMatchTool,
+  watchAdvertisementsTool,
   connectTool,
   disconnectTool,
   enumerateGattTool,

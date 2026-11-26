@@ -48,6 +48,18 @@ export class FakeBluetooth {
     }, available);
   }
 
+  async setAdvertising(id: string, on: boolean): Promise<void> {
+    await this.page.evaluate(
+      ({ id, on }) => {
+        const globals = globalThis as unknown as {
+          __gattsbyFakes: { setAdvertising(deviceId: string, enabled: boolean): void };
+        };
+        globals.__gattsbyFakes.setAdvertising(id, on);
+      },
+      { id, on },
+    );
+  }
+
   /** The person's effort: 0 = still, 1 = walking or pedalling, 2 = faster. */
   async setEffort(effort: number): Promise<void> {
     await this.page.evaluate(

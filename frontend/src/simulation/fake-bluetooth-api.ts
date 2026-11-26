@@ -31,6 +31,11 @@ export class FakeBluetoothApi extends EventTarget {
           script.readDelays,
         ),
     );
+    for (const device of this.devices) {
+      if (!script.permittedCandidates?.includes(device.script.id)) continue;
+      device.grant(new Set(device.script.services.map(({ uuid }) => canonicalUuid(uuid))));
+      this.granted.add(device);
+    }
   }
 
   /** The person's effort, for every device (0 = still, 1 = walking or pedalling, 2 = faster). */
@@ -41,6 +46,11 @@ export class FakeBluetoothApi extends EventTarget {
   /** The incline the person sets on the console, in percent. */
   setIncline(percent: number): void {
     this.devices.forEach((device) => (device.state.values['incline'] = percent));
+  }
+
+  setAdvertising(deviceId: string, on: boolean): void {
+    const device = this.devices.find((candidate) => candidate.script.id === deviceId);
+    if (device) device.state.values['advertisingOff'] = on ? 0 : 1;
   }
 
   async getAvailability(): Promise<boolean> {
@@ -94,8 +104,21 @@ export class FakeBluetoothApi extends EventTarget {
     return device;
   }
 
-  requestLEScan(): Promise<never> {
-    return this.unexpected('requestLEScan');
+  async requestLEScan(): Promise<{ stop(): void }> {
+    if (!this.script.advertisementScanning) return this.unexpected('requestLEScan');
+    this.report({ kind: 'bluetooth-call', method: 'requestLEScan', detail: '' });
+    const interval = setInterval(() => {
+      for (const device of this.granted) {
+        const advertisement = device.advertisement();
+        if (advertisement) this.dispatchEvent(advertisement);
+      }
+    }, 1_000);
+    return {
+      stop: () => {
+        clearInterval(interval);
+        this.report({ kind: 'bluetooth-call', method: 'stopLEScan', detail: '' });
+      },
+    };
   }
 
   private async unexpected(detail: string): Promise<never> {

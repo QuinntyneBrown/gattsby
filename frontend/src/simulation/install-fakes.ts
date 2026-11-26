@@ -4,6 +4,7 @@
 // `__gattsbyReport` that the fixture exposes, so the records survive a reload.
 
 import { FakeBluetoothApi } from './fake-bluetooth-api';
+import { FakeBluetoothDevice } from './fake-bluetooth-device';
 import { canonicalUuid } from './bluetooth-uuid';
 import { FakeLanguageModel } from './fake-language-model';
 import { SCRIPTED_DEVICES } from './scripted-devices';
@@ -16,6 +17,7 @@ interface SimulationGlobals {
     setEffort(effort: number): void;
     setIncline(percent: number): void;
     setBluetoothAvailable(available: boolean): void;
+    setAdvertising(deviceId: string, on: boolean): void;
   };
   LanguageModel?: unknown;
 }
@@ -81,6 +83,12 @@ function install(config: SimulationConfig): void {
     };
   });
   const bluetooth = new FakeBluetoothApi(devices, config.bluetooth, report);
+  if (config.bluetooth.watchAdvertisements) {
+    Object.defineProperty(globalThis, 'BluetoothDevice', {
+      configurable: true,
+      value: FakeBluetoothDevice,
+    });
+  }
   if (!config.bluetooth.advertisementScanning) {
     Object.defineProperty(bluetooth, 'requestLEScan', { value: undefined });
   }
@@ -99,6 +107,7 @@ function install(config: SimulationConfig): void {
     setEffort: (effort) => bluetooth.setEffort(effort),
     setIncline: (percent) => bluetooth.setIncline(percent),
     setBluetoothAvailable: (available) => bluetooth.setAvailable(available),
+    setAdvertising: (deviceId, on) => bluetooth.setAdvertising(deviceId, on),
   };
 
   delete globals.LanguageModel;

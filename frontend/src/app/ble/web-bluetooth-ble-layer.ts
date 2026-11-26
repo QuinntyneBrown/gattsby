@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import type { GattProperty } from '../knowledge-base/knowledge-base-data';
 import type { NotificationDecoding } from '../store/model/notification-decoding';
+import type { AdvertisementSample } from '../store/model/advertisement-sample';
 import { canonicalUuid } from '../knowledge-base/uuid';
 import { FTMS_CONTROL_POINT, FTMS_SERVICE } from '../knowledge-base/ftms-control-point';
 import { Clock } from '../shared/clock';
@@ -10,6 +11,7 @@ import type { BleAvailability } from './ble-availability';
 import { ApprovalLedger } from './approval-ledger';
 import { BleLayer, type ReadResult } from './ble-layer';
 import { BLUETOOTH } from './bluetooth.token';
+import type { BluetoothAdvertisingEvent } from './bluetooth-advertising-event';
 import type { ChosenDevice } from './chosen-device';
 import type { ConnectionState, DisconnectEvent } from './connection-state';
 import type { GattServiceInfo } from './gatt-layout';
@@ -31,6 +33,20 @@ const PROPERTIES: readonly GattProperty[] = [
   'notify',
   'indicate',
 ];
+
+type WatchableDevice = BluetoothDevice & {
+  watchAdvertisements?(options: { signal: AbortSignal }): Promise<void>;
+};
+
+type AdvertisementScanner = Bluetooth & {
+  requestLEScan?(options: {
+    acceptAllAdvertisements: boolean;
+    keepRepeatedDevices: boolean;
+  }): Promise<{ stop(): void }>;
+};
+
+const MAX_ADVERTISING_FIELDS = 8;
+const MAX_ADVERTISING_BYTES = 64;
 
 // The BLE layer on Web Bluetooth (scan-for-the-device, connect-to-the-device,
 // enumerate-the-gatt-layout and release-the-connection designs).
@@ -123,6 +139,84 @@ export class WebBluetoothBleLayer extends BleLayer {
       detail: `${request.mode}: chose ${device.id}`,
     });
     return { deviceId: device.id, name: device.name ?? null, advertisedServices: [] };
+  }
+
+  async permittedDevices(): Promise<ChosenDevice[]> {
+    const permitted = await this.bluetooth?.getDevices?.();
+    if (permitted) {
+      for (const device of permitted) this.devices.set(device.id, device);
+    }
+    return [...this.devices.values()].map((device) => ({
+      deviceId: device.id,
+      name: device.name || null,
+      advertisedServices: [],
+    }));
+  }
+
+  async watchAdvertisements(
+    deviceIds: readonly string[],
+    receive: (sample: AdvertisementSample) => void,
+    signal: AbortSignal,
+  ): Promise<void> {
+    signal.throwIfAborted();
+    const bluetooth = this.bluetooth as AdvertisementScanner | undefined;
+    const targets = new Set(deviceIds);
+    const devices = [...targets].map((id) => this.devices.get(id) as WatchableDevice | undefined);
+    if (!devices.length || devices.some((device) => !device)) {
+      throw new ToolError(
+        'PRECONDITION_FAILED',
+        'Choose the candidates in Chrome before watching them.',
+      );
+    }
+    const listener = (event: Event) => {
+      const packet = event as BluetoothAdvertisingEvent;
+      if (!targets.has(packet.device.id)) return;
+      const manufacturerData = advertisementFields(
+        packet.manufacturerData,
+        (id) => `0x${id.toString(16).toUpperCase().padStart(4, '0')}`,
+      );
+      const serviceData = advertisementFields(packet.serviceData, canonicalUuid);
+      const values = {
+        deviceId: packet.device.id,
+        rssi: packet.rssi ?? null,
+        ...(packet.txPower == null ? {} : { txPower: packet.txPower }),
+        serviceUuids: (packet.uuids ?? []).slice(0, 32).map(canonicalUuid),
+        manufacturerData,
+        serviceData,
+      };
+      const evidenceId = this.log.append({
+        kind: 'advertisement',
+        direction: 'in',
+        hex: '',
+        detail: JSON.stringify(values),
+      });
+      receive({ ...values, t: this.clock.now(), evidenceId });
+    };
+    try {
+      if (
+        watchAdvertisementsAvailable() &&
+        devices.every((device) => !!device?.watchAdvertisements)
+      ) {
+        await Promise.all(
+          devices.map((device) => {
+            device!.addEventListener('advertisementreceived', listener, { signal });
+            return device!.watchAdvertisements!({ signal });
+          }),
+        );
+      } else if (bluetooth?.requestLEScan) {
+        bluetooth.addEventListener('advertisementreceived', listener, { signal });
+        const scan = await bluetooth.requestLEScan({
+          acceptAllAdvertisements: true,
+          keepRepeatedDevices: true,
+        });
+        if (signal.aborted) scan.stop();
+        else signal.addEventListener('abort', () => scan.stop(), { once: true });
+      } else {
+        throw new ToolError('UNSUPPORTED', 'This browser cannot watch Bluetooth advertisements.');
+      }
+    } catch (error) {
+      throw this.gattError(error);
+    }
   }
 
   async connect(deviceId: string, timeoutMs: number): Promise<{ at: number; entryId: string }> {
@@ -374,6 +468,17 @@ export class WebBluetoothBleLayer extends BleLayer {
 function watchAdvertisementsAvailable(): boolean {
   const device = (globalThis as { BluetoothDevice?: { prototype: object } }).BluetoothDevice;
   return !!device && 'watchAdvertisements' in device.prototype;
+}
+
+function advertisementFields<K>(
+  fields: ReadonlyMap<K, DataView> | undefined,
+  key: (value: K) => string,
+) {
+  return Object.fromEntries(
+    [...(fields ?? [])]
+      .slice(0, MAX_ADVERTISING_FIELDS)
+      .map(([id, view]) => [key(id), toHex(bytesOf(view).slice(0, MAX_ADVERTISING_BYTES))]),
+  );
 }
 
 async function bluetoothBlocked(): Promise<boolean> {
