@@ -33,6 +33,10 @@ export class HomePage {
     return this.page.title();
   }
 
+  get manifest(): Locator {
+    return this.page.locator('link[rel="manifest"]');
+  }
+
   get settings() {
     return this.page.getByRole('link', { name: 'Settings' });
   }
